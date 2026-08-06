@@ -1,0 +1,76 @@
+# ─── Environment & secrets ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+secrets/
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+pip-log.txt
+
+# ─── ML artifacts (NEVER commit these — use MLflow artifact store) ────────────
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
+*.safetensors
+models/checkpoints/
+ml/artifacts/
+mlruns/
+
+# ─── Database dumps ───────────────────────────────────────────────────────────
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.pgdump
+
+# ─── Node / Next.js ───────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.npm
+*.tsbuildinfo
+
+# ─── IDEs ─────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─── Test / coverage ──────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── Alembic ──────────────────────────────────────────────────────────────────
+# (keep migrations, exclude auto-generated pycache)
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/

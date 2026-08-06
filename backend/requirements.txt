@@ -1,0 +1,30 @@
+# ─── Web framework ────────────────────────────────────────────────────────────
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.12
+
+# ─── Database ─────────────────────────────────────────────────────────────────
+sqlalchemy==2.0.36
+asyncpg==0.30.0          # async PostgreSQL driver (used by the app)
+psycopg2-binary==2.9.10  # sync driver (used by Alembic migrations only)
+alembic==1.14.0
+
+# ─── Configuration ────────────────────────────────────────────────────────────
+pydantic==2.10.3
+pydantic-settings==2.6.1
+python-dotenv==1.0.1
+
+# ─── HTTP client (ingestion jobs) ─────────────────────────────────────────────
+httpx==0.28.1
+
+# ─── Job queue (Phase 2+; declared now so the Docker image is stable) ─────────
+rq==2.0.0
+redis==5.2.1
+
+# ─── Testing ──────────────────────────────────────────────────────────────────
+pytest==8.3.4
+pytest-asyncio==0.24.0
+httpx==0.28.1            # also used for async test client
+
+# ─── Linting ──────────────────────────────────────────────────────────────────
+ruff==0.8.4
