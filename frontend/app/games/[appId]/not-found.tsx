@@ -13,7 +13,7 @@ export default function NotFound() {
           </code>{" "}
           to add it to the database.
         </p>
-        <a
+        <Link
           href="/"
           style={{
             display: "inline-block",
@@ -24,7 +24,7 @@ export default function NotFound() {
           }}
         >
           ← Back to search
-        </a>
+        </Link>
       </div>
     </div>
   );
