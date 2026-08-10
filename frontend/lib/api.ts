@@ -70,6 +70,63 @@ export interface GameSearchResult {
   query: string;
 }
 
+// ─── Review Intelligence Types (Phase 2) ──────────────────────────────────────
+
+export interface SentimentOverviewData {
+  positive_pct: number;
+  mixed_pct: number;
+  negative_pct: number;
+  positive_count: number;
+  negative_count: number;
+  total_count: number;
+  sentiment_label: string;
+}
+
+export interface MonthlySentimentData {
+  month: string;
+  positive_reviews: number;
+  negative_reviews: number;
+  net_positive_pct: number;
+}
+
+export interface ReviewTopicData {
+  topic_id: number;
+  label: string;
+  review_count: number;
+  sentiment_score: number;
+  keywords: string[] | null;
+}
+
+export interface LovedFeatureData {
+  feature_name: string;
+  mention_count: number;
+  praise_intensity: number;
+}
+
+export interface ComplaintCategoryData {
+  category: string;
+  volume_pct: number;
+  severity: "high" | "moderate" | "low";
+  representative_snippets: string[];
+}
+
+export interface ReviewSummaryData {
+  strengths: string[];
+  pain_points: string[];
+  feature_requests: string[];
+}
+
+export interface ReviewIntelligenceBundle {
+  app_id: number;
+  sentiment: SentimentOverviewData;
+  timeline: MonthlySentimentData[];
+  topics: ReviewTopicData[];
+  loved_features: LovedFeatureData[];
+  complaints: ComplaintCategoryData[];
+  summary: ReviewSummaryData;
+  is_processed: boolean;
+}
+
 // ─── API error class ──────────────────────────────────────────────────────────
 
 export class SteamIQApiError extends Error {
@@ -144,6 +201,14 @@ export const api = {
    */
   async getGame(appId: number): Promise<GameDetail> {
     return apiFetch<GameDetail>(`/api/v1/games/${appId}`);
+  },
+
+  /**
+   * Get Review Intelligence bundle by Steam app_id (Phase 2).
+   * GET /api/v1/games/{appId}/reviews
+   */
+  async getReviews(appId: number): Promise<ReviewIntelligenceBundle> {
+    return apiFetch<ReviewIntelligenceBundle>(`/api/v1/games/${appId}/reviews`);
   },
 
   /**

@@ -63,7 +63,10 @@ def create_app() -> FastAPI:
 
     # ── API routers ────────────────────────────────────────────────────────────
     from api.games import router as games_router
+    from api.reviews import router as reviews_router
+
     app.include_router(games_router, prefix="/api/v1")
+    app.include_router(reviews_router, prefix="/api/v1")
 
     logger.info("SteamIQ API v%s started in %s mode", settings.app_version, settings.app_env)
     return app

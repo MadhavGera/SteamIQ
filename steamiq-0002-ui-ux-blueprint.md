@@ -241,20 +241,50 @@ Cards in the Overview tab **only render when backed by populated database tables
 
 ---
 
-#### Tab 2: Reviews (Review Intelligence)
+#### Tab 2: Reviews (Review Intelligence) (locked)
 
-**Purpose:** Deep-dive analysis into player feedback, sentiment breakdown, topic discovery, complaint identification, and LLM summaries.
+**Purpose:**  
+Transform raw Steam review text into structured qualitative intelligence. Answers: *What do players specifically love, what are the primary pain points/complaints, how has sentiment evolved over time, and what is the overall synthesized verdict?*
 
-- **Sentiment Overview & Timeline (2-column layout):**
-  - *Sentiment Split Bar & Metrics (Left)*: Positive / Mixed / Negative percentages with overall rating pill (`feature_review_sentiment`).
-  - *Historical Sentiment Timeline Chart (Right)*: Monthly positive/negative review volume and sentiment ratio over time (`feature_review_sentiment`).
-- **Topic & Feature Discovery Grid (2-column grid):**
-  - *BERTopic Topic Clusters (Left)*: Top 5 extracted review topics with review count badges and sentiment lean (`feature_review_topics`).
-  - *Loved Features Breakdown (Right)*: Top appreciated game features (e.g. "Soundtrack", "Gunplay") ranked by positive mention count (`feature_review_features`).
-- **Complaint Analysis & Snippets Table:**
-  - Filterable table listing issue categories, complaint share %, severity badge (`--danger` / `--warning`), and clickable "View Representative Snippets" button (`feature_review_complaints`).
-- **AI Review Summary Card:**
-  - Structured summary block divided into "Core Strengths", "Primary Complaints", and "Player Feature Requests" (`mart_game_overview` / `feature_review_*`).
+**Entry points:**  
+- Game Intelligence tab bar ("2. Reviews")
+- "Review Intelligence Teaser" card on the Overview tab
+- Direct URL with tab query: `/game/[app_id]?tab=reviews`
+
+**Sections (Top to Bottom):**
+
+1. **Sentiment Breakdown & Monthly Timeline (2-column 50/50 layout):**
+   - *Sentiment Overview Panel (Left)*: Positive / Mixed / Negative percentage breakdown with overall score pill (e.g. `97% Overwhelmingly Positive`), positive review count, and negative review count (`feature_review_sentiment`).
+   - *Historical Sentiment Timeline Chart (Right)*: Monthly time-series chart plotting positive volume in `--success` (`#4ADE9A`) and negative volume in `--danger` (`#F2685C`) alongside net sentiment ratio over time (`feature_review_sentiment`).
+
+2. **Topic Discovery & Loved Features (2-column 50/50 grid):**
+   - *BERTopic Topic Clusters (Left)*: Extracted semantic topic clusters from reviews (e.g. "Combat Mechanics", "Lore & Worldbuilding", "Boss Design", "Art Style") with review frequency count badges and net sentiment lean (`feature_review_topics`). Wrapped in a fallback to TF-IDF+KMeans if BERTopic pipeline unavailable.
+   - *Loved Features Breakdown (Right)*: Ranked list of positive feature appreciations extracted via HDBSCAN embeddings (e.g. "Soundtrack", "Atmosphere", "Controls") sorted by praise volume (`feature_review_features`).
+
+3. **Complaint Breakdown & Snippets Table:**
+   - Filterable data table from zero-shot complaint classification (`feature_review_complaints`).
+   - Columns: Issue Category (e.g. "Performance / Stuttering", "Input Latency", "Difficulty Spike"), Volume Share %, Severity Badge (`--danger` "High" / `--warning` "Moderate"), and Action button: *"View Representative Snippets"*.
+   - Clicking *"View Representative Snippets"* triggers a floating modal (`SnippetModal`) displaying 3 real review quotes tagged with that complaint.
+
+4. **Hierarchical AI Review Summary Card:**
+   - Precomputed structured summary card (`mart_game_overview` / `feature_review_*`) cleanly divided into three callout sections:
+     - **Core Strengths:** Bulleted summary of universally praised gameplay elements.
+     - **Pain Points:** Key friction areas and technical complaints.
+     - **Player Feature Requests:** Commonly requested mechanics, QoL improvements, or content desires.
+
+**Data contracts:**
+- Sentiment split & timeline: `feature_review_sentiment`
+- Extracted topics: `feature_review_topics`
+- Complaint classification & snippets: `feature_review_complaints`
+- Feature appreciation: `feature_review_features`
+- Executive summary: `mart_game_overview` (Phase 5) / precomputed summary job
+
+**Components used:** `SentimentOverview`, `SentimentTimeline`, `TopicDistribution`, `LovedFeatures`, `ComplaintBreakdown`, `ReviewSummary`, `SnippetModal` (see §4).
+
+**States:**
+- Loading: Skeleton progress bars, shimmer chart container, and table skeletons.
+- No-data-yet (game ingested in `raw_reviews`, but NLP pipeline has not run yet): Content replaced by a clean banner: *"Review intelligence in progress — run `make process-reviews` to generate sentiment, topics, and complaint analytics."*
+- Empty: Game has 0 user reviews on Steam.
 
 ---
 
@@ -321,41 +351,287 @@ Cards in the Overview tab **only render when backed by populated database tables
 *Reusable pieces referenced by page specs above.*
 
 ### 4.1 `GameHeader` (`components/game/GameHeader.tsx`)
-- **Props:** `app_id: string`, `title: string`, `developer: string`, `publisher: string`, `capsule_url: string`, `release_date: string`, `price: number`, `kpis: GameHeaderKPIs`
-- **Style:** Fixed/Sticky top banner, `--bg-base`, bottom border 1px `--border-subtle`.
-- **Child elements:** Thumbnail, H1 title, status pills, KPI summary strip.
+**Purpose:** Persistent sticky top shell rendered across all 7 tabs of Game Intelligence (`/game/[app_id]`). Provides primary game context, metadata badges, quick KPI strip, and sticky sub-navigation.
 
-### 4.2 `TabSubNav` (`components/game/TabSubNav.tsx`)
-- **Props:** `activeTab: string`, `tabs: TabItem[]`, `onTabChange: (tabId: string) => void`
-- **Style:** Horizontal flex track, `--border-subtle` bottom line, active tab underlined with 2px `--accent-primary`.
+**TypeScript Interface:**
+```typescript
+export interface GameHeaderKPIs {
+  successScore?: number | null;     // Phase 4+ (0-100)
+  modelRunId?: string | null;       // Phase 4+ (e.g. "#8f2a")
+  netSentimentPct?: number | null;  // Phase 2+ (0-100)
+  sentimentLabel?: string | null;   // Phase 2+ (e.g. "Overwhelmingly Positive")
+  peakCcu24h?: number | null;       // Phase 1+ (from raw_player_snapshots)
+}
 
-### 4.3 `StatCard` (`components/ui/StatCard.tsx`)
-- **Props:** `eyebrow: string`, `value: string | number`, `subtitle?: string`, `trend?: { value: string, direction: 'up' | 'down' | 'neutral' }`, `accentColor?: string`
-- **Style:** Standard card (`--bg-surface`, 12px radius, 1px `--border-subtle` border, 24px padding). Value uses Display typography in JetBrains Mono / tabular-nums.
+export interface GameHeaderProps {
+  appId: number;
+  title: string;
+  developer?: string | null;
+  publisher?: string | null;
+  releaseDate?: string | null;
+  priceUsd?: string | null;
+  isFree?: boolean;
+  headerImage?: string | null;
+  activeTab: string;
+  onTabChange?: (tabId: string) => void;
+  kpis?: GameHeaderKPIs;
+}
+```
 
-### 4.4 `SHAPBreakdownCard` (`components/game/SHAPBreakdownCard.tsx`)
-- **Props:** `drivers: SHAPFactor[]` (`feature_name: string`, `impact: number`, `direction: 'positive' | 'negative'`)
-- **Style:** Horizontal bar list. Positive bars rendered in `--success`, negative bars in `--danger`.
+**Layout & Token Bindings:**
+- Outer container: `position: sticky; top: 64px; z-index: 90; background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);`
+- Left section: Capsule art (`120x60px`, `border-radius: 6px`, `border: 1px solid var(--border-subtle)`), `H1` title (28px / 700, `--text-primary`), metadata byline (`--text-secondary`, 13px), and `badge-pill` chips for App ID and price.
+- Right section: Condensed KPI strip. **Progressive disclosure rule:** If `kpis.successScore` is null, the success pill is omitted. If `netSentimentPct` is null, the sentiment pill is omitted. Only available numbers render.
+- Bottom sub-nav track: 7 tabs (`Overview`, `Reviews`, `Player Activity`, `Market`, `Competitors`, `Updates`, `Recommendations`), 13px / 600, active tab underlined with 2px `var(--accent-primary)`.
 
-### 4.5 `SentimentDistributionBar` (`components/game/SentimentDistributionBar.tsx`)
-- **Props:** `positivePct: number`, `neutralPct: number`, `negativePct: number`
-- **Style:** Multi-segment rounded horizontal progress bar using `--success`, `--warning`, and `--danger`.
+---
 
-### 4.6 `TopicClusterGrid` (`components/game/TopicClusterGrid.tsx`)
-- **Props:** `topics: TopicCluster[]` (`topic_name: string`, `review_count: number`, `sentiment_score: number`)
-- **Style:** Flex pill container, `--bg-surface-raised` background on pills, volume count in `--text-muted`.
+### 4.2 `StatCard` (`components/ui/StatCard.tsx`)
+**Purpose:** Primary metric building block used in KPI grids across Overview, Reviews, Player Activity, and Market tabs.
 
-### 4.7 `ComplaintTable` (`components/game/ComplaintTable.tsx`)
-- **Props:** `complaints: ComplaintCategory[]`
-- **Style:** Standard table (§2.8). Uses `--danger` / `--warning` severity badges. Action column triggers representative snippet popover.
+**TypeScript Interface:**
+```typescript
+export interface StatCardProps {
+  eyebrow: string;                           // 11px uppercase overline
+  value: string | number | null | undefined; // Display number (JetBrains Mono)
+  sub?: React.ReactNode;                     // Context label beneath number
+  accentColor?: string;                      // Defaults to var(--accent-primary)
+  trend?: {
+    value: string;
+    direction: 'up' | 'down' | 'neutral';
+  };
+  loading?: boolean;
+}
+```
 
-### 4.8 `CompetitorTable` (`components/game/CompetitorTable.tsx`)
-- **Props:** `competitors: CompetitorGame[]`
-- **Style:** Standard table (§2.8). Similarity score rendered in `--accent-primary` pill. Row click navigates to target game.
+**Layout & Behavior:**
+- Container: `background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 20px;`
+- Eyebrow: `font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);`
+- Value: `font-size: 32px; font-weight: 700; font-family: var(--font-mono); font-variant-numeric: tabular-nums; line-height: 1.1;`
+- **Progressive Disclosure Rule:** When `value` is `null` or `undefined` and `loading` is `false`, the component returns `null` (collapsing the grid cleanly) rather than rendering a misleading "0" or "N/A". If `loading: true`, renders a shimmer skeleton (`.skeleton`).
 
-### 4.9 `RecommendationCard` (`components/game/RecommendationCard.tsx`)
-- **Props:** `recommendation: RecommendationItem` (`title: string`, `domain: string`, `impactRank: number`, `rationale: string`, `difficulty: 'Low' | 'Medium' | 'High'`)
-- **Style:** Emphasis card (`--bg-surface-raised`, 12px radius, 24px padding). Domain pill in `--accent-primary`, difficulty pill in neutral `--text-secondary`.
+---
+
+### 4.3 `SHAPDriverList` (`components/game/SHAPDriverList.tsx`)
+**Purpose:** Explainable ML feature attribution list displaying positive drivers and negative drag factors from `serving_predictions`.
+
+**TypeScript Interface:**
+```typescript
+export interface SHAPDriver {
+  featureName: string;            // Raw feature slug (e.g. "review_velocity_30d")
+  displayName: string;            // User-facing label (e.g. "High Review Velocity")
+  impact: number;                 // Contribution score (e.g. +0.32 or -0.14)
+  direction: 'positive' | 'negative';
+  category?: 'sentiment' | 'market' | 'velocity' | 'developer';
+}
+
+export interface SHAPDriverListProps {
+  drivers: SHAPDriver[];
+  maxItems?: number;              // Defaults to 5 for Overview panel
+  loading?: boolean;
+}
+```
+
+**Layout & Token Bindings:**
+- Item row: `display: flex; align-items: center; justify-content: space-between; font-size: 13px;`
+- Feature label: `width: 180px; font-weight: 500; color: var(--text-primary);`
+- Track: `flex: 1; height: 8px; background: var(--bg-base); border-radius: 4px; margin: 0 12px; overflow: hidden;`
+- Bar fill: Positive bars use `var(--success)` (`#4ADE9A`); negative bars use `var(--danger)` (`#F2685C`).
+- Score badge: JetBrains Mono tabular numeral, colored in `--success` (for positive) or `--danger` (for negative).
+- **Progressive Disclosure Rule:** If `drivers` array is empty (pre-Phase 4), the entire panel returns `null`.
+
+---
+
+### 4.4 `TeaserCard` (`components/game/TeaserCard.tsx`)
+**Purpose:** Interactive summary card on the Overview tab that previews a sub-domain and deep-links directly to its dedicated tab.
+
+**TypeScript Interface:**
+```typescript
+export interface TeaserCardProps {
+  title: string;
+  icon?: React.ReactNode;
+  targetTab: 'reviews' | 'player-activity' | 'market' | 'competitors' | 'updates' | 'recommendations';
+  actionLabel?: string;          // Defaults to "View full analysis →"
+  children: React.ReactNode;
+  badge?: {
+    text: string;
+    variant?: 'success' | 'warning' | 'danger' | 'neutral';
+  };
+  onNavigate?: (tab: string) => void;
+}
+```
+
+**Layout & Behavior:**
+- Container: `background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 20px; transition: all 150ms ease;`
+- Hover state: `border-color: var(--border-strong); background: var(--bg-surface-raised); cursor: pointer;`
+- Header: Title (`H3`, 15px/700, `--text-primary`), optional icon, optional `badge-pill`.
+- Action link: `font-size: 12px; font-weight: 600; color: var(--accent-primary); margin-top: 14px; display: inline-flex; align-items: center; gap: 4px;`
+- **Progressive Disclosure Rule:** Only instantiated on the Overview page for tabs with active, populated database tables.
+
+---
+
+### 4.5 `SentimentOverview` (`components/game/SentimentOverview.tsx`)
+**Purpose:** Multi-segment sentiment proportion bar and metric card on the Reviews tab.
+
+**TypeScript Interface:**
+```typescript
+export interface SentimentOverviewProps {
+  positivePct: number;
+  mixedPct: number;
+  negativePct: number;
+  positiveCount: number;
+  negativeCount: number;
+  sentimentLabel: string;
+  loading?: boolean;
+}
+```
+**Tokens & Layout:** Multi-segment bar using `--success`, `--warning`, `--danger`. Score badge uses `badge-pill--success` (if >80%), `badge-pill--warning` (60–80%), or `badge-pill--danger` (<60%).
+
+---
+
+### 4.6 `SentimentTimeline` (`components/game/SentimentTimeline.tsx`)
+**Purpose:** Monthly volume and sentiment ratio time-series chart.
+
+**TypeScript Interface:**
+```typescript
+export interface MonthlySentimentData {
+  month: string;           // "2024-05"
+  positiveReviews: number;
+  negativeReviews: number;
+  netPositivePct: number;
+}
+
+export interface SentimentTimelineProps {
+  data: MonthlySentimentData[];
+  loading?: boolean;
+}
+```
+**Tokens & Layout:** Positive bars/line in `--success`, negative in `--danger`, gridlines in `var(--border-subtle)` at reduced opacity.
+
+---
+
+### 4.7 `TopicDistribution` (`components/game/TopicDistribution.tsx`)
+**Purpose:** BERTopic cluster pills display showing extracted review topics with review count and sentiment lean.
+
+**TypeScript Interface:**
+```typescript
+export interface ReviewTopic {
+  topicId: number;
+  label: string;          // e.g. "Combat Mechanics"
+  reviewCount: number;
+  sentimentScore: number; // 0-1
+}
+
+export interface TopicDistributionProps {
+  topics: ReviewTopic[];
+  onTopicSelect?: (topicId: number) => void;
+  loading?: boolean;
+}
+```
+
+---
+
+### 4.8 `LovedFeatures` (`components/game/LovedFeatures.tsx`)
+**Purpose:** Ranked list of positively appreciated features extracted via HDBSCAN embeddings.
+
+**TypeScript Interface:**
+```typescript
+export interface LovedFeatureItem {
+  featureName: string;
+  mentionCount: number;
+  praiseIntensity: number; // 0-100
+}
+
+export interface LovedFeaturesProps {
+  features: LovedFeatureItem[];
+  loading?: boolean;
+}
+```
+
+---
+
+### 4.9 `ComplaintBreakdown` (`components/game/ComplaintBreakdown.tsx`)
+**Purpose:** Zero-shot classified complaint table with severity badges and snippet modal trigger.
+
+**TypeScript Interface:**
+```typescript
+export interface ComplaintCategory {
+  category: string;
+  volumePct: number;
+  severity: 'high' | 'moderate' | 'low';
+  representativeSnippets: string[];
+}
+
+export interface ComplaintBreakdownProps {
+  complaints: ComplaintCategory[];
+  onViewSnippets: (complaint: ComplaintCategory) => void;
+  loading?: boolean;
+}
+```
+
+---
+
+### 4.10 `ReviewSummary` (`components/game/ReviewSummary.tsx`)
+**Purpose:** Three-part hierarchical summary card (Core Strengths, Pain Points, Player Wishes).
+
+**TypeScript Interface:**
+```typescript
+export interface ReviewSummaryProps {
+  strengths: string[];
+  painPoints: string[];
+  featureRequests: string[];
+  loading?: boolean;
+}
+```
+
+---
+
+### 4.11 `SnippetModal` (`components/game/SnippetModal.tsx`)
+**Purpose:** Floating modal displaying 3 representative review quotes for a clicked complaint category.
+
+**TypeScript Interface:**
+```typescript
+export interface SnippetModalProps {
+  isOpen: boolean;
+  categoryTitle: string;
+  snippets: string[];
+  onClose: () => void;
+}
+```
+**Tokens & Elevation:** Overlay `rgba(0,0,0,0.6)`, modal container `var(--bg-surface-raised)`, border `1px solid var(--border-strong)`, shadow `var(--shadow-dropdown)` (`0 8px 24px rgba(0,0,0,0.35)`).
+
+---
+
+## 5. Interaction specifications
+*Click/search/filter/compare behavior, per page.*
+
+### 5.1 Tab Navigation (`/game/[app_id]`)
+- **Behavior:** Clicking a tab updates URL search params (`?tab=reviews`) and updates the rendered tab component without full page reload or layout shift.
+
+### 5.2 Timeframe Filtering on Charts
+- **Behavior:** Clicking `7d | 30d | 90d | 1y | All` re-fetches or filters chart series dataset seamlessly with a short pulse loading skeleton on the chart container.
+
+### 5.3 Review Snippet Popover Modal
+- **Behavior:** Clicking "View Snippets" in the Complaint table opens `SnippetModal` with `0 8px 24px rgba(0,0,0,0.35)` shadow, showing 3 representative raw player reviews tagged with that complaint.
+
+### 5.4 Competitor Navigation
+- **Behavior:** Hovering over a competitor row highlights the row with `--bg-surface-raised`. Clicking opens the selected game's Intelligence page.
+
+---
+
+## Wiring this into the roadmap
+
+Replace vague roadmap lines like "Phase 2 — Review Intelligence UI" with:
+
+```
+Phase 2 — Implement Reviews tab per UI Blueprint §3 → Game Intelligence → Reviews
+Allowed components: SentimentOverview, SentimentTimeline, TopicDistribution,
+                     LovedFeatures, ComplaintBreakdown, ReviewSummary, SnippetModal
+Do not alter navigation or overall page structure.
+```
+
+Backend/data work (Phase 2's `feature_*` tables, sentiment job, BERTopic pipeline, RQ worker) is unaffected by any of this and continues now — only frontend implementation waits on a page's §3 entry existing.
+
 
 ---
 

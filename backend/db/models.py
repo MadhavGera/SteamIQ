@@ -269,3 +269,161 @@ class RawGameTag(Base):
 
     def __repr__(self) -> str:
         return f"<RawGameTag app_id={self.app_id} tag={self.tag_name!r} votes={self.votes}>"
+
+
+# ===========================================================================
+# FEATURE ZONE (Phase 2 — NLP Core)
+# Written ONLY by NLP/feature pipeline jobs, read by serving layer & API handlers.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# feature_review_sentiment
+# ---------------------------------------------------------------------------
+
+class FeatureReviewSentiment(Base):
+    """
+    Aggregated sentiment metrics per game, both overall and broken down monthly.
+    Written by NLP processing pipeline jobs.
+    """
+    __tablename__ = "feature_review_sentiment"
+    __table_args__ = (
+        UniqueConstraint("app_id", "month", name="uq_game_sentiment_month"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    month: Mapped[str] = mapped_column(String(16), nullable=False, index=True)  # e.g. "2024-05" or "ALL_TIME"
+    positive_count: Mapped[int] = mapped_column(Integer, default=0)
+    negative_count: Mapped[int] = mapped_column(Integer, default=0)
+    total_count: Mapped[int] = mapped_column(Integer, default=0)
+    net_positive_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=0.0)  # 0.00 - 100.00%
+    sentiment_score: Mapped[float] = mapped_column(Numeric(5, 4), default=0.0)   # 0.0000 - 1.0000
+
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<FeatureReviewSentiment app_id={self.app_id} month={self.month} net_pos={self.net_positive_pct}%>"
+
+
+# ---------------------------------------------------------------------------
+# feature_review_topics
+# ---------------------------------------------------------------------------
+
+class FeatureReviewTopic(Base):
+    """
+    Semantic topic clusters discovered from player reviews via BERTopic (or TF-IDF fallback).
+    Written by NLP topic discovery pipeline.
+    """
+    __tablename__ = "feature_review_topics"
+    __table_args__ = (
+        UniqueConstraint("app_id", "topic_id", name="uq_game_topic"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    topic_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    topic_label: Mapped[str] = mapped_column(String(256), nullable=False)        # e.g. "Combat & Movement Mechanics"
+    review_count: Mapped[int] = mapped_column(Integer, default=0)
+    sentiment_score: Mapped[float] = mapped_column(Numeric(5, 4), default=0.5)  # 0.0000 - 1.0000
+    keywords: Mapped[Optional[dict]] = mapped_column(JSONB)                     # ["sword", "dodge", "fluid", "parry"]
+
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<FeatureReviewTopic app_id={self.app_id} label={self.topic_label!r} count={self.review_count}>"
+
+
+# ---------------------------------------------------------------------------
+# feature_review_complaints
+# ---------------------------------------------------------------------------
+
+class FeatureReviewComplaint(Base):
+    """
+    Classified complaint categories and representative quotes from zero-shot classification.
+    Written by NLP complaint classification pipeline.
+    """
+    __tablename__ = "feature_review_complaints"
+    __table_args__ = (
+        UniqueConstraint("app_id", "category", name="uq_game_complaint"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    category: Mapped[str] = mapped_column(String(128), nullable=False)          # e.g. "Performance / FPS Drops"
+    volume_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=0.0)       # share of negative reviews
+    severity: Mapped[str] = mapped_column(String(32), default="moderate")       # "high", "moderate", "low"
+    representative_snippets: Mapped[Optional[dict]] = mapped_column(JSONB)      # [quote1, quote2, quote3]
+
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<FeatureReviewComplaint app_id={self.app_id} cat={self.category!r} vol={self.volume_pct}%>"
+
+
+# ---------------------------------------------------------------------------
+# feature_review_features
+# ---------------------------------------------------------------------------
+
+class FeatureReviewFeature(Base):
+    """
+    Appreciated / loved game features extracted via embeddings & HDBSCAN.
+    Written by NLP feature appreciation pipeline.
+    """
+    __tablename__ = "feature_review_features"
+    __table_args__ = (
+        UniqueConstraint("app_id", "feature_name", name="uq_game_loved_feature"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    feature_name: Mapped[str] = mapped_column(String(128), nullable=False)       # e.g. "Soundtrack & Audio"
+    mention_count: Mapped[int] = mapped_column(Integer, default=0)
+    praise_intensity: Mapped[int] = mapped_column(Integer, default=80)          # 0 - 100 score
+
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<FeatureReviewFeature app_id={self.app_id} feature={self.feature_name!r}>"
+
+
+# ---------------------------------------------------------------------------
+# feature_review_summary
+# ---------------------------------------------------------------------------
+
+class FeatureReviewSummary(Base):
+    """
+    Hierarchical review summary divided into Strengths, Pain Points, and Player Requests.
+    Written by NLP summarization pipeline.
+    """
+    __tablename__ = "feature_review_summary"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), unique=True, nullable=False, index=True
+    )
+    core_strengths: Mapped[Optional[dict]] = mapped_column(JSONB)   # ["Pristine audio-visual execution", ...]
+    pain_points: Mapped[Optional[dict]] = mapped_column(JSONB)      # ["Early difficulty spike", ...]
+    feature_requests: Mapped[Optional[dict]] = mapped_column(JSONB) # ["Boss rush mode", ...]
+
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<FeatureReviewSummary app_id={self.app_id}>"

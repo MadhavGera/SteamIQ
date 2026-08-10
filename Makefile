@@ -43,6 +43,13 @@ seed: ## Ingest a curated set of known games for local dev
 	cd $(BACKEND) && $(PYTHON) -m jobs.ingest_games --appid 570      # Dota 2
 	@echo "✅  Seed complete."
 
+process-reviews: ## Process NLP reviews for a game: make process-reviews APPID=1145360
+	@if [ -z "$(APPID)" ]; then echo "❌  Usage: make process-reviews APPID=<steam_app_id>"; exit 1; fi
+	cd $(BACKEND) && $(PYTHON) -m jobs.process_reviews --app-id $(APPID)
+
+process-reviews-all: ## Process NLP reviews for all ingested games
+	cd $(BACKEND) && $(PYTHON) -m jobs.process_reviews --all
+
 # ─── Development ──────────────────────────────────────────────────────────────
 dev: ## Start backend (uvicorn --reload) and frontend (next dev) locally
 	@echo ">>> Starting backend..."
