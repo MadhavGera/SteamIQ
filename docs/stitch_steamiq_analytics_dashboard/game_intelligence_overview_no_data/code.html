@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SteamIQ - Game Intelligence Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#0f4a73",
+                        "primary-container": "#5ec2f0",
+                        "surface-bright": "#293b4a",
+                        "surface-container-lowest": "#00101c",
+                        "on-background": "#d1e5f8",
+                        "outline": "#889299",
+                        "on-primary-container": "#004e68",
+                        "outline-variant": "#3e484e",
+                        "surface-container-low": "#0a1d2b",
+                        "surface-container": "#0e212f",
+                        "primary-fixed-dim": "#73d1ff",
+                        "tertiary-fixed-dim": "#ffb86c",
+                        "tertiary-container": "#f5a64c",
+                        "surface-container-high": "#192c3a",
+                        "surface-dim": "#021522",
+                        "on-tertiary-fixed": "#2c1600",
+                        "on-secondary-fixed-variant": "#0f4a73",
+                        "error": "#ffb4ab",
+                        "inverse-primary": "#006687",
+                        "on-secondary-container": "#8ab9e9",
+                        "secondary": "#9bcbfb",
+                        "on-surface-variant": "#bec8cf",
+                        "on-tertiary": "#492900",
+                        "secondary-fixed-dim": "#9bcbfb",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary": "#003354",
+                        "inverse-on-surface": "#203241",
+                        "tertiary": "#ffc891",
+                        "tertiary-fixed": "#ffdcbc",
+                        "primary-fixed": "#c1e8ff",
+                        "on-primary-fixed-variant": "#004d67",
+                        "on-primary-fixed": "#001e2b",
+                        "secondary-fixed": "#cee5ff",
+                        "background": "#021522",
+                        "surface-tint": "#73d1ff",
+                        "on-tertiary-container": "#6a3d00",
+                        "primary": "#98dbff",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#683c00",
+                        "surface": "#021522",
+                        "on-error": "#690005",
+                        "surface-container-highest": "#243745",
+                        "inverse-surface": "#d1e5f8",
+                        "on-primary": "#003548",
+                        "surface-variant": "#243745",
+                        "on-surface": "#d1e5f8",
+                        "on-secondary-fixed": "#001d33"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "grid-max-width": "1440px",
+                        "card-padding-desktop": "24px",
+                        "card-padding-mobile": "16px",
+                        "scale-12": "12px",
+                        "scale-4": "4px",
+                        "scale-8": "8px",
+                        "scale-64": "64px",
+                        "scale-48": "48px",
+                        "scale-16": "16px",
+                        "scale-24": "24px",
+                        "scale-32": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "stat-md": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "stat-lg": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "stat-md": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "stat-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .loading-bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 4px;
+            height: 24px;
+        }
+        .loading-bars span {
+            display: block;
+            width: 2px;
+            background-color: theme('colors.primary');
+            animation: bounce 1.2s infinite ease-in-out;
+        }
+        .loading-bars span:nth-child(1) { height: 12px; animation-delay: -0.24s; }
+        .loading-bars span:nth-child(2) { height: 24px; animation-delay: -0.12s; }
+        .loading-bars span:nth-child(3) { height: 16px; animation-delay: 0s; }
+        
+        @keyframes bounce {
+            0%, 80%, 100% { height: 8px; opacity: 0.5; }
+            40% { height: 24px; opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center h-16 px-6 mx-auto bg-background border-b border-outline-variant">
+<div class="flex items-center space-x-2">
+<div class="w-6 h-6 bg-primary rounded-sm"></div>
+<span class="text-headline-md font-headline-md font-bold text-on-surface dark:text-on-surface">SteamIQ</span>
+</div>
+<div class="hidden md:flex space-x-6 h-full items-end">
+<!-- Inactive Nav Links -->
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors pb-5" href="#">Search/Landing</a>
+<!-- Active Nav Link -->
+<a class="font-body-md text-body-md text-primary border-b-2 border-primary pb-5 opacity-80 transition-all" href="#">Game Intelligence</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors pb-5" href="#">Compare Games</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors pb-5" href="#">Market Explorer</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors pb-5" href="#">Ask SteamIQ</a>
+</div>
+<div class="flex items-center space-x-4">
+<button class="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors">Documentation</button>
+<button class="font-body-md text-body-md px-4 py-2 bg-surface-container rounded-md border border-outline-variant hover:bg-surface-container-high transition-colors">Sign In</button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-grow flex flex-col pt-16 w-full max-w-grid-max-width mx-auto">
+<!-- Game Header & SubNav Area (Adapted from SideNavBar JSON + Image context) -->
+<div class="sticky top-16 w-full flex flex-col z-40 bg-background border-b border-outline-variant px-6 pt-6">
+<!-- Game Info Header -->
+<div class="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-6">
+<div class="flex items-center gap-6">
+<!-- Capsule Art Placeholder -->
+<div class="w-24 h-16 bg-surface-container border border-outline-variant rounded flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-on-surface-variant">sports_esports</span>
+</div>
+<div>
+<div class="flex items-center gap-3 mb-1">
+<h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">Hollow Knight</h1>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant font-label-caps text-label-caps rounded-sm border border-outline-variant">APPID --</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Dev: <span class="text-on-surface">Team Cherry</span> • Released: <span class="text-on-surface">Feb 24, 2017</span></p>
+</div>
+</div>
+<!-- Empty Stats (from image context) -->
+<div class="flex gap-8">
+<div class="flex flex-col items-end">
+<span class="font-label-caps text-label-caps text-on-surface-variant mb-1 uppercase">Success Score</span>
+<span class="font-stat-lg text-stat-lg text-on-surface-variant">--</span>
+</div>
+<div class="w-px bg-outline-variant h-10 self-center"></div>
+<div class="flex flex-col items-end">
+<span class="font-label-caps text-label-caps text-on-surface-variant mb-1 uppercase">Net Sentiment</span>
+<span class="font-stat-lg text-stat-lg text-on-surface-variant">--</span>
+</div>
+<div class="w-px bg-outline-variant h-10 self-center"></div>
+<div class="flex flex-col items-end">
+<span class="font-label-caps text-label-caps text-on-surface-variant mb-1 uppercase">24h Peak CCU</span>
+<span class="font-stat-lg text-stat-lg text-on-surface-variant">--</span>
+</div>
+</div>
+</div>
+<!-- Horizontal Tab Navigation (derived from SideNavBar JSON) -->
+<div class="flex gap-6 overflow-x-auto no-scrollbar">
+<a class="font-body-md text-body-md text-primary border-b-2 border-primary font-bold pb-3 flex items-center gap-2 scale-95 duration-150" href="#">
+                    Overview
+                </a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors pb-3 flex items-center gap-2 scale-95 duration-150" href="#">
+                    Reviews
+                </a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors pb-3 flex items-center gap-2 scale-95 duration-150" href="#">
+                    Player Activity
+                </a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors pb-3 flex items-center gap-2 scale-95 duration-150" href="#">
+                    Market
+                </a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors pb-3 flex items-center gap-2 scale-95 duration-150" href="#">
+                    Competitors
+                </a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors pb-3 flex items-center gap-2 scale-95 duration-150" href="#">
+                    Updates
+                </a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors pb-3 flex items-center gap-2 scale-95 duration-150" href="#">
+                    Recommendations
+                </a>
+</div>
+</div>
+<!-- Empty State / Loading Canvas -->
+<div class="flex-grow flex flex-col items-center justify-center p-6 bg-background">
+<div class="flex flex-col items-center max-w-md text-center">
+<!-- Circular Icon Container with simple bar animation -->
+<div class="w-16 h-16 rounded-full border border-outline-variant bg-surface-container flex items-center justify-center mb-6 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+<div class="loading-bars">
+<span></span><span></span><span></span>
+</div>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-2">Analysis in Progress</h2>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                    We're crunching the numbers. Check back shortly for full intelligence.
+                </p>
+</div>
+</div>
+</main>
+</body></html>

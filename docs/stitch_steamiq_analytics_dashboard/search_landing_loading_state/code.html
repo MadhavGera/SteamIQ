@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SteamIQ - Search/Landing</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-container": "#0f4a73",
+                      "primary-container": "#5ec2f0",
+                      "surface-bright": "#293b4a",
+                      "surface-container-lowest": "#00101c",
+                      "on-background": "#d1e5f8",
+                      "outline": "#889299",
+                      "on-primary-container": "#004e68",
+                      "outline-variant": "#3e484e",
+                      "surface-container-low": "#0a1d2b",
+                      "surface-container": "#0e212f",
+                      "primary-fixed-dim": "#73d1ff",
+                      "tertiary-fixed-dim": "#ffb86c",
+                      "tertiary-container": "#f5a64c",
+                      "surface-container-high": "#192c3a",
+                      "surface-dim": "#021522",
+                      "on-tertiary-fixed": "#2c1600",
+                      "on-secondary-fixed-variant": "#0f4a73",
+                      "error": "#ffb4ab",
+                      "inverse-primary": "#006687",
+                      "on-secondary-container": "#8ab9e9",
+                      "secondary": "#9bcbfb",
+                      "on-surface-variant": "#bec8cf",
+                      "on-tertiary": "#492900",
+                      "secondary-fixed-dim": "#9bcbfb",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary": "#003354",
+                      "inverse-on-surface": "#203241",
+                      "tertiary": "#ffc891",
+                      "tertiary-fixed": "#ffdcbc",
+                      "primary-fixed": "#c1e8ff",
+                      "on-primary-fixed-variant": "#004d67",
+                      "on-primary-fixed": "#001e2b",
+                      "secondary-fixed": "#cee5ff",
+                      "background": "#021522",
+                      "surface-tint": "#73d1ff",
+                      "on-tertiary-container": "#6a3d00",
+                      "primary": "#98dbff",
+                      "error-container": "#93000a",
+                      "on-tertiary-fixed-variant": "#683c00",
+                      "surface": "#021522",
+                      "on-error": "#690005",
+                      "surface-container-highest": "#243745",
+                      "inverse-surface": "#d1e5f8",
+                      "on-primary": "#003548",
+                      "surface-variant": "#243745",
+                      "on-surface": "#d1e5f8",
+                      "on-secondary-fixed": "#001d33"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "grid-max-width": "1440px",
+                      "card-padding-desktop": "24px",
+                      "card-padding-mobile": "16px",
+                      "scale-12": "12px",
+                      "scale-4": "4px",
+                      "scale-8": "8px",
+                      "scale-64": "64px",
+                      "scale-48": "48px",
+                      "scale-16": "16px",
+                      "scale-24": "24px",
+                      "scale-32": "32px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "stat-md": [
+                              "JetBrains Mono"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "JetBrains Mono"
+                      ],
+                      "label-caps": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "stat-lg": [
+                              "JetBrains Mono"
+                      ]
+              },
+              "fontSize": {
+                      "stat-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-caps": [
+                              "11px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "stat-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .shimmer {
+            position: relative;
+            overflow: hidden;
+            background-color: #192c3a; /* surface-container-high */
+        }
+        .shimmer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            transform: translateX(-100%);
+            background-image: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0,
+                rgba(255, 255, 255, 0.05) 20%,
+                rgba(255, 255, 255, 0.1) 60%,
+                rgba(255, 255, 255, 0)
+            );
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            100% {
+                transform: translateX(100%);
+            }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col font-body-md antialiased pt-16">
+<!-- TopNavBar Shared Component -->
+<nav class="bg-background border-b border-outline-variant fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-card-padding-desktop mx-auto h-16 max-w-grid-max-width">
+<div class="flex items-center space-x-scale-32">
+<div class="flex items-center space-x-2 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">speed</span>
+<span class="text-headline-sm font-headline-sm font-bold text-on-surface">SteamIQ</span>
+</div>
+<div class="hidden md:flex space-x-scale-24 h-full">
+<a class="text-primary border-b-2 border-primary h-full flex items-center pt-1 font-body-md text-body-md opacity-80 transition-all" href="#">Search/Landing</a>
+<a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors h-full flex items-center pt-1 px-2 font-body-md text-body-md rounded-t-DEFAULT" href="#">Game Intelligence</a>
+<a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors h-full flex items-center pt-1 px-2 font-body-md text-body-md rounded-t-DEFAULT" href="#">Compare Games</a>
+<a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors h-full flex items-center pt-1 px-2 font-body-md text-body-md rounded-t-DEFAULT" href="#">Market Explorer</a>
+<a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors h-full flex items-center pt-1 px-2 font-body-md text-body-md rounded-t-DEFAULT flex space-x-1" href="#">
+<span>Ask SteamIQ</span>
+<span class="bg-surface-variant text-on-surface-variant text-label-caps font-label-caps px-1 py-0.5 rounded-sm">AI</span>
+</a>
+</div>
+</div>
+<div class="flex items-center space-x-scale-16">
+<a class="text-on-surface-variant hover:text-on-surface font-body-md text-body-md hidden sm:block" href="#">Documentation</a>
+<button class="bg-transparent border border-outline-variant text-on-surface hover:bg-surface-container-high px-4 py-1.5 rounded font-body-md text-body-md transition-colors">Sign In</button>
+</div>
+</nav>
+<!-- Main Canvas -->
+<main class="flex-grow flex flex-col items-center w-full max-w-grid-max-width mx-auto px-4 sm:px-gutter lg:px-card-padding-desktop pb-scale-64">
+<!-- Hero Search Section -->
+<section class="w-full flex flex-col items-center justify-center mt-scale-64 mb-scale-48">
+<div class="inline-flex items-center space-x-2 bg-surface-container-high rounded-full px-3 py-1 mb-scale-24 border border-outline-variant">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-label-caps font-label-caps text-on-surface-variant uppercase tracking-wider">AI-POWERED STEAM ANALYTICS PLATFORM</span>
+</div>
+<h1 class="text-display-lg font-display-lg text-on-surface text-center mb-scale-16">Game Intelligence, Powered by AI</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant text-center max-w-2xl mb-scale-32">
+                Turn Steam reviews, player data, and market signals into explainable decisions.<br/>
+                Discover what gamers actually want before you write a single line of code.
+            </p>
+<!-- Search Bar Container -->
+<div class="w-full max-w-2xl bg-surface-container border border-outline-variant rounded-lg p-2 flex items-center relative focus-within:border-primary transition-colors duration-200">
+<span class="material-symbols-outlined text-on-surface-variant ml-3 mr-2">search</span>
+<input class="flex-grow bg-transparent border-none text-on-surface placeholder-on-surface-variant focus:ring-0 font-body-md text-body-md h-10 outline-none" placeholder="Search by game name or Steam App ID..." type="text" value="Hollow Knight"/>
+<!-- Loading Indicator in Search -->
+<div class="absolute right-[140px] top-1/2 transform -translate-y-1/2 flex space-x-1 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed animate-bounce" style="animation-delay: 0s;"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed animate-bounce" style="animation-delay: 0.2s;"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed animate-bounce" style="animation-delay: 0.4s;"></span>
+</div>
+<button class="bg-primary text-on-primary hover:bg-primary-fixed hover:text-on-primary-fixed-variant px-6 py-2 rounded font-headline-sm text-body-md font-bold transition-colors h-10 flex items-center ml-2 pointer-events-none opacity-80">
+                    Analyzing
+                    <span class="material-symbols-outlined ml-2 text-sm">loop</span>
+</button>
+</div>
+<!-- Popular Queries -->
+<div class="mt-scale-24 flex flex-col items-center opacity-50">
+<span class="text-label-caps font-label-caps text-on-surface-variant mb-3 uppercase">POPULAR QUERIES</span>
+<div class="flex flex-wrap justify-center gap-3">
+<button class="bg-surface-container hover:bg-surface-container-high border border-outline-variant rounded-full px-4 py-1.5 flex items-center space-x-2 transition-colors">
+<span class="text-body-sm font-body-sm text-on-surface">Hollow Knight</span>
+<span class="text-label-caps font-stat-md text-on-surface-variant">367520</span>
+</button>
+<button class="bg-surface-container hover:bg-surface-container-high border border-outline-variant rounded-full px-4 py-1.5 flex items-center space-x-2 transition-colors">
+<span class="text-body-sm font-body-sm text-on-surface">Hades</span>
+<span class="text-label-caps font-stat-md text-on-surface-variant">1145360</span>
+</button>
+<button class="bg-surface-container hover:bg-surface-container-high border border-outline-variant rounded-full px-4 py-1.5 flex items-center space-x-2 transition-colors">
+<span class="text-body-sm font-body-sm text-on-surface">Celeste</span>
+<span class="text-label-caps font-stat-md text-on-surface-variant">504230</span>
+</button>
+<button class="bg-surface-container hover:bg-surface-container-high border border-outline-variant rounded-full px-4 py-1.5 flex items-center space-x-2 transition-colors">
+<span class="text-body-sm font-body-sm text-on-surface">Stardew Valley</span>
+<span class="text-label-caps font-stat-md text-on-surface-variant">413150</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Ready to Analyze Grid (Skeleton State) -->
+<section class="w-full mt-scale-32">
+<div class="mb-scale-24">
+<span class="text-label-caps font-label-caps text-on-surface-variant uppercase tracking-wider block mb-1">FEATURED GAMES</span>
+<h2 class="text-headline-md font-headline-md text-on-surface">Ready to Analyze</h2>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-1">Fetching latest market data and reviews...</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+<!-- Skeleton Card 1 -->
+<div class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col h-[280px]">
+<div class="h-3/4 shimmer w-full border-b border-outline-variant/30 flex items-start p-4">
+<div class="w-16 h-6 rounded-full bg-surface-variant/50"></div>
+</div>
+<div class="h-1/4 p-4 flex flex-col justify-center space-y-3 bg-surface-container-lowest">
+<div class="h-4 w-3/4 bg-surface-container-high rounded shimmer"></div>
+<div class="h-3 w-1/2 bg-surface-container-high rounded shimmer"></div>
+</div>
+</div>
+<!-- Skeleton Card 2 -->
+<div class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col h-[280px]">
+<div class="h-3/4 shimmer w-full border-b border-outline-variant/30 flex items-start p-4" style="animation-delay: 0.1s;">
+<div class="w-12 h-6 rounded-full bg-surface-variant/50"></div>
+</div>
+<div class="h-1/4 p-4 flex flex-col justify-center space-y-3 bg-surface-container-lowest">
+<div class="h-4 w-4/5 bg-surface-container-high rounded shimmer" style="animation-delay: 0.1s;"></div>
+<div class="h-3 w-2/5 bg-surface-container-high rounded shimmer" style="animation-delay: 0.1s;"></div>
+</div>
+</div>
+<!-- Skeleton Card 3 -->
+<div class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col h-[280px]">
+<div class="h-3/4 shimmer w-full border-b border-outline-variant/30 flex items-start p-4" style="animation-delay: 0.2s;">
+<div class="w-20 h-6 rounded-full bg-surface-variant/50"></div>
+</div>
+<div class="h-1/4 p-4 flex flex-col justify-center space-y-3 bg-surface-container-lowest">
+<div class="h-4 w-2/3 bg-surface-container-high rounded shimmer" style="animation-delay: 0.2s;"></div>
+<div class="h-3 w-1/3 bg-surface-container-high rounded shimmer" style="animation-delay: 0.2s;"></div>
+</div>
+</div>
+<!-- Skeleton Card 4 -->
+<div class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col h-[280px]">
+<div class="h-3/4 shimmer w-full border-b border-outline-variant/30 flex items-start p-4" style="animation-delay: 0.3s;">
+<div class="w-14 h-6 rounded-full bg-surface-variant/50"></div>
+</div>
+<div class="h-1/4 p-4 flex flex-col justify-center space-y-3 bg-surface-container-lowest">
+<div class="h-4 w-5/6 bg-surface-container-high rounded shimmer" style="animation-delay: 0.3s;"></div>
+<div class="h-3 w-1/2 bg-surface-container-high rounded shimmer" style="animation-delay: 0.3s;"></div>
+</div>
+</div>
+<!-- Skeleton Card 5 -->
+<div class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col h-[280px]">
+<div class="h-3/4 shimmer w-full border-b border-outline-variant/30 flex items-start p-4" style="animation-delay: 0.4s;">
+<div class="w-16 h-6 rounded-full bg-surface-variant/50"></div>
+</div>
+<div class="h-1/4 p-4 flex flex-col justify-center space-y-3 bg-surface-container-lowest">
+<div class="h-4 w-3/4 bg-surface-container-high rounded shimmer" style="animation-delay: 0.4s;"></div>
+<div class="h-3 w-3/5 bg-surface-container-high rounded shimmer" style="animation-delay: 0.4s;"></div>
+</div>
+</div>
+<!-- Skeleton Card 6 -->
+<div class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col h-[280px]">
+<div class="h-3/4 shimmer w-full border-b border-outline-variant/30 flex items-start p-4" style="animation-delay: 0.5s;">
+<div class="w-12 h-6 rounded-full bg-surface-variant/50"></div>
+</div>
+<div class="h-1/4 p-4 flex flex-col justify-center space-y-3 bg-surface-container-lowest">
+<div class="h-4 w-4/5 bg-surface-container-high rounded shimmer" style="animation-delay: 0.5s;"></div>
+<div class="h-3 w-1/2 bg-surface-container-high rounded shimmer" style="animation-delay: 0.5s;"></div>
+</div>
+</div>
+<!-- Skeleton Card 7 -->
+<div class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col h-[280px]">
+<div class="h-3/4 shimmer w-full border-b border-outline-variant/30 flex items-start p-4" style="animation-delay: 0.6s;">
+<div class="w-18 h-6 rounded-full bg-surface-variant/50"></div>
+</div>
+<div class="h-1/4 p-4 flex flex-col justify-center space-y-3 bg-surface-container-lowest">
+<div class="h-4 w-2/3 bg-surface-container-high rounded shimmer" style="animation-delay: 0.6s;"></div>
+<div class="h-3 w-1/3 bg-surface-container-high rounded shimmer" style="animation-delay: 0.6s;"></div>
+</div>
+</div>
+<!-- Skeleton Card 8 -->
+<div class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col h-[280px]">
+<div class="h-3/4 shimmer w-full border-b border-outline-variant/30 flex items-start p-4" style="animation-delay: 0.7s;">
+<div class="w-14 h-6 rounded-full bg-surface-variant/50"></div>
+</div>
+<div class="h-1/4 p-4 flex flex-col justify-center space-y-3 bg-surface-container-lowest">
+<div class="h-4 w-5/6 bg-surface-container-high rounded shimmer" style="animation-delay: 0.7s;"></div>
+<div class="h-3 w-2/5 bg-surface-container-high rounded shimmer" style="animation-delay: 0.7s;"></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+</body></html>

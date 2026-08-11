@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SteamIQ - Search/Landing</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#0f4a73",
+                        "primary-container": "#5ec2f0",
+                        "surface-bright": "#293b4a",
+                        "surface-container-lowest": "#00101c",
+                        "on-background": "#d1e5f8",
+                        "outline": "#889299",
+                        "on-primary-container": "#004e68",
+                        "outline-variant": "#3e484e",
+                        "surface-container-low": "#0a1d2b",
+                        "surface-container": "#0e212f",
+                        "primary-fixed-dim": "#73d1ff",
+                        "tertiary-fixed-dim": "#ffb86c",
+                        "tertiary-container": "#f5a64c",
+                        "surface-container-high": "#192c3a",
+                        "surface-dim": "#021522",
+                        "on-tertiary-fixed": "#2c1600",
+                        "on-secondary-fixed-variant": "#0f4a73",
+                        "error": "#ffb4ab",
+                        "inverse-primary": "#006687",
+                        "on-secondary-container": "#8ab9e9",
+                        "secondary": "#9bcbfb",
+                        "on-surface-variant": "#bec8cf",
+                        "on-tertiary": "#492900",
+                        "secondary-fixed-dim": "#9bcbfb",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary": "#003354",
+                        "inverse-on-surface": "#203241",
+                        "tertiary": "#ffc891",
+                        "tertiary-fixed": "#ffdcbc",
+                        "primary-fixed": "#c1e8ff",
+                        "on-primary-fixed-variant": "#004d67",
+                        "on-primary-fixed": "#001e2b",
+                        "secondary-fixed": "#cee5ff",
+                        "background": "#021522",
+                        "surface-tint": "#73d1ff",
+                        "on-tertiary-container": "#6a3d00",
+                        "primary": "#98dbff",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#683c00",
+                        "surface": "#021522",
+                        "on-error": "#690005",
+                        "surface-container-highest": "#243745",
+                        "inverse-surface": "#d1e5f8",
+                        "on-primary": "#003548",
+                        "surface-variant": "#243745",
+                        "on-surface": "#d1e5f8",
+                        "on-secondary-fixed": "#001d33"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "grid-max-width": "1440px",
+                        "card-padding-desktop": "24px",
+                        "card-padding-mobile": "16px",
+                        "scale-12": "12px",
+                        "scale-4": "4px",
+                        "scale-8": "8px",
+                        "scale-64": "64px",
+                        "scale-48": "48px",
+                        "scale-16": "16px",
+                        "scale-24": "24px",
+                        "scale-32": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "stat-md": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "stat-lg": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "stat-md": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "stat-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen font-body-md antialiased flex flex-col pt-16">
+<!-- TopNavBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 lg:px-grid-max-width mx-auto bg-background dark:bg-background border-b border-outline-variant h-16">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">speed</span>
+<span class="text-headline-md font-headline-md font-bold text-on-surface dark:text-on-surface">SteamIQ</span>
+</div>
+<div class="hidden md:flex items-center gap-6 font-body-md text-body-md h-full pt-1">
+<!-- Active Item -->
+<a class="text-primary border-b-2 border-primary h-full flex items-center pt-1 hover:opacity-80 transition-all" href="#">Search/Landing</a>
+<!-- Inactive Items -->
+<a class="text-on-surface-variant hover:text-on-surface transition-colors h-full flex items-center" href="#">Game Intelligence</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors h-full flex items-center" href="#">Compare Games</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors h-full flex items-center" href="#">Market Explorer</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors h-full flex items-center gap-1" href="#">
+                    Ask SteamIQ
+                    <span class="bg-surface-variant text-on-surface-variant px-1.5 py-0.5 rounded text-[10px] font-bold">AI</span>
+</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<a class="hidden md:block font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors" href="#">Documentation</a>
+<button class="bg-transparent border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors px-4 py-2 rounded font-body-md font-medium">
+                Sign In
+            </button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-6 lg:px-8 py-12 flex flex-col items-center">
+<!-- Hero Section -->
+<section class="w-full max-w-4xl mx-auto flex flex-col items-center text-center mt-8 mb-20 space-y-8">
+<div class="inline-flex items-center gap-2 bg-surface-container-high border border-outline-variant rounded-full px-3 py-1 text-sm text-on-surface-variant font-medium">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+                AI-POWERED STEAM ANALYTICS PLATFORM
+            </div>
+<div class="space-y-4">
+<h1 class="font-display-lg text-display-lg text-on-surface">Game Intelligence, Powered by AI</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
+                    Turn Steam reviews, player data, and market signals into explainable decisions.<br/>
+                    Discover what gamers actually want before you write a single line of code.
+                </p>
+</div>
+<!-- Search Bar -->
+<div class="w-full max-w-2xl mt-6 relative">
+<div class="flex items-center bg-surface-container rounded-lg border border-outline-variant focus-within:border-primary transition-colors overflow-hidden p-1 pl-4 shadow-lg shadow-black/20">
+<span class="material-symbols-outlined text-on-surface-variant mr-3">search</span>
+<input class="flex-grow bg-transparent border-none text-on-surface font-body-md text-body-md focus:ring-0 placeholder:text-on-surface-variant/60 py-3 outline-none" placeholder="Search by game name or Steam App ID..." type="text"/>
+<button class="bg-primary-container text-on-primary-container hover:bg-primary-fixed font-headline-sm text-body-md font-bold px-6 py-3 rounded-md transition-colors flex items-center gap-2 whitespace-nowrap">
+                        Analyze Game
+                        <span class="material-symbols-outlined text-sm font-bold">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Popular Queries -->
+<div class="flex flex-col items-center gap-3 mt-8 w-full">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Popular Queries</span>
+<div class="flex flex-wrap justify-center gap-3">
+<button class="flex items-center gap-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant px-3 py-1.5 rounded-full transition-colors text-sm">
+<span class="text-on-surface font-medium">Hollow Knight</span>
+<span class="font-stat-md text-xs text-on-surface-variant font-mono">367520</span>
+</button>
+<button class="flex items-center gap-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant px-3 py-1.5 rounded-full transition-colors text-sm">
+<span class="text-on-surface font-medium">Hades</span>
+<span class="font-stat-md text-xs text-on-surface-variant font-mono">1145360</span>
+</button>
+<button class="flex items-center gap-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant px-3 py-1.5 rounded-full transition-colors text-sm">
+<span class="text-on-surface font-medium">Celeste</span>
+<span class="font-stat-md text-xs text-on-surface-variant font-mono">504230</span>
+</button>
+<button class="flex items-center gap-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant px-3 py-1.5 rounded-full transition-colors text-sm">
+<span class="text-on-surface font-medium">Stardew Valley</span>
+<span class="font-stat-md text-xs text-on-surface-variant font-mono">413150</span>
+</button>
+<button class="flex items-center gap-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant px-3 py-1.5 rounded-full transition-colors text-sm">
+<span class="text-on-surface font-medium">Dead Cells</span>
+<span class="font-stat-md text-xs text-on-surface-variant font-mono">588650</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Featured Games Grid -->
+<section class="w-full mt-12 mb-24 space-y-6">
+<div class="flex flex-col space-y-1">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Featured Games</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Ready to Analyze</h2>
+<p class="font-body-sm text-body-md text-on-surface-variant">These games have been fully ingested and are ready for deep intelligence.</p>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Card 1 -->
+<a class="group flex flex-col bg-surface-container rounded-xl border border-outline-variant overflow-hidden hover:bg-surface-container-high hover:border-primary-container transition-all duration-200 shadow-sm shadow-black/10" href="#">
+<div class="h-32 w-full relative bg-gradient-to-br from-secondary-container to-surface-container overflow-hidden">
+<div class="absolute top-2 left-2 bg-surface-container-lowest/80 backdrop-blur-sm border border-outline-variant rounded px-2 py-0.5 flex items-center gap-1.5 z-10">
+<span class="font-label-caps text-[10px] text-on-surface-variant">ID:</span>
+<span class="font-stat-md text-xs text-on-surface font-mono">367520</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-1 border-t border-outline-variant bg-surface">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary-container transition-colors truncate">Hollow Knight</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Metroidvania · Action-Adventure</p>
+</div>
+</a>
+<!-- Card 2 -->
+<a class="group flex flex-col bg-surface-container rounded-xl border border-outline-variant overflow-hidden hover:bg-surface-container-high hover:border-primary-container transition-all duration-200 shadow-sm shadow-black/10" href="#">
+<div class="h-32 w-full relative bg-gradient-to-br from-surface-container-highest to-surface-container overflow-hidden">
+<div class="absolute top-2 left-2 bg-surface-container-lowest/80 backdrop-blur-sm border border-outline-variant rounded px-2 py-0.5 flex items-center gap-1.5 z-10">
+<span class="font-label-caps text-[10px] text-on-surface-variant">ID:</span>
+<span class="font-stat-md text-xs text-on-surface font-mono">1145360</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-1 border-t border-outline-variant bg-surface">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary-container transition-colors truncate">Hades</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Rogue-like · Action RPG</p>
+</div>
+</a>
+<!-- Card 3 -->
+<a class="group flex flex-col bg-surface-container rounded-xl border border-outline-variant overflow-hidden hover:bg-surface-container-high hover:border-primary-container transition-all duration-200 shadow-sm shadow-black/10" href="#">
+<div class="h-32 w-full relative bg-gradient-to-br from-error-container to-surface-container overflow-hidden">
+<div class="absolute top-2 left-2 bg-surface-container-lowest/80 backdrop-blur-sm border border-outline-variant rounded px-2 py-0.5 flex items-center gap-1.5 z-10">
+<span class="font-label-caps text-[10px] text-on-surface-variant">ID:</span>
+<span class="font-stat-md text-xs text-on-surface font-mono">504230</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-1 border-t border-outline-variant bg-surface">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary-container transition-colors truncate">Celeste</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Precision Platformer · Indie</p>
+</div>
+</a>
+<!-- Card 4 -->
+<a class="group flex flex-col bg-surface-container rounded-xl border border-outline-variant overflow-hidden hover:bg-surface-container-high hover:border-primary-container transition-all duration-200 shadow-sm shadow-black/10" href="#">
+<div class="h-32 w-full relative bg-gradient-to-br from-[#4c1d95] to-surface-container overflow-hidden">
+<div class="absolute top-2 left-2 bg-surface-container-lowest/80 backdrop-blur-sm border border-outline-variant rounded px-2 py-0.5 flex items-center gap-1.5 z-10">
+<span class="font-label-caps text-[10px] text-on-surface-variant">ID:</span>
+<span class="font-stat-md text-xs text-on-surface font-mono">413150</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-1 border-t border-outline-variant bg-surface">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary-container transition-colors truncate">Stardew Valley</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Farming Sim · Cozy RPG</p>
+</div>
+</a>
+<!-- Card 5 -->
+<a class="group flex flex-col bg-surface-container rounded-xl border border-outline-variant overflow-hidden hover:bg-surface-container-high hover:border-primary-container transition-all duration-200 shadow-sm shadow-black/10" href="#">
+<div class="h-32 w-full relative bg-gradient-to-br from-secondary-container to-surface-container overflow-hidden">
+<div class="absolute top-2 left-2 bg-surface-container-lowest/80 backdrop-blur-sm border border-outline-variant rounded px-2 py-0.5 flex items-center gap-1.5 z-10">
+<span class="font-label-caps text-[10px] text-on-surface-variant">ID:</span>
+<span class="font-stat-md text-xs text-on-surface font-mono">588650</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-1 border-t border-outline-variant bg-surface">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary-container transition-colors truncate">Dead Cells</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Rogue-lite · Metroidvania</p>
+</div>
+</a>
+<!-- Card 6 -->
+<a class="group flex flex-col bg-surface-container rounded-xl border border-outline-variant overflow-hidden hover:bg-surface-container-high hover:border-primary-container transition-all duration-200 shadow-sm shadow-black/10" href="#">
+<div class="h-32 w-full relative bg-gradient-to-br from-surface-container-highest to-surface-container overflow-hidden">
+<div class="absolute top-2 left-2 bg-surface-container-lowest/80 backdrop-blur-sm border border-outline-variant rounded px-2 py-0.5 flex items-center gap-1.5 z-10">
+<span class="font-label-caps text-[10px] text-on-surface-variant">ID:</span>
+<span class="font-stat-md text-xs text-on-surface font-mono">105600</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-1 border-t border-outline-variant bg-surface">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary-container transition-colors truncate">Terraria</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Sandbox · Crafting · Survival</p>
+</div>
+</a>
+<!-- Card 7 -->
+<a class="group flex flex-col bg-surface-container rounded-xl border border-outline-variant overflow-hidden hover:bg-surface-container-high hover:border-primary-container transition-all duration-200 shadow-sm shadow-black/10" href="#">
+<div class="h-32 w-full relative bg-gradient-to-br from-error-container to-surface-container overflow-hidden">
+<div class="absolute top-2 left-2 bg-surface-container-lowest/80 backdrop-blur-sm border border-outline-variant rounded px-2 py-0.5 flex items-center gap-1.5 z-10">
+<span class="font-label-caps text-[10px] text-on-surface-variant">ID:</span>
+<span class="font-stat-md text-xs text-on-surface font-mono">646570</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-1 border-t border-outline-variant bg-surface">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary-container transition-colors truncate">Slay the Spire</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Roguelike Deckbuilder · Strategy</p>
+</div>
+</a>
+<!-- Card 8 -->
+<a class="group flex flex-col bg-surface-container rounded-xl border border-outline-variant overflow-hidden hover:bg-surface-container-high hover:border-primary-container transition-all duration-200 shadow-sm shadow-black/10" href="#">
+<div class="h-32 w-full relative bg-gradient-to-br from-[#4c1d95] to-surface-container overflow-hidden">
+<div class="absolute top-2 left-2 bg-surface-container-lowest/80 backdrop-blur-sm border border-outline-variant rounded px-2 py-0.5 flex items-center gap-1.5 z-10">
+<span class="font-label-caps text-[10px] text-on-surface-variant">ID:</span>
+<span class="font-stat-md text-xs text-on-surface font-mono">1245620</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-1 border-t border-outline-variant bg-surface">
+<h3 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary-container transition-colors truncate">Elden Ring (Indie IQ)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Action RPG · Open World</p>
+</div>
+</a>
+</div>
+</section>
+</main>
+</body></html>

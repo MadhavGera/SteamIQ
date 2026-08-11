@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SteamIQ - Game Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#0f4a73",
+                        "primary-container": "#5ec2f0",
+                        "surface-bright": "#293b4a",
+                        "surface-container-lowest": "#00101c",
+                        "on-background": "#d1e5f8",
+                        "outline": "#889299",
+                        "on-primary-container": "#004e68",
+                        "outline-variant": "#3e484e",
+                        "surface-container-low": "#0a1d2b",
+                        "surface-container": "#0e212f",
+                        "primary-fixed-dim": "#73d1ff",
+                        "tertiary-fixed-dim": "#ffb86c",
+                        "tertiary-container": "#f5a64c",
+                        "surface-container-high": "#192c3a",
+                        "surface-dim": "#021522",
+                        "on-tertiary-fixed": "#2c1600",
+                        "on-secondary-fixed-variant": "#0f4a73",
+                        "error": "#ffb4ab",
+                        "inverse-primary": "#006687",
+                        "on-secondary-container": "#8ab9e9",
+                        "secondary": "#9bcbfb",
+                        "on-surface-variant": "#bec8cf",
+                        "on-tertiary": "#492900",
+                        "secondary-fixed-dim": "#9bcbfb",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary": "#003354",
+                        "inverse-on-surface": "#203241",
+                        "tertiary": "#ffc891",
+                        "tertiary-fixed": "#ffdcbc",
+                        "primary-fixed": "#c1e8ff",
+                        "on-primary-fixed-variant": "#004d67",
+                        "on-primary-fixed": "#001e2b",
+                        "secondary-fixed": "#cee5ff",
+                        "background": "#021522",
+                        "surface-tint": "#73d1ff",
+                        "on-tertiary-container": "#6a3d00",
+                        "primary": "#98dbff",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#683c00",
+                        "surface": "#021522",
+                        "on-error": "#690005",
+                        "surface-container-highest": "#243745",
+                        "inverse-surface": "#d1e5f8",
+                        "on-primary": "#003548",
+                        "surface-variant": "#243745",
+                        "on-surface": "#d1e5f8",
+                        "on-secondary-fixed": "#001d33",
+                        "semantic-success": "#10b981",
+                        "semantic-danger": "#ef4444"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "grid-max-width": "1440px",
+                        "card-padding-desktop": "24px",
+                        "card-padding-mobile": "16px",
+                        "scale-12": "12px",
+                        "scale-4": "4px",
+                        "scale-8": "8px",
+                        "scale-64": "64px",
+                        "scale-48": "48px",
+                        "scale-16": "16px",
+                        "scale-24": "24px",
+                        "scale-32": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "stat-md": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "stat-lg": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "stat-md": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "stat-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-grid-max-width mx-auto bg-background dark:bg-background h-16 border-b border-outline-variant px-6">
+<div class="flex items-center space-x-8 h-full">
+<div class="flex items-center space-x-2">
+<div class="w-6 h-6 bg-primary rounded-sm"></div>
+<span class="text-headline-md font-headline-md font-bold text-on-surface dark:text-on-surface">SteamIQ</span>
+</div>
+<div class="hidden md:flex space-x-6 h-full items-center">
+<a class="text-on-surface-variant hover:text-on-surface transition-colors font-body-md text-body-md" href="#">Search/Landing</a>
+<a class="text-primary border-b-2 border-primary pb-[22px] pt-[22px] font-body-md text-body-md" href="#">Game Intelligence</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors font-body-md text-body-md" href="#">Compare Games</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors font-body-md text-body-md" href="#">Market Explorer</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors font-body-md text-body-md" href="#">Ask SteamIQ</a>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<span class="px-2 py-1 bg-surface-container-high border border-outline-variant rounded text-label-caps text-on-surface-variant flex items-center space-x-1">
+<span class="w-2 h-2 rounded-full bg-semantic-success"></span>
+<span>MODEL ONLINE</span>
+</span>
+<div class="w-8 h-8 rounded-full bg-surface-variant border border-outline-variant"></div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="mt-16 w-full max-w-grid-max-width mx-auto px-6 pb-24">
+<!-- Sticky Header & Subnav Container -->
+<div class="sticky top-16 z-40 bg-background pt-6 pb-0 border-b border-outline-variant mb-8">
+<div class="flex items-start justify-between mb-6">
+<div class="flex items-center space-x-4">
+<img class="w-[120px] h-[60px] object-cover rounded border border-outline-variant" data-alt="Dark, moody capsule art for Hollow Knight featuring a small bug knight with a nail weapon standing in a gloomy, atmospheric cavern with cool blue lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPkvHi4RYn0zPGlI6pAFaSVIhHq8iQ3fZzLeK9CgRAx2KnSnFG01BHWDmW0U9eviMuC1YbRaTszta8ej97kZobf0HswFgMaHlW3uc4JGSodxoOZo9HNsQ2G6jvZMkOxdVWClmYHlR9XgspVkSFRubQBbxDTP2Ns708yevtLhxXE3kH_iLKYTKuLN8ukNHCGpp0e60a4iBEwhYaTgw-irIKpkobk_UbOCYkhML6_N9F0VGdw1cQAGW_pg"/>
+<div>
+<div class="flex items-center space-x-3 mb-1">
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Hollow Knight</h1>
+<span class="px-2 py-0.5 bg-surface-variant rounded text-label-caps text-on-surface-variant border border-outline-variant">APP ID 367520</span>
+</div>
+<div class="flex items-center space-x-3 text-body-sm text-on-surface-variant">
+<span>Dev: <span class="text-on-surface">Team Cherry</span></span>
+<span>•</span>
+<span>Released: <span class="text-on-surface">Feb 24, 2017</span></span>
+<span>•</span>
+<span class="text-primary">$14.99</span>
+</div>
+</div>
+</div>
+<div class="flex items-center space-x-8">
+<div class="text-right">
+<div class="text-label-caps text-on-surface-variant mb-1">SUCCESS SCORE</div>
+<div class="font-stat-lg text-stat-lg text-primary">84%</div>
+</div>
+<div class="w-px h-10 bg-outline-variant"></div>
+<div class="text-right">
+<div class="text-label-caps text-on-surface-variant mb-1">NET SENTIMENT</div>
+<div class="font-stat-lg text-stat-lg text-semantic-success">+72%</div>
+</div>
+<div class="w-px h-10 bg-outline-variant"></div>
+<div class="text-right">
+<div class="text-label-caps text-on-surface-variant mb-1">24H PEAK CCU</div>
+<div class="font-stat-lg text-stat-lg text-on-surface">3,247</div>
+</div>
+</div>
+</div>
+<!-- Sub Nav -->
+<div class="flex space-x-6">
+<a class="text-primary border-b-2 border-primary pb-3 font-body-md text-body-md font-bold" href="#">Overview</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors pb-3 font-body-md text-body-md" href="#">Reviews</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors pb-3 font-body-md text-body-md" href="#">Player Activity</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors pb-3 font-body-md text-body-md" href="#">Market</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors pb-3 font-body-md text-body-md" href="#">Competitors</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors pb-3 font-body-md text-body-md" href="#">Updates</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors pb-3 font-body-md text-body-md" href="#">Recommendations</a>
+</div>
+</div>
+<!-- Section 1: Hero KPI Strip -->
+<div class="flex justify-between items-end mb-4 mt-8">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Intelligence Matrix</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Complete predictive modeling and attribution breakdown</p>
+</div>
+<button class="flex items-center space-x-2 px-3 py-1.5 border border-outline-variant rounded bg-surface-variant hover:bg-surface-container-high transition-colors text-body-sm font-body-sm">
+<span>Export Full Report</span>
+<span class="material-symbols-outlined text-[16px]">arrow_outward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+<!-- Card 1 -->
+<div class="bg-surface border border-outline-variant rounded-lg p-5 flex flex-col justify-between h-[140px]">
+<div class="flex justify-between items-start">
+<span class="text-label-caps text-on-surface-variant">SUCCESS SCORE</span>
+<span class="px-2 py-0.5 bg-surface-variant border border-outline-variant rounded text-label-caps text-primary">Model v2.1</span>
+</div>
+<div>
+<div class="font-display-lg text-display-lg text-primary mb-1">84%</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">Last updated 2h ago</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface border border-outline-variant rounded-lg p-5 flex flex-col justify-between h-[140px]">
+<div class="flex justify-between items-start">
+<span class="text-label-caps text-on-surface-variant">NET SENTIMENT</span>
+<span class="px-2 py-0.5 bg-semantic-success/15 rounded-full text-label-caps text-semantic-success border border-semantic-success/20">Positive</span>
+</div>
+<div>
+<div class="font-display-lg text-display-lg text-semantic-success mb-1">+72%</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">12,847 reviews analyzed</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface border border-outline-variant rounded-lg p-5 flex flex-col justify-between h-[140px]">
+<div class="flex justify-between items-start">
+<span class="text-label-caps text-on-surface-variant">PLAYER ACTIVITY</span>
+</div>
+<div>
+<div class="font-display-lg text-display-lg text-primary mb-1">3,247</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">24h peak • 30d avg: 2,891</div>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface border border-outline-variant rounded-lg p-5 flex flex-col justify-between h-[140px]">
+<div class="flex justify-between items-start">
+<span class="text-label-caps text-on-surface-variant">COMMERCIAL BRACKET</span>
+</div>
+<div>
+<div class="font-stat-lg text-stat-lg text-primary mb-1">Platinum</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">Est. 3-5M owners • $50-100M revenue</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

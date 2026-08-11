@@ -127,6 +127,44 @@ export interface ReviewIntelligenceBundle {
   is_processed: boolean;
 }
 
+// ─── Competitor Intelligence Types (Phase 3) ──────────────────────────────────
+
+export interface CompetitorItem {
+  rank: number;
+  app_id: number;
+  name: string;
+  similarity_score: number;
+  similarity_pct: number;
+  shared_tags: string[];
+  price_usd: string | null;
+  price_delta_usd: number | null;
+  positive_reviews: number;
+  negative_reviews: number;
+  review_pct: number | null;
+  header_image: string | null;
+  genres: Array<{ id: string; description: string }> | null;
+}
+
+export interface CompetitorSourceGame {
+  app_id: number;
+  name: string;
+  header_image: string | null;
+  final_price_usd: string | null;
+  positive_reviews: number;
+  negative_reviews: number;
+  review_pct: number | null;
+  genres: Array<{ id: string; description: string }> | null;
+}
+
+export interface CompetitorList {
+  app_id: number;
+  source_game: CompetitorSourceGame;
+  competitors: CompetitorItem[];
+  total: number;
+  model_name: string;
+  is_processed: boolean;
+}
+
 // ─── API error class ──────────────────────────────────────────────────────────
 
 export class SteamIQApiError extends Error {
@@ -142,14 +180,10 @@ export class SteamIQApiError extends Error {
 
 // ─── Base fetch helper ────────────────────────────────────────────────────────
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
-if (!BASE_URL && typeof window !== "undefined") {
-  console.error(
-    "[SteamIQ] NEXT_PUBLIC_API_URL is not set. " +
-      "Copy .env.example to .env.local and set NEXT_PUBLIC_API_URL."
-  );
-}
+const BASE_URL =
+  (typeof window === "undefined"
+    ? process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://backend:8000"
+    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001");
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
@@ -209,6 +243,14 @@ export const api = {
    */
   async getReviews(appId: number): Promise<ReviewIntelligenceBundle> {
     return apiFetch<ReviewIntelligenceBundle>(`/api/v1/games/${appId}/reviews`);
+  },
+
+  /**
+   * Get Competitor Discovery bundle by Steam app_id (Phase 3).
+   * GET /api/v1/games/{appId}/competitors?limit={limit}
+   */
+  async getCompetitors(appId: number, limit = 10): Promise<CompetitorList> {
+    return apiFetch<CompetitorList>(`/api/v1/games/${appId}/competitors?limit=${limit}`);
   },
 
   /**

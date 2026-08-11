@@ -1,6 +1,5 @@
 FROM python:3.11-slim
 
-# Set working directory — absolute, never relative (ADR 0001, Decision 8)
 WORKDIR /app
 
 # Install system deps needed for psycopg2 build
@@ -9,15 +8,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python deps first (layer cache)
-COPY requirements.txt .
-RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt
+# Set up user and HuggingFace cache directory
+ENV HF_HOME=/home/steamiq/.cache/huggingface
+RUN adduser --disabled-password --gecos "" steamiq && \
+    mkdir -p /home/steamiq/.cache/huggingface && \
+    chown -R steamiq:steamiq /home/steamiq /app
+
+# Copy and install Python deps from pyproject.toml first (layer cache)
+COPY pyproject.toml README.md ./
+RUN pip install --default-timeout=120 --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu .
+
+# Pre-download sentence transformer model into HF_HOME
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')" && \
+    chown -R steamiq:steamiq /home/steamiq/.cache
 
 # Copy application code
 COPY . .
+RUN chown -R steamiq:steamiq /app
 
-# Non-root user for security
-RUN adduser --disabled-password --gecos "" steamiq
 USER steamiq
 
 # Expose port

@@ -15,7 +15,7 @@ export
 # ─── Setup ────────────────────────────────────────────────────────────────────
 setup: ## Install all dependencies and run DB migrations
 	@echo ">>> Installing backend dependencies..."
-	cd $(BACKEND) && $(PIP) install -r requirements.txt
+	cd $(BACKEND) && $(PIP) install -e ".[dev]"
 	@echo ">>> Running Alembic migrations..."
 	cd $(BACKEND) && $(ALEMBIC) upgrade head
 	@echo ">>> Installing frontend dependencies..."
@@ -35,13 +35,14 @@ ingest: ## Ingest a single game: make ingest APPID=1145360
 	cd $(BACKEND) && $(PYTHON) -m jobs.ingest_games --appid $(APPID)
 
 seed: ## Ingest a curated set of known games for local dev
-	@echo ">>> Seeding known games..."
-	cd $(BACKEND) && $(PYTHON) -m jobs.ingest_games --appid 1145360  # Hollow Knight
-	cd $(BACKEND) && $(PYTHON) -m jobs.ingest_games --appid 1091500  # Cyberpunk 2077
-	cd $(BACKEND) && $(PYTHON) -m jobs.ingest_games --appid 292030   # The Witcher 3
-	cd $(BACKEND) && $(PYTHON) -m jobs.ingest_games --appid 413150   # Stardew Valley
-	cd $(BACKEND) && $(PYTHON) -m jobs.ingest_games --appid 570      # Dota 2
+	@echo ">>> Seeding benchmark catalog (fast mode: 10 games)..."
+	cd $(BACKEND) && $(PYTHON) -m jobs.seed_catalog --limit 10
 	@echo "✅  Seed complete."
+
+seed-catalog: ## Ingest full 30-game benchmark catalog for Phase 3 embeddings
+	@echo ">>> Seeding full benchmark catalog (30 games)..."
+	cd $(BACKEND) && $(PYTHON) -m jobs.seed_catalog --all
+	@echo "✅  Full catalog seed complete."
 
 process-reviews: ## Process NLP reviews for a game: make process-reviews APPID=1145360
 	@if [ -z "$(APPID)" ]; then echo "❌  Usage: make process-reviews APPID=<steam_app_id>"; exit 1; fi
@@ -49,6 +50,15 @@ process-reviews: ## Process NLP reviews for a game: make process-reviews APPID=1
 
 process-reviews-all: ## Process NLP reviews for all ingested games
 	cd $(BACKEND) && $(PYTHON) -m jobs.process_reviews --all
+
+process-embeddings: ## Generate pgvector embeddings for a single game: make process-embeddings APPID=367520
+	@if [ -z "$(APPID)" ]; then echo "❌  Usage: make process-embeddings APPID=<steam_app_id>"; exit 1; fi
+	cd $(BACKEND) && $(PYTHON) -m jobs.process_embeddings --app-id $(APPID)
+
+process-embeddings-all: ## Generate pgvector embeddings and competitor rankings for all games
+	@echo ">>> Processing pgvector embeddings for all games..."
+	cd $(BACKEND) && $(PYTHON) -m jobs.process_embeddings --all
+	@echo "✅  Competitor embeddings complete."
 
 # ─── Development ──────────────────────────────────────────────────────────────
 dev: ## Start backend (uvicorn --reload) and frontend (next dev) locally

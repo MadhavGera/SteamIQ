@@ -31,6 +31,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector
 
 from db.base import Base
 
@@ -427,3 +428,80 @@ class FeatureReviewSummary(Base):
 
     def __repr__(self) -> str:
         return f"<FeatureReviewSummary app_id={self.app_id}>"
+
+
+# ---------------------------------------------------------------------------
+# model_game_embeddings (Phase 3)
+# ---------------------------------------------------------------------------
+
+class ModelGameEmbedding(Base):
+    """
+    Dense semantic vector representation of game metadata, tags, and review themes.
+    Written by jobs/process_embeddings.py (Phase 3).
+    """
+    __tablename__ = "model_game_embeddings"
+    __table_args__ = (
+        UniqueConstraint("app_id", "model_name", name="uq_game_embedding_model"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    model_name: Mapped[str] = mapped_column(String(128), nullable=False, default="all-MiniLM-L6-v2")
+    model_version: Mapped[str] = mapped_column(String(64), nullable=False, default="1.0.0")
+    embedding = mapped_column(Vector(384), nullable=False)
+    text_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    game: Mapped["RawGame"] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<ModelGameEmbedding app_id={self.app_id} model={self.model_name}>"
+
+
+# ---------------------------------------------------------------------------
+# serving_similar_games (Phase 3)
+# ---------------------------------------------------------------------------
+
+class ServingSimilarGame(Base):
+    """
+    Precomputed top-N closest competitor games by vector cosine similarity.
+    Written by jobs/process_embeddings.py (Phase 3).
+    Read by api/competitors.py (ADR 0001, Decision 2).
+    """
+    __tablename__ = "serving_similar_games"
+    __table_args__ = (
+        UniqueConstraint("source_app_id", "target_app_id", name="uq_serving_similar_pair"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    source_app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    target_app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    similarity_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)  # 0.0000 - 1.0000
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)                      # 1, 2, 3...
+    shared_tags: Mapped[Optional[dict]] = mapped_column(JSONB)                      # ["Metroidvania", "Difficult", ...]
+    price_delta_usd: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))      # target price - source price
+
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    source_game: Mapped["RawGame"] = relationship("RawGame", foreign_keys=[source_app_id], lazy="noload")
+    target_game: Mapped["RawGame"] = relationship("RawGame", foreign_keys=[target_app_id], lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<ServingSimilarGame {self.source_app_id} -> {self.target_app_id} sim={self.similarity_score}>"
+

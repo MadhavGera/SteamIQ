@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SteamIQ - Game Intelligence</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-container": "#0f4a73",
+                    "primary-container": "#5ec2f0",
+                    "surface-bright": "#293b4a",
+                    "surface-container-lowest": "#00101c",
+                    "on-background": "#d1e5f8",
+                    "outline": "#889299",
+                    "on-primary-container": "#004e68",
+                    "outline-variant": "#3e484e",
+                    "surface-container-low": "#0a1d2b",
+                    "surface-container": "#0e212f",
+                    "primary-fixed-dim": "#73d1ff",
+                    "tertiary-fixed-dim": "#ffb86c",
+                    "tertiary-container": "#f5a64c",
+                    "surface-container-high": "#192c3a",
+                    "surface-dim": "#021522",
+                    "on-tertiary-fixed": "#2c1600",
+                    "on-secondary-fixed-variant": "#0f4a73",
+                    "error": "#ffb4ab",
+                    "inverse-primary": "#006687",
+                    "on-secondary-container": "#8ab9e9",
+                    "secondary": "#9bcbfb",
+                    "on-surface-variant": "#bec8cf",
+                    "on-tertiary": "#492900",
+                    "secondary-fixed-dim": "#9bcbfb",
+                    "on-error-container": "#ffdad6",
+                    "on-secondary": "#003354",
+                    "inverse-on-surface": "#203241",
+                    "tertiary": "#ffc891",
+                    "tertiary-fixed": "#ffdcbc",
+                    "primary-fixed": "#c1e8ff",
+                    "on-primary-fixed-variant": "#004d67",
+                    "on-primary-fixed": "#001e2b",
+                    "secondary-fixed": "#cee5ff",
+                    "background": "#021522",
+                    "surface-tint": "#73d1ff",
+                    "on-tertiary-container": "#6a3d00",
+                    "primary": "#98dbff",
+                    "error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#683c00",
+                    "surface": "#021522",
+                    "on-error": "#690005",
+                    "surface-container-highest": "#243745",
+                    "inverse-surface": "#d1e5f8",
+                    "on-primary": "#003548",
+                    "surface-variant": "#243745",
+                    "on-surface": "#d1e5f8",
+                    "on-secondary-fixed": "#001d33"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "grid-max-width": "1440px",
+                    "card-padding-desktop": "24px",
+                    "card-padding-mobile": "16px",
+                    "scale-12": "12px",
+                    "scale-4": "4px",
+                    "scale-8": "8px",
+                    "scale-64": "64px",
+                    "scale-48": "48px",
+                    "scale-16": "16px",
+                    "scale-24": "24px",
+                    "scale-32": "32px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "stat-md": [
+                            "JetBrains Mono"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "Inter"
+                    ],
+                    "label-caps": [
+                            "Inter"
+                    ],
+                    "headline-md": [
+                            "Inter"
+                    ],
+                    "headline-sm": [
+                            "Inter"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ],
+                    "body-sm": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Inter"
+                    ],
+                    "stat-lg": [
+                            "JetBrains Mono"
+                    ]
+            },
+            "fontSize": {
+                    "stat-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "56px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "label-caps": [
+                            "11px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-sm": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-lg": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "stat-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+          },
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex flex-col antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar Shared Component -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-grid-max-width mx-auto bg-background dark:bg-background h-16 border-b border-outline-variant px-6">
+<div class="flex items-center gap-8">
+<!-- Brand Logo -->
+<a class="flex items-center gap-2 text-headline-md font-headline-md font-bold text-on-surface dark:text-on-surface hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">speed</span>
+                SteamIQ
+            </a>
+<!-- Navigation Links (Desktop) -->
+<nav class="hidden md:flex h-full items-end gap-6">
+<!-- Search/Landing - Active -->
+<a class="text-primary border-b-2 border-primary pb-5 font-headline-sm text-headline-sm opacity-80 transition-all hover:bg-surface-container-low dark:hover:bg-surface-container-high px-2 rounded-t-sm" href="#">
+                    Search/Landing
+                </a>
+<!-- Game Intelligence - Inactive -->
+<a class="text-on-surface-variant hover:text-on-surface transition-colors pb-5 font-body-md text-body-md hover:bg-surface-container-low dark:hover:bg-surface-container-high px-2 rounded-t-sm" href="#">
+                    Game Intelligence
+                </a>
+<!-- Compare Games - Inactive -->
+<a class="text-on-surface-variant hover:text-on-surface transition-colors pb-5 font-body-md text-body-md hover:bg-surface-container-low dark:hover:bg-surface-container-high px-2 rounded-t-sm" href="#">
+                    Compare Games
+                </a>
+<!-- Market Explorer - Inactive -->
+<a class="text-on-surface-variant hover:text-on-surface transition-colors pb-5 font-body-md text-body-md hover:bg-surface-container-low dark:hover:bg-surface-container-high px-2 rounded-t-sm" href="#">
+                    Market Explorer
+                </a>
+<!-- Ask SteamIQ - Inactive -->
+<a class="text-on-surface-variant hover:text-on-surface transition-colors pb-5 font-body-md text-body-md hover:bg-surface-container-low dark:hover:bg-surface-container-high px-2 rounded-t-sm flex items-center gap-1.5" href="#">
+                    Ask SteamIQ
+                    <span class="bg-surface-container-highest text-on-surface px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider">AI</span>
+</a>
+</nav>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-4">
+<a class="hidden md:block text-on-surface-variant hover:text-on-surface font-body-md text-body-md transition-colors" href="#">Documentation</a>
+<a class="px-4 py-2 border border-outline-variant text-on-surface font-headline-sm text-headline-sm font-bold rounded hover:bg-surface-container-low transition-colors text-sm" href="#">Sign In</a>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-grow pt-32 pb-24 px-4 sm:px-6 md:px-8 max-w-[1440px] mx-auto w-full flex flex-col items-center">
+<!-- Hero Section -->
+<div class="w-full max-w-4xl flex flex-col items-center text-center mb-16">
+<!-- Badge -->
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container border border-outline-variant rounded-full mb-8">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">AI-POWERED STEAM ANALYTICS PLATFORM</span>
+</div>
+<!-- Headline -->
+<h1 class="font-display-lg text-display-lg text-on-surface mb-6">Game Intelligence, Powered by AI</h1>
+<!-- Subheadline -->
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mb-12">
+                Turn Steam reviews, player data, and market signals into explainable decisions.<br/>
+                Discover what gamers actually want before you write a single line of code.
+            </p>
+<!-- Search Bar Component -->
+<div class="w-full max-w-3xl bg-surface border border-outline-variant rounded-lg p-2 flex items-center focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all shadow-sm mb-8">
+<span class="material-symbols-outlined text-on-surface-variant ml-3 mr-2" style="font-variation-settings: 'FILL' 0;">search</span>
+<input class="flex-grow bg-transparent border-none text-on-surface font-body-md focus:ring-0 focus:outline-none placeholder-on-surface-variant py-2" placeholder="Search by game name or Steam App ID..." type="text"/>
+<button class="bg-primary text-background font-headline-sm text-sm font-bold py-2.5 px-6 rounded hover:bg-surface-tint transition-colors flex items-center gap-2">
+                    Analyze Game
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+<!-- Popular Queries -->
+<div class="flex flex-col items-center gap-4">
+<span class="font-label-caps text-label-caps text-outline uppercase tracking-wider">POPULAR QUERIES</span>
+<div class="flex flex-wrap justify-center gap-3">
+<button class="px-4 py-1.5 bg-surface border border-outline-variant rounded-full hover:border-primary hover:text-primary transition-colors flex items-center gap-2 group">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Hollow Knight</span>
+<span class="font-stat-md text-xs text-on-surface-variant opacity-60">367520</span>
+</button>
+<button class="px-4 py-1.5 bg-surface border border-outline-variant rounded-full hover:border-primary hover:text-primary transition-colors flex items-center gap-2 group">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Hades</span>
+<span class="font-stat-md text-xs text-on-surface-variant opacity-60">1145360</span>
+</button>
+<button class="px-4 py-1.5 bg-surface border border-outline-variant rounded-full hover:border-primary hover:text-primary transition-colors flex items-center gap-2 group">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Celeste</span>
+<span class="font-stat-md text-xs text-on-surface-variant opacity-60">504230</span>
+</button>
+<button class="px-4 py-1.5 bg-surface border border-outline-variant rounded-full hover:border-primary hover:text-primary transition-colors flex items-center gap-2 group">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Stardew Valley</span>
+<span class="font-stat-md text-xs text-on-surface-variant opacity-60">413150</span>
+</button>
+<button class="px-4 py-1.5 bg-surface border border-outline-variant rounded-full hover:border-primary hover:text-primary transition-colors flex items-center gap-2 group">
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Dead Cells</span>
+<span class="font-stat-md text-xs text-on-surface-variant opacity-60">588650</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Empty State Module -->
+<div class="w-full max-w-4xl bg-surface border border-outline-variant rounded-xl p-16 flex flex-col items-center justify-center text-center mt-8">
+<div class="w-16 h-16 bg-surface-container-highest rounded-full flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-3xl text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">database</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-3">No Games Ingested Yet</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-xl">
+                Search for a game above to start your first analysis. SteamIQ will immediately spin up an AI pipeline to harvest reviews and calculate sentiment signals.
+            </p>
+</div>
+</main>
+</body></html>
