@@ -116,11 +116,6 @@ export default function LandingPage() {
     <div className="container" style={{ paddingTop: "24px", paddingBottom: "64px" }}>
       {/* ── Hero Section (Stitch Design) ── */}
       <section className="hero-wrapper">
-        <div className="hero-tag">
-          <span className="hero-tag__dot" />
-          AI-POWERED STEAM ANALYTICS PLATFORM
-        </div>
-
         <h1 className="hero-title">
           Game Intelligence, Powered by AI
         </h1>

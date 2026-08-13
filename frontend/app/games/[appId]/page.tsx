@@ -571,9 +571,6 @@ export default async function GameDetailPage({
         {/* ── TABS 3, 4, 6, 7 (SCHEDULED ROADMAP STUBS) ── */}
         {hasData && currentTab !== "overview" && currentTab !== "reviews" && currentTab !== "competitors" && (
           <div className="card" style={{ padding: "64px 24px", textAlign: "center", marginTop: "24px" }}>
-            <span className="badge-pill badge-pill--neutral" style={{ color: "var(--accent-light)", marginBottom: "16px" }}>
-              Roadmap Feature
-            </span>
             <h2 style={{ fontSize: "22px", fontWeight: 700, margin: "8px 0" }}>
               {tabs.find((t) => t.id === currentTab)?.label ?? "Intelligence Module"}
             </h2>
