@@ -15,14 +15,12 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
-import sys
-import time
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from core.config import settings
 from db.models import FeatureReviewTopic, ModelGameEmbedding, RawGame, ServingSimilarGame
@@ -35,7 +33,7 @@ MODEL_VERSION = "1.0.0"
 class ProcessEmbeddingsJob(BaseJob):
     job_name = "process_embeddings"
 
-    def __init__(self, *, app_id: Optional[int] = None, all_games: bool = False, dry_run: bool = False) -> None:
+    def __init__(self, *, app_id: int | None = None, all_games: bool = False, dry_run: bool = False) -> None:
         super().__init__(dry_run=dry_run)
         self.app_id = app_id
         self.all_games = all_games

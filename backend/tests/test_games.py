@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import RawGame
 
-
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 async def _insert_game(session: AsyncSession, **overrides) -> RawGame:

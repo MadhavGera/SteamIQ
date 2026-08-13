@@ -7,12 +7,36 @@ Integration tests that require Postgres use the STEAMIQ_TEST_DATABASE_URL env va
 from __future__ import annotations
 
 import os
-import pytest
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from db.base import Base, get_db
+import pytest
+from httpx import ASGITransport, AsyncClient
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import BigInteger
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.compiler import compiles
+
 from core.app import create_app
+from db.base import Base, get_db
+
+
+# SQLite type mappings for PostgreSQL-specific types during in-memory testing
+@compiles(BigInteger, "sqlite")
+def compile_bigint_sqlite(type_, compiler, **kw):
+    return "INTEGER"
+
+@compiles(JSONB, "sqlite")
+def compile_jsonb_sqlite(type_, compiler, **kw):
+    return "JSON"
+
+@compiles(PG_UUID, "sqlite")
+def compile_uuid_sqlite(type_, compiler, **kw):
+    return "TEXT"
+
+@compiles(Vector, "sqlite")
+def compile_vector_sqlite(type_, compiler, **kw):
+    return "TEXT"
 
 # Use SQLite for unit tests — fast and no Postgres needed
 TEST_DATABASE_URL = os.getenv(
@@ -37,9 +61,12 @@ async def test_engine():
 
 @pytest.fixture
 async def db_session(test_engine):
-    SessionLocal = async_sessionmaker(test_engine, expire_on_commit=False)
-    async with SessionLocal() as session:
-        yield session
+    async with test_engine.connect() as conn:
+        trans = await conn.begin()
+        SessionLocal = async_sessionmaker(conn, expire_on_commit=False)
+        async with SessionLocal() as session:
+            yield session
+        await trans.rollback()
 
 
 @pytest.fixture

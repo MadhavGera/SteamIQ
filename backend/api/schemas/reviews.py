@@ -5,7 +5,6 @@ Decoupled from ORM models. Returned by api/reviews.py.
 """
 from __future__ import annotations
 
-from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
@@ -34,7 +33,7 @@ class ReviewTopicSchema(BaseModel):
     label: str = Field(..., description="User-facing topic name (e.g. Combat & Boss Design)")
     review_count: int = Field(0, description="Number of reviews mentioning this topic")
     sentiment_score: float = Field(0.5, description="Topic sentiment score 0.0 - 1.0")
-    keywords: Optional[list[str]] = Field(default=None, description="Top keywords in cluster")
+    keywords: list[str] | None = Field(default=None, description="Top keywords in cluster")
 
 
 class LovedFeatureSchema(BaseModel):

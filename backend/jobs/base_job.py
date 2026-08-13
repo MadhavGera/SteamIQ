@@ -33,6 +33,11 @@ class BaseJob:
         self._setup_logging()
 
     def _setup_logging(self) -> None:
+        if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
+            try:
+                sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
         if not logging.root.handlers:
             logging.basicConfig(
                 level=logging.INFO,

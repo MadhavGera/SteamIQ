@@ -10,7 +10,6 @@ Or via Makefile:
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 
 # ─── Load .env before anything else reads env vars ────────────────────────────

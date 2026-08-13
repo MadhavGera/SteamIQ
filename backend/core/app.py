@@ -62,9 +62,9 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
 
     # ── API routers ────────────────────────────────────────────────────────────
+    from api.competitors import router as competitors_router
     from api.games import router as games_router
     from api.reviews import router as reviews_router
-    from api.competitors import router as competitors_router
 
     app.include_router(games_router, prefix="/api/v1")
     app.include_router(reviews_router, prefix="/api/v1")

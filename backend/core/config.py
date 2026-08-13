@@ -10,9 +10,7 @@ ADR 0001, Decision 4: CORS_ALLOWED_ORIGINS is always an explicit list, never "*"
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Annotated
 
-from pydantic import AnyUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

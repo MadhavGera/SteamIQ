@@ -21,8 +21,8 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
 # Import Base (which imports all models via db/__init__.py)
-from db.base import Base  # noqa: E402
 import db.models  # noqa: F401, E402 — registers all models with Base.metadata
+from db.base import Base  # noqa: E402
 
 # ─── Alembic Config ───────────────────────────────────────────────────────────
 config = context.config

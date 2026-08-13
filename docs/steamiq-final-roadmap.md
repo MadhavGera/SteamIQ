@@ -1,158 +1,174 @@
-# SteamIQ — Final Project Roadmap
+# SteamIQ — Final Project Roadmap v2 (Player + Developer)
 
-This supersedes the phasing in the original spec (§37–38). Same seven build phases, now with Phase 0 added and every phase carrying its production revisions baked in from the start rather than bolted on later. Each phase lists: goal, deliverables, exit criteria (what "done" means before moving on), and the specific anti-pattern from your own past projects to watch for at that stage.
-
----
-
-## Phase 0 — Architecture & ADR
-**Goal:** Lock in the decisions that are expensive to retrofit, before any code is written.
-
-**Deliverables**
-- `design-docs/steamiq/0001-architecture-blueprint.md` written using your `ai-mill` ADR template (skeleton already drafted in the prior review — fill it in, don't restart it)
-- Data-zone table map finalized: every table in §13 assigned to `raw_*` / `feature_*` / `serving_*` / `mart_*` / `model_*`
-- `model_runs` schema defined (id, model_name, stage, dataset_version, hyperparameters, metrics, artifact_path) with the stage enum: `candidate → staging → production → archived`
-- Repo skeleton created: `frontend/`, `backend/`, `ml/`, `pipelines/`, `core/` (shared FastAPI app factory + `ApiResponse` envelope + error handlers), `docs/`
-- One-page "MVP vs Final vs Stretch" scope table committed to the repo (from §38) so scope creep has a written reference to check against
-
-**Exit criteria:** ADR merged; every downstream phase can point to it instead of re-deciding. No API or job code written yet.
-
-**Watch for:** skipping this because it "feels like paperwork." This is the exact step MartechAI-Deployment_Friendly had and its prototype predecessor (Martech-AI) didn't — it's the difference between a planned migration and an ad hoc one.
+**Status:** Proposed amendment to `docs/steamiq-final-roadmap.md` (v1) and `docs/steamiq-0002-ui-ux-blueprint.md`
+**Supersedes:** v1 roadmap phase sequence stays intact (Phase 0–7 unchanged in order). This document only changes *what* Phases 5 and 6 deliver, and amends the locked IA. Phases 0–4 are untouched — do not re-open them.
 
 ---
 
-## Phase 1 — Foundation
-**Goal:** Search a game, see reliably stored data, on a schema that won't need renaming later.
+## 0. What changed and why
 
-**Deliverables**
-- PostgreSQL schema created directly with zone-prefixed table names (`raw_games`, `raw_reviews`, `raw_player_snapshots`, `raw_price_history`, ...) via SQLAlchemy + Alembic migrations from the first table
-- Steam API + SteamSpy ingestion jobs, writing only to `raw_*`
-- `core/` shared library: `create_app()` wiring CORS with an **explicit origin allowlist** (never `["*"]`), the `ApiResponse` envelope, generic error handlers, `/health`
-- FastAPI skeleton with `api/games.py` as the only router so far, reading straight from `raw_*` for this phase only (acceptable stopgap — flagged for removal once `mart_game_overview` exists in Phase 5)
-- Next.js skeleton, `NEXT_PUBLIC_API_URL` env var wired from the first component (never a hardcoded localhost URL)
-- Docker Compose: Postgres + backend + frontend
+The player-facing expansion is a good addition **in principle** — one shared Game Intelligence Engine with two audiences on top of it, not two products. That's consistent with the architecture you already committed to in ADR 0001 (single Postgres, single embedding space, zone-prefixed tables everyone reads through `serving_*`/`mart_*`).
 
-**Exit criteria:** search a game by name, see stored metadata rendered end to end through Docker Compose.
+But the original expansion proposal designs it as if starting from scratch, which produces a second top-level IA (`Explore` vs `Developer Studio`) and several "new" pages that duplicate tabs your `0002-ui-ux-blueprint.md` already locked (pricing folded into Market, competitors already a tab, no separate Similar Games page). Implementing it as written would mean silently violating your own locked-IA golden rule instead of amending it.
 
-**Watch for:** Lexflow-AI's CWD-dependent data paths and MC4-Final's hardcoded backend URL. Both are one-line mistakes made in week one that cost a debugging session months later.
+**Decision:** integrate the player experience as a **mode toggle on the existing IA**, reusing existing tables wherever possible, and add exactly one new table for the one genuinely new feature (game-profile matching). No new phase is inserted; the work lands in Phase 5 (materialization/decision layer) and lightly touches Phase 6 (assistant).
 
 ---
 
-## Phase 2 — NLP Core
-**Goal:** SteamIQ becomes a viable project — reviews turn into structured intelligence.
+## 1. Revised architecture (shared engine, two decision outputs)
 
-**Deliverables**
-- `feature_review_sentiment`, `feature_review_topics`, `feature_review_complaints`, `feature_review_features` tables, written only by NLP pipeline jobs (never an API handler)
-- Sentiment: RoBERTa/DistilBERT via Hugging Face Transformers, batched in a job, not inline
-- Topic Discovery: BERTopic pipeline, wrapped in a `BERTOPIC_AVAILABLE` try/except with a TF-IDF+KMeans fallback so a broken install doesn't block the container
-- Complaint detection: zero-shot classification bootstrap, multi-label
-- Feature appreciation (loved features): embeddings + HDBSCAN, same graceful-degradation wrapper as BERTopic
-- Review summarization: hierarchical (representative-review selection → topic grouping → LLM/BART summarization), queued as a job, never synchronous in a request
-- Job runner in place: RQ + Redis, invoked via a Makefile target (`make process-reviews`) mirroring Martech-AI's `make train-all` DX pattern
-- Review Intelligence UI (§22) reads only from `feature_*` tables
+```
+                         DATA SOURCES
+                              │
+              ┌───────────────┼───────────────┐
+           Steam API       Reviews          SteamSpy
+              │               │                 │
+          raw_games      raw_reviews    raw_player_snapshots
+                                          raw_price_history
+                              │
+                              ▼
+                    FEATURE PIPELINES (Phase 2–4)
+                              │
+       ┌──────────────────────┼───────────────────────┐
+    feature_review_*      model_game_embeddings   feature_game_features
+    (sentiment/topics/     serving_similar_games    feature_market_features
+     complaints/loved)                               model_runs / serving_predictions
+                              │
+                              ▼
+                   DECISION / MART LAYER (Phase 5)
+                              │
+     ┌───────────┬────────────┼────────────┬───────────────┐
+mart_game_    mart_trends  mart_opportunity  mart_game_match  serving_recommendations
+overview                    _scores          _profile  ← NEW
+                              │
+                              ▼
+                   API (reads serving_*/mart_* only)
+                              │
+                ┌─────────────┴─────────────┐
+           PLAYER MODE                  DEVELOPER MODE
+        (same Game Intelligence      (same Game Intelligence page
+         page, framing toggled)       + dev-only global pages)
+                              │
+                        Ask SteamIQ (Phase 6, user_mode-aware)
+```
 
-**Exit criteria:** for a seeded game with real review data, sentiment/topics/complaints/loved-features/summary all render from precomputed tables with no live NLP call in the request path.
-
-**Watch for:** letting BERTopic or embedding generation run inside an API handler "just for now" — this is precisely how Martech-AI's `customer_profiling/main.py` grew to 93KB.
-
----
-
-## Phase 3 — Similarity + Competitors
-**Goal:** Competitor discovery, the feature that most differentiates SteamIQ from a generic review analyzer.
-
-**Deliverables**
-- `model_game_embeddings` table (sentence-transformer vectors over description + genres/tags + review topics)
-- Vector index: pgvector inside the existing Postgres instance (preferred over adding FAISS as a second system unless query volume later proves it's needed — avoids Lexflow-AI's dual-vector-store maintenance burden)
-- Similarity API reading from a `serving_similar_games` table populated by a scheduled job, not computed per request
-- Competitor Analysis UI (§23) wired to real data
-
-**Exit criteria:** given any seeded game, return its top-N competitors with similarity scores, served from a precomputed table.
-
----
-
-## Phase 4 — Predictive ML
-**Goal:** One rigorously-designed predictive model, done properly — this is the non-negotiable ML core, not a checklist item.
-
-**Deliverables**
-- `feature_game_features`, `feature_market_features` tables (price, genre, tags, developer/publisher history, review velocity, competitor density, sentiment — as in §32) built with **enforced temporal leakage boundaries**: a `feature_cutoff_date` parameter that makes it structurally impossible to feed post-cutoff data into training
-- Success Prediction: **XGBoost + LightGBM ensemble, tuned with Optuna**, not a single model — this is the default now, not a stretch upgrade
-- Baseline comparison table populated for real (Logistic Regression → Random Forest → XGBoost → XGBoost+LightGBM ensemble), matching the format in §18
-- MLflow wired from the *first* training run, not added retroactively
-- `model_runs` table populated on every training run; `evaluate_champion()`-style promotion logic (ported from AutoModelX's `registry.py`) auto-promotes the best eligible run per metric direction
-- Every row written to `serving_predictions` carries `model_run_id`, so any score is traceable to the exact model version that produced it
-- SHAP wired in for this model as soon as it's trained, not deferred to Phase 5, since explainability and the model should be developed together
-- Revenue Category and Activity/Retention forecasting follow the same ensemble+registry pattern once Success Prediction validates the pipeline
-
-**Exit criteria:** a success score for a seeded game, generated by a promoted `production`-stage model, explainable via SHAP, with the model run traceable in MLflow and `model_runs`.
-
-**Watch for:** treating the ensemble+HPO step or the registry as later polish. Both are the same amount of work now as retrofitting them into a system that already has predictions flowing — cheaper to do once, correctly, here.
+No second vector store, no second ingestion path, no second nav shell. The mode toggle changes *labels, framing, and which tabs render* — not which system answers the question.
 
 ---
 
-## Phase 5 — Decision Intelligence
-**Goal:** Turn stored intelligence into materialized, dashboard-ready insight — and close the loop from data to recommendation.
+## 2. IA amendment (proposed replacement for §1 of `0002-ui-ux-blueprint.md`)
 
-**Deliverables**
-- `mart_game_overview`, `mart_trends`, `mart_opportunity_scores` populated by a scheduled materialization job — the Game Intelligence Page (§21) and Main Dashboard (§20) are repointed from `raw_*`/`feature_*` (Phase 1 stopgap) to these `mart_*` tables
-- Opportunity Finder: weighted-scoring formula as originally specified (§8) — kept as analytics, not upgraded to ML until there's real historical performance data to learn weights from
-- Pricing Intelligence: market-based comparable-range output (§5.3), no causal price-elasticity claims
-- Update Impact Tracker: before/after windows, explicitly labeled "observed/correlated," same discipline extended to the What-If Simulator's scenario framing (§39) if built
-- Recommendation Engine: hybrid rules + model-output system (§10), reading from `serving_predictions`/`feature_*`, writing to `serving_recommendations`
-- Recommendation Center UI (§26) built as its own dedicated view, not folded into individual charts
+This must be committed as an explicit amendment to that doc before frontend work starts — its own golden rule requires that, and it's currently marked "locked."
 
-**Exit criteria:** the dashboard and game page load entirely from `mart_*`/`serving_*` tables — zero live aggregation or model inference triggered by a page render.
+```
+SteamIQ
+│
+├── Search / Landing
+├── Dashboard
+│
+├── Game Intelligence  (per game, tabbed — shared by both modes)
+│   ├── Overview
+│   ├── Reviews              — Review Intelligence
+│   ├── Player Activity      — Player Behaviour / activity
+│   ├── Market               — Price + Success/Revenue Intelligence
+│   │                           Player mode: "buy now or wait" framing
+│   │                           Dev mode: competitor price positioning
+│   ├── Competitors          — Similarity Engine
+│   │                           Player mode label: "Similar Games"
+│   │                           Dev mode label: "Competitors" (+ market presence column)
+│   ├── Match                — NEW. Player mode only. "Is this for me?"
+│   ├── Updates               — Dev mode only (Update Impact Tracker)
+│   └── Recommendations       — Dev mode only (Recommendation Engine)
+│
+├── Compare Games
+├── Market Explorer           — Dev mode only (Opportunity Finder + Trends)
+├── Ask SteamIQ               — shared, responses adapt to mode
+└── Settings                  (mode toggle lives here + as a persistent header control)
+```
 
----
+**New locked decisions this round:**
+- Mode toggle (Player / Developer) is global and session-persisted. It never forks routes — `/game/[app_id]` is one page for both modes.
+- `Match` tab is the only net-new tab. Everything else is an existing tab with conditional visibility and/or relabeled framing.
+- `Updates`, `Recommendations`, and `Market Explorer` are hidden (not deleted, not separately routed) in Player mode.
 
-## Phase 6 — AI Assistant
-**Goal:** "Ask SteamIQ" — grounded, auditable, and only built once there's real intelligence underneath it to query.
-
-**Deliverables**
-- Deterministic intent router first: keyword/pattern rules (compare, why/caused, competitor+sentiment, etc.) mapped directly to structured API/analytics calls — LLM intent classification only as fallback for unmatched queries, per the HR-BOT planner pattern
-- `schema_metadata.json` describing `mart_*`/`serving_*` tables in business terms, injected into any prompt that needs structured retrieval — prevents the hallucinated-query problem both HR-BOT and MC4-FORECASTING hit
-- RAG path (vector search over review-topic summaries and evidence text) reserved for genuinely unstructured questions; structured questions go straight to APIs, never through embedding + LLM guesswork
-- Assistant calls queued through the existing RQ worker, not synchronous in the request handler, since LLM latency is user-facing
-- Citations/evidence links (§12) returned alongside every answer
-
-**Exit criteria:** the example query set from §12 ("Why are players complaining," "How does this compare with Hades," "What caused sentiment to fall") all resolve via the deterministic path where a rule applies, with correct evidence citations.
-
----
-
-## Phase 7 — Productionization
-**Goal:** Everything that turns a working prototype into something you'd trust to keep running.
-
-**Deliverables**
-- Redis caching finalized across the endpoints in §15
-- All jobs (ingestion, feature engineering, NLP, training, materialization) running through RQ with a real scheduler (cron or RQ-scheduler) — no in-process APScheduler thread anywhere, per Lexflow-AI's lesson
-- Model registry promotion process fully operational and documented — this closes the exact gap MartechAI-DF flagged as unsolved
-- `.gitignore` audit: no committed `.pkl`/`.joblib` artifacts, no committed SQLite/Postgres dumps, no committed API keys — checked against the anti-pattern table before first public push
-- CI/CD: GitHub Actions running tests + lint (ruff) + a build check on every PR
-- Testing: standard pytest suite **plus** a golden-output behavioral test — run the full pipeline for a fixed seeded game, diff the JSON output against a stored baseline, catch silent regressions in scoring/recommendations the way unit tests alone won't (Martech-AI's `audit_comparison.md` pattern)
-- Docker images finalized for backend, worker, and frontend; docker-compose covers full local stack
-- README: setup instructions, Makefile CLI (`make seed`, `make ingest`, `make process-reviews`, `make train`, `make health`) mirroring the DX pattern from Martech-AI, and — if cloud deployment is pursued — a migration-mapping doc listing exactly where each local component goes in the cloud target, written *before* touching infra code
-
-**Exit criteria:** fresh clone → `make setup && docker compose up` → working platform, with CI green and the golden-output test passing.
+**Rejected from the original proposal:** a second top-level nav (`Explore`/`Developer Studio` as separate trees), a standalone Price Intelligence page, a standalone Similar Games page. All folded into the structure above.
 
 ---
 
-## Roadmap-level scope map
+## 3. Phase deltas
+
+Phases 0–4 are unchanged — do not reopen. Only Phase 5 and Phase 6 gain new deliverables.
+
+### Phase 5 — Decision Intelligence (revised)
+
+**Goal (unchanged):** turn stored intelligence into materialized, dashboard-ready insight — now audience-aware.
+
+**Deliverables — existing (unchanged):**
+- `mart_game_overview`, `mart_trends`, `mart_opportunity_scores`
+- Opportunity Finder (weighted scoring, analytics-only)
+- Pricing Intelligence: comparable-range output, no causal price-elasticity claims
+- Update Impact Tracker
+- Recommendation Engine (hybrid rules + model output)
+
+**Deliverables — new:**
+- **`mart_game_match_profile`** (new `mart_*` table): per-game intensity scores on a small fixed dimension set — difficulty, story weight, exploration, combat, multiplayer, session length. Derived from `feature_review_topics` + `raw_game_tags` via a weighted-scoring formula identical in spirit to Opportunity Finder — **not a new ML model, no new phase**. Populated by the same scheduled materialization job pattern as the other `mart_*` tables.
+- **Game Match scoring**: given a user-supplied preference vector (a handful of checkbox values, never stored server-side unless the user opts to save it), compute a percentage match against `mart_game_match_profile`. This is a documented, narrow exception to the Golden Rule: the handler performs a small fixed-size comparison (≤6 numbers) against precomputed data, not an aggregate or a table scan. Flag it as such in `core/README.md` next to the Golden Rule so it isn't mistaken for a crack in the rule.
+- **`serving_similar_games`**: add one additive column, `market_presence` (derived from `raw_player_snapshots` volume / review count), so the existing row serves both "Similar Games" (player) and "Competitors" (dev) without a second table.
+- Pricing Intelligence gains player-facing copy ("current price is X% above historical low") reading the *same* `mart_*` output the dev-side comparable-range view uses — presentation only, one new ingestion requirement to verify: **confirm the price-history job runs on a recurring schedule**, not just the Phase 1 one-off snapshot, or "historical lowest" has nothing to compare against.
+
+**Exit criteria (added):** Game Match returns a percentage score for any seeded game given a sample preference vector, computed entirely from `mart_game_match_profile`; the dashboard and game page still load entirely from `mart_*`/`serving_*` with zero live aggregation elsewhere on the page.
+
+### Phase 6 — AI Assistant (revised)
+
+**Deliverables — new:**
+- Intent router gains a `user_mode` parameter (`player` / `developer`). Same deterministic rule set and `schema_metadata.json`, different answer templates — e.g. "should I buy this now" and "why is my sentiment declining" both resolve through the same structured path, just routed to different phrasing.
+- No new retrieval path, no new RAG index. This is a templating change on an already-planned component.
+
+**Exit criteria (added):** the example query set resolves correctly under both `user_mode` values without any change to the deterministic router's structured-call logic.
+
+### Phases 0–4, 7 — unchanged
+Everything already specified stands as written. In particular: no new vector store, no new job runner, no new ingestion source, no change to the MLflow/model_runs/registry work in Phase 4.
+
+---
+
+## 4. Feature ownership (merged)
+
+| Feature | Player | Developer | Zone / Table | Phase |
+|---|:---:|:---:|---|---|
+| Game Search | ✅ | ✅ | `raw_games` → `mart_game_overview` | 1 / 5 |
+| Game Overview | ✅ | ✅ | `mart_game_overview` | 5 |
+| Community Sentiment / Topics / Loved / Complaints / Summary | ✅ | ✅ | `feature_review_*` | 2 |
+| Similar Games / Competitors | ✅ | ✅ | `serving_similar_games` (+`market_presence`) | 3 |
+| Price History / Historical Low | ✅ | ✅ | `raw_price_history` → `mart_*` | 1 / 5 |
+| Player Activity | ✅ | ✅ | `raw_player_snapshots` | 1 |
+| **Game Match ("is this for me")** | ✅ | — | **`mart_game_match_profile`** (new) | **5** |
+| Success / Retention / Playtime / Churn Prediction | — | ✅ | `feature_game_features`, `model_runs`, `serving_predictions` | 4 |
+| Market Opportunity Finder | — | ✅ | `mart_opportunity_scores` | 5 |
+| Update Impact Tracker | — | ✅ | `mart_trends` / job output | 5 |
+| Recommendation Engine | — | ✅ | `serving_recommendations` | 5 |
+| Ask SteamIQ | ✅ | ✅ | `schema_metadata.json` + `user_mode` routing | 6 |
+
+---
+
+## 5. Revised scope map
 
 | Phase | MVP | Strong Final Version | Stretch |
 |---|---|---|---|
-| 0 — Architecture & ADR | ✅ required | | |
+| 0 — Architecture & ADR | ✅ (+ this IA amendment recorded) | | |
 | 1 — Foundation | ✅ | | |
-| 2 — NLP Core | ✅ (sentiment, topics, complaints, loved features, summary) | | |
-| 3 — Similarity + Competitors | ✅ | | |
-| 4 — Predictive ML | ✅ (one model, ensemble+registry) | Revenue category, activity forecast added | |
-| 5 — Decision Intelligence | | ✅ Opportunity Finder, Update Impact, Recommendation Engine, SHAP | Pricing simulator refinements |
-| 6 — AI Assistant | | ✅ RAG assistant | |
-| 7 — Productionization | | ✅ Redis, MLflow, registry, Docker, CI/CD, golden-output tests | Cloud deployment (Azure/AWS), publisher-portfolio dashboard, automatic retraining, What-If Simulator |
+| 2 — NLP Core | ✅ | | |
+| 3 — Similarity + Competitors | ✅ | `market_presence` column added | |
+| 4 — Predictive ML | ✅ | Revenue category, activity forecast | |
+| 5 — Decision Intelligence | | ✅ Opportunity Finder, Update Impact, Recommendation Engine, SHAP, **Game Match** | Pricing simulator refinements |
+| 6 — AI Assistant | | ✅ RAG assistant, **mode-aware templating** | |
+| 7 — Productionization | | ✅ Redis, MLflow, registry, CI/CD, golden-output tests | Cloud deployment, portfolio dashboard, auto-retraining, What-If Simulator |
 
-This keeps your original MVP/Final/Stretch split (§38) intact — the only change is that Phase 0's decisions and Phase 4's ensemble+registry work move from "stretch" into the non-negotiable core, since both are cheaper to build correctly the first time than to retrofit once predictions are already flowing through the system.
+Nothing moves from Stretch into core because of this expansion — Game Match is cheap enough to sit in the existing Final scope for Phase 5 without displacing anything.
 
 ---
 
-## One rule to keep visible throughout
+## 6. One rule to keep visible (unchanged, one addendum)
 
 > No API handler computes an aggregate, runs a model, or scans `raw_*`/`feature_*` tables. It reads from `serving_*` or `mart_*` only. If the data isn't there yet, add or fix a job — never add a bigger query to the handler.
-
-Pin this at the top of `core/README.md` or your AGENTS.md-equivalent. It's the single rule that, if followed from Phase 1 onward, prevents SteamIQ from repeating the one mistake nearly every past project in your learning-notes library made in some form.
+>
+> **Addendum:** Game Match's request-time comparison against a user-supplied preference vector is the one explicit, documented exception — a fixed-size (≤6 value) comparison against precomputed `mart_*` data, not an aggregate. Any other "just this once" handler computation is still a violation.

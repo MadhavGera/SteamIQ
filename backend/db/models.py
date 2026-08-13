@@ -13,14 +13,16 @@ are added in their respective phases.
 """
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     Numeric,
@@ -30,11 +32,10 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from pgvector.sqlalchemy import Vector
 
 from db.base import Base
-
 
 # ---------------------------------------------------------------------------
 # raw_games
@@ -52,26 +53,26 @@ class RawGame(Base):
 
     app_id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    short_description: Mapped[Optional[str]] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
+    short_description: Mapped[str | None] = mapped_column(Text)
 
     # Developer / publisher
-    developer: Mapped[Optional[str]] = mapped_column(String(512))
-    publisher: Mapped[Optional[str]] = mapped_column(String(512))
+    developer: Mapped[str | None] = mapped_column(String(512))
+    publisher: Mapped[str | None] = mapped_column(String(512))
 
     # Release
-    release_date: Mapped[Optional[str]] = mapped_column(String(64))
+    release_date: Mapped[str | None] = mapped_column(String(64))
     coming_soon: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Genres / categories stored as JSON arrays (denormalised for simplicity at raw zone)
-    genres: Mapped[Optional[dict]] = mapped_column(JSONB)          # [{"id": "1", "description": "Action"}, ...]
-    categories: Mapped[Optional[dict]] = mapped_column(JSONB)      # Steam categories
-    tags: Mapped[Optional[dict]] = mapped_column(JSONB)            # SteamSpy tags with vote counts
+    genres: Mapped[dict | None] = mapped_column(JSONB)          # [{"id": "1", "description": "Action"}, ...]
+    categories: Mapped[dict | None] = mapped_column(JSONB)      # Steam categories
+    tags: Mapped[dict | None] = mapped_column(JSONB)            # SteamSpy tags with vote counts
 
     # Pricing (USD, stored as cents to avoid float precision issues)
     is_free: Mapped[bool] = mapped_column(Boolean, default=False)
-    price_usd: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
-    final_price_usd: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))   # after discount
+    price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    final_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))   # after discount
     discount_pct: Mapped[int] = mapped_column(Integer, default=0)
 
     # Platform support
@@ -82,20 +83,20 @@ class RawGame(Base):
     # Review aggregate (from Steam)
     positive_reviews: Mapped[int] = mapped_column(Integer, default=0)
     negative_reviews: Mapped[int] = mapped_column(Integer, default=0)
-    review_score: Mapped[Optional[int]] = mapped_column(Integer)          # 0-9 Steam score
-    review_score_desc: Mapped[Optional[str]] = mapped_column(String(128)) # "Overwhelmingly Positive"
+    review_score: Mapped[int | None] = mapped_column(Integer)          # 0-9 Steam score
+    review_score_desc: Mapped[str | None] = mapped_column(String(128)) # "Overwhelmingly Positive"
 
     # SteamSpy estimates
-    owners_estimate: Mapped[Optional[str]] = mapped_column(String(64))    # "2,000,000 .. 5,000,000"
+    owners_estimate: Mapped[str | None] = mapped_column(String(64))    # "2,000,000 .. 5,000,000"
     average_playtime_forever: Mapped[int] = mapped_column(Integer, default=0)
     median_playtime_forever: Mapped[int] = mapped_column(Integer, default=0)
 
     # Metacritic
-    metacritic_score: Mapped[Optional[int]] = mapped_column(Integer)
+    metacritic_score: Mapped[int | None] = mapped_column(Integer)
 
     # Media
-    header_image: Mapped[Optional[str]] = mapped_column(String(512))
-    website: Mapped[Optional[str]] = mapped_column(String(512))
+    header_image: Mapped[str | None] = mapped_column(String(512))
+    website: Mapped[str | None] = mapped_column(String(512))
 
     # Ingestion metadata
     ingested_at: Mapped[datetime] = mapped_column(
@@ -109,10 +110,10 @@ class RawGame(Base):
     )
 
     # Relationships
-    reviews: Mapped[list["RawReview"]] = relationship(back_populates="game", lazy="noload")
-    player_snapshots: Mapped[list["RawPlayerSnapshot"]] = relationship(back_populates="game", lazy="noload")
-    price_history: Mapped[list["RawPriceHistory"]] = relationship(back_populates="game", lazy="noload")
-    game_tags: Mapped[list["RawGameTag"]] = relationship(back_populates="game", lazy="noload")
+    reviews: Mapped[list[RawReview]] = relationship(back_populates="game", lazy="noload")
+    player_snapshots: Mapped[list[RawPlayerSnapshot]] = relationship(back_populates="game", lazy="noload")
+    price_history: Mapped[list[RawPriceHistory]] = relationship(back_populates="game", lazy="noload")
+    game_tags: Mapped[list[RawGameTag]] = relationship(back_populates="game", lazy="noload")
 
     def __repr__(self) -> str:
         return f"<RawGame app_id={self.app_id} name={self.name!r}>"
@@ -136,20 +137,20 @@ class RawReview(Base):
     )
 
     # Author
-    author_steam_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    author_steam_id: Mapped[str | None] = mapped_column(String(64), index=True)
     author_playtime_forever: Mapped[int] = mapped_column(Integer, default=0)
     author_playtime_at_review: Mapped[int] = mapped_column(Integer, default=0)
     author_num_reviews: Mapped[int] = mapped_column(Integer, default=0)
 
     # Review content
     language: Mapped[str] = mapped_column(String(16), default="english")
-    review_text: Mapped[Optional[str]] = mapped_column(Text)
+    review_text: Mapped[str | None] = mapped_column(Text)
     voted_up: Mapped[bool] = mapped_column(Boolean, nullable=False)  # True = positive
 
     # Helpfulness signals
     votes_up: Mapped[int] = mapped_column(Integer, default=0)
     votes_funny: Mapped[int] = mapped_column(Integer, default=0)
-    weighted_vote_score: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 4))
+    weighted_vote_score: Mapped[Decimal | None] = mapped_column(Numeric(6, 4))
 
     # Purchase type
     steam_purchase: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -157,8 +158,8 @@ class RawReview(Base):
     written_during_early_access: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Timestamps (Unix epoch from Steam)
-    review_created_at: Mapped[Optional[int]] = mapped_column(BigInteger)
-    review_updated_at: Mapped[Optional[int]] = mapped_column(BigInteger)
+    review_created_at: Mapped[int | None] = mapped_column(BigInteger)
+    review_updated_at: Mapped[int | None] = mapped_column(BigInteger)
 
     # Ingestion metadata
     ingested_at: Mapped[datetime] = mapped_column(
@@ -166,7 +167,7 @@ class RawReview(Base):
     )
 
     # Relationship
-    game: Mapped["RawGame"] = relationship(back_populates="reviews")
+    game: Mapped[RawGame] = relationship(back_populates="reviews")
 
     def __repr__(self) -> str:
         return f"<RawReview review_id={self.review_id} app_id={self.app_id} voted_up={self.voted_up}>"
@@ -192,14 +193,14 @@ class RawPlayerSnapshot(Base):
     )
     snapshot_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     player_count: Mapped[int] = mapped_column(Integer, default=0)
-    peak_24h: Mapped[Optional[int]] = mapped_column(Integer)
+    peak_24h: Mapped[int | None] = mapped_column(Integer)
     source: Mapped[str] = mapped_column(String(32), default="steam_api")  # "steam_api" | "steamspy"
 
     ingested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    game: Mapped["RawGame"] = relationship(back_populates="player_snapshots")
+    game: Mapped[RawGame] = relationship(back_populates="player_snapshots")
 
     def __repr__(self) -> str:
         return f"<RawPlayerSnapshot app_id={self.app_id} players={self.player_count}>"
@@ -224,8 +225,8 @@ class RawPriceHistory(Base):
         Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
     )
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    price_usd: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
-    final_price_usd: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
+    price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    final_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     discount_pct: Mapped[int] = mapped_column(Integer, default=0)
     currency: Mapped[str] = mapped_column(String(8), default="USD")
 
@@ -233,7 +234,7 @@ class RawPriceHistory(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    game: Mapped["RawGame"] = relationship(back_populates="price_history")
+    game: Mapped[RawGame] = relationship(back_populates="price_history")
 
     def __repr__(self) -> str:
         return f"<RawPriceHistory app_id={self.app_id} price={self.final_price_usd}>"
@@ -266,7 +267,7 @@ class RawGameTag(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    game: Mapped["RawGame"] = relationship(back_populates="game_tags")
+    game: Mapped[RawGame] = relationship(back_populates="game_tags")
 
     def __repr__(self) -> str:
         return f"<RawGameTag app_id={self.app_id} tag={self.tag_name!r} votes={self.votes}>"
@@ -332,7 +333,7 @@ class FeatureReviewTopic(Base):
     topic_label: Mapped[str] = mapped_column(String(256), nullable=False)        # e.g. "Combat & Movement Mechanics"
     review_count: Mapped[int] = mapped_column(Integer, default=0)
     sentiment_score: Mapped[float] = mapped_column(Numeric(5, 4), default=0.5)  # 0.0000 - 1.0000
-    keywords: Mapped[Optional[dict]] = mapped_column(JSONB)                     # ["sword", "dodge", "fluid", "parry"]
+    keywords: Mapped[dict | None] = mapped_column(JSONB)                     # ["sword", "dodge", "fluid", "parry"]
 
     processed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -363,7 +364,7 @@ class FeatureReviewComplaint(Base):
     category: Mapped[str] = mapped_column(String(128), nullable=False)          # e.g. "Performance / FPS Drops"
     volume_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=0.0)       # share of negative reviews
     severity: Mapped[str] = mapped_column(String(32), default="moderate")       # "high", "moderate", "low"
-    representative_snippets: Mapped[Optional[dict]] = mapped_column(JSONB)      # [quote1, quote2, quote3]
+    representative_snippets: Mapped[dict | None] = mapped_column(JSONB)      # [quote1, quote2, quote3]
 
     processed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -418,9 +419,9 @@ class FeatureReviewSummary(Base):
     app_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), unique=True, nullable=False, index=True
     )
-    core_strengths: Mapped[Optional[dict]] = mapped_column(JSONB)   # ["Pristine audio-visual execution", ...]
-    pain_points: Mapped[Optional[dict]] = mapped_column(JSONB)      # ["Early difficulty spike", ...]
-    feature_requests: Mapped[Optional[dict]] = mapped_column(JSONB) # ["Boss rush mode", ...]
+    core_strengths: Mapped[dict | None] = mapped_column(JSONB)   # ["Pristine audio-visual execution", ...]
+    pain_points: Mapped[dict | None] = mapped_column(JSONB)      # ["Early difficulty spike", ...]
+    feature_requests: Mapped[dict | None] = mapped_column(JSONB) # ["Boss rush mode", ...]
 
     processed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -451,7 +452,7 @@ class ModelGameEmbedding(Base):
     model_name: Mapped[str] = mapped_column(String(128), nullable=False, default="all-MiniLM-L6-v2")
     model_version: Mapped[str] = mapped_column(String(64), nullable=False, default="1.0.0")
     embedding = mapped_column(Vector(384), nullable=False)
-    text_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    text_hash: Mapped[str | None] = mapped_column(String(64), index=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -461,7 +462,7 @@ class ModelGameEmbedding(Base):
     )
 
     # Relationships
-    game: Mapped["RawGame"] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
+    game: Mapped[RawGame] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
 
     def __repr__(self) -> str:
         return f"<ModelGameEmbedding app_id={self.app_id} model={self.model_name}>"
@@ -491,17 +492,227 @@ class ServingSimilarGame(Base):
     )
     similarity_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)  # 0.0000 - 1.0000
     rank: Mapped[int] = mapped_column(Integer, nullable=False)                      # 1, 2, 3...
-    shared_tags: Mapped[Optional[dict]] = mapped_column(JSONB)                      # ["Metroidvania", "Difficult", ...]
-    price_delta_usd: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))      # target price - source price
+    shared_tags: Mapped[dict | None] = mapped_column(JSONB)                      # ["Metroidvania", "Difficult", ...]
+    price_delta_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))      # target price - source price
 
     computed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     # Relationships
-    source_game: Mapped["RawGame"] = relationship("RawGame", foreign_keys=[source_app_id], lazy="noload")
-    target_game: Mapped["RawGame"] = relationship("RawGame", foreign_keys=[target_app_id], lazy="noload")
+    source_game: Mapped[RawGame] = relationship("RawGame", foreign_keys=[source_app_id], lazy="noload")
+    target_game: Mapped[RawGame] = relationship("RawGame", foreign_keys=[target_app_id], lazy="noload")
 
     def __repr__(self) -> str:
         return f"<ServingSimilarGame {self.source_app_id} -> {self.target_app_id} sim={self.similarity_score}>"
+
+
+# ===========================================================================
+# FEATURE ZONE (Phase 4 — Tabular ML Features)
+# Written ONLY by feature pipeline jobs, read by training jobs.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# feature_game_features
+# ---------------------------------------------------------------------------
+
+class FeatureGameFeature(Base):
+    """
+    Consolidated tabular feature vector for predictive models at a specific cutoff date.
+    Written by jobs/build_features.py (Phase 4).
+    Enforces feature_cutoff_date to strictly prevent temporal leakage during training.
+    """
+    __tablename__ = "feature_game_features"
+    __table_args__ = (
+        UniqueConstraint("app_id", "feature_cutoff_date", name="uq_game_features_app_cutoff"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    feature_cutoff_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+    # Pricing features
+    price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    discount_pct: Mapped[int] = mapped_column(Integer, default=0)
+    is_free: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Genre & Tag features
+    primary_genre: Mapped[str | None] = mapped_column(String(128))
+    genres: Mapped[dict | None] = mapped_column(JSONB)
+    top_tags: Mapped[dict | None] = mapped_column(JSONB)
+
+    # Developer & Publisher historical track record
+    developer_game_count: Mapped[int] = mapped_column(Integer, default=1)
+    publisher_game_count: Mapped[int] = mapped_column(Integer, default=1)
+    developer_avg_review_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    publisher_avg_review_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+
+    # Review signals at cutoff
+    total_reviews_at_cutoff: Mapped[int] = mapped_column(Integer, default=0)
+    positive_reviews_at_cutoff: Mapped[int] = mapped_column(Integer, default=0)
+    review_velocity_30d: Mapped[float] = mapped_column(Float, default=0.0)
+    positive_review_pct: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=0.0)
+
+    # Competitor density & market positioning
+    competitor_density: Mapped[int] = mapped_column(Integer, default=0)
+    price_vs_genre_median: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+
+    # Sentiment & NLP signals (from feature_review_* tables)
+    sentiment_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
+    complaint_density: Mapped[float] = mapped_column(Float, default=0.0)
+    loved_feature_density: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # Target / engagement labels for training
+    average_playtime_forever: Mapped[int] = mapped_column(Integer, default=0)
+    target_success_score: Mapped[float | None] = mapped_column(Float)
+    is_hit: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationship
+    game: Mapped[RawGame] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<FeatureGameFeature app_id={self.app_id} cutoff={self.feature_cutoff_date}>"
+
+
+# ---------------------------------------------------------------------------
+# feature_market_features
+# ---------------------------------------------------------------------------
+
+class FeatureMarketFeature(Base):
+    """
+    Market and genre-level aggregations computed at specific cutoff dates.
+    Written by jobs/build_features.py (Phase 4).
+    """
+    __tablename__ = "feature_market_features"
+    __table_args__ = (
+        UniqueConstraint("genre", "feature_cutoff_date", name="uq_market_features_genre_cutoff"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    genre: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    feature_cutoff_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+    game_count: Mapped[int] = mapped_column(Integer, default=0)
+    median_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    avg_review_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    total_positive_reviews: Mapped[int] = mapped_column(BigInteger, default=0)
+    total_negative_reviews: Mapped[int] = mapped_column(BigInteger, default=0)
+    median_playtime_forever: Mapped[int] = mapped_column(Integer, default=0)
+    top_tags: Mapped[dict | None] = mapped_column(JSONB)
+    saturation_index: Mapped[float] = mapped_column(Float, default=0.0)
+
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<FeatureMarketFeature genre={self.genre!r} games={self.game_count}>"
+
+
+# ===========================================================================
+# MODEL ZONE (Phase 4 — Predictive ML Runs & Artifacts)
+# Written ONLY by training & promotion jobs. ADR 0001, Decision 6.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# model_runs
+# ---------------------------------------------------------------------------
+
+class ModelRun(Base):
+    """
+    Tracks every ML model training run, metadata, hyperparameters, and evaluation metrics.
+    Stages: candidate -> staging -> production -> archived.
+    Written by jobs/train_success_model.py (Phase 4).
+    """
+    __tablename__ = "model_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    model_name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    stage: Mapped[str] = mapped_column(
+        String(32), nullable=False, index=True
+    )  # "candidate" | "staging" | "production" | "archived"
+    dataset_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    hyperparameters: Mapped[dict | None] = mapped_column(JSONB)
+    metrics: Mapped[dict | None] = mapped_column(JSONB)
+    artifact_path: Mapped[str | None] = mapped_column(Text)
+    promoted_by: Mapped[str | None] = mapped_column(String(128))
+    promoted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    predictions: Mapped[list[ServingPrediction]] = relationship(
+        back_populates="model_run", lazy="noload"
+    )
+
+    def __repr__(self) -> str:
+        return f"<ModelRun id={self.id} model={self.model_name!r} stage={self.stage!r}>"
+
+
+# ===========================================================================
+# SERVING ZONE (Phase 4 — Model Predictions & SHAP Explainability)
+# Written ONLY by scoring/training pipeline jobs, read by API handlers in Phase 5.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# serving_predictions
+# ---------------------------------------------------------------------------
+
+class ServingPrediction(Base):
+    """
+    Precomputed inference predictions with explainable SHAP feature values.
+    Every row requires a model_run_id foreign key for 100% auditability.
+    Written by jobs/train_success_model.py.
+    """
+    __tablename__ = "serving_predictions"
+    __table_args__ = (
+        UniqueConstraint(
+            "app_id", "prediction_type", "model_run_id", name="uq_serving_predictions_app_type_run"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    model_run_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("model_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    prediction_type: Mapped[str] = mapped_column(
+        String(64), nullable=False, index=True
+    )  # e.g. "success_score"
+    score: Mapped[Decimal] = mapped_column(Numeric(6, 4), nullable=False)
+    confidence_lower: Mapped[Decimal | None] = mapped_column(Numeric(6, 4))
+    confidence_upper: Mapped[Decimal | None] = mapped_column(Numeric(6, 4))
+    feature_importance: Mapped[dict | None] = mapped_column(JSONB)
+    shap_values: Mapped[dict | None] = mapped_column(JSONB)
+
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    game: Mapped[RawGame] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
+    model_run: Mapped[ModelRun] = relationship("ModelRun", back_populates="predictions", lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<ServingPrediction app_id={self.app_id} type={self.prediction_type!r} score={self.score}>"
+
 

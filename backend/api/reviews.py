@@ -16,7 +16,6 @@ ADR 0001, Decision 2 (Golden Rule):
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Path
 from sqlalchemy import select
@@ -32,7 +31,7 @@ from api.schemas.reviews import (
     SentimentOverviewSchema,
 )
 from core.errors import GameNotFoundError
-from core.response import ApiResponse, ResponseMeta
+from core.response import ApiResponse
 from db.base import get_db
 from db.models import (
     FeatureReviewComplaint,

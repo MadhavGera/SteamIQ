@@ -30,14 +30,11 @@ import argparse
 import asyncio
 import logging
 import os
-import sys
-import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
 import httpx
-from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -244,8 +241,8 @@ class IngestGamesJob(BaseJob):
             "platform_windows": steam_data.get("platforms", {}).get("windows", False),
             "platform_mac": steam_data.get("platforms", {}).get("mac", False),
             "platform_linux": steam_data.get("platforms", {}).get("linux", False),
-            "positive_reviews": steam_data.get("recommendations", {}).get("total", 0) if steam_data.get("recommendations") else 0,
-            "negative_reviews": 0,  # Steam doesn't expose negative count directly; computed from review score
+            "positive_reviews": int(spy_data.get("positive", 0) or 0) if (spy_data and spy_data.get("positive")) else (steam_data.get("recommendations", {}).get("total", 0) if steam_data.get("recommendations") else 0),
+            "negative_reviews": int(spy_data.get("negative", 0) or 0) if (spy_data and spy_data.get("negative")) else 0,
             "review_score": steam_data.get("metacritic", {}).get("score") if steam_data.get("metacritic") else None,
             "review_score_desc": None,
             "owners_estimate": spy_data.get("owners") if spy_data else None,
@@ -325,7 +322,7 @@ class IngestGamesJob(BaseJob):
         price_usd, final_price_usd, discount_pct = self._parse_price(steam_data)
         row = {
             "app_id": self.app_id,
-            "recorded_at": datetime.now(timezone.utc),
+            "recorded_at": datetime.now(UTC),
             "price_usd": price_usd,
             "final_price_usd": final_price_usd,
             "discount_pct": discount_pct,
@@ -345,7 +342,7 @@ class IngestGamesJob(BaseJob):
 
         row = {
             "app_id": self.app_id,
-            "snapshot_at": datetime.now(timezone.utc),
+            "snapshot_at": datetime.now(UTC),
             "player_count": player_count,
             "source": "steam_api",
         }
@@ -399,14 +396,13 @@ class IngestGamesJob(BaseJob):
             engine = create_async_engine(_build_database_url(), pool_pre_ping=True)
             SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
-            async with SessionLocal() as session:
-                async with session.begin():
-                    await self._upsert_game(session, steam_data, spy_data)
-                    reviews_count = await self._upsert_reviews(session, reviews)
-                    if spy_data:
-                        await self._upsert_tags(session, spy_data)
-                    await self._insert_price_snapshot(session, steam_data)
-                    await self._insert_player_snapshot(session, player_count)
+            async with SessionLocal() as session, session.begin():
+                await self._upsert_game(session, steam_data, spy_data)
+                reviews_count = await self._upsert_reviews(session, reviews)
+                if spy_data:
+                    await self._upsert_tags(session, spy_data)
+                await self._insert_price_snapshot(session, steam_data)
+                await self._insert_player_snapshot(session, player_count)
 
             await engine.dispose()
 

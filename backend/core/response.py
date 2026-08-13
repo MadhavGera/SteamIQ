@@ -17,7 +17,7 @@ Shape:
 from __future__ import annotations
 
 import time
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -28,7 +28,7 @@ class ErrorDetail(BaseModel):
     """Machine-readable error info returned in ApiResponse.error."""
     code: str = Field(description="Machine-readable error slug, e.g. 'game_not_found'")
     message: str = Field(description="Human-readable error description")
-    details: Optional[dict[str, Any]] = Field(
+    details: dict[str, Any] | None = Field(
         default=None,
         description="Optional extra context (field errors, upstream info, etc.)",
     )
@@ -37,10 +37,10 @@ class ErrorDetail(BaseModel):
 class ResponseMeta(BaseModel):
     """Optional metadata attached to every response."""
     version: str = Field(default="0.1.0")
-    took_ms: Optional[float] = Field(default=None, description="Request processing time in ms")
-    page: Optional[int] = None
-    page_size: Optional[int] = None
-    total: Optional[int] = None
+    took_ms: float | None = Field(default=None, description="Request processing time in ms")
+    page: int | None = None
+    page_size: int | None = None
+    total: int | None = None
 
 
 class ApiResponse(BaseModel, Generic[T]):
@@ -54,9 +54,9 @@ class ApiResponse(BaseModel, Generic[T]):
         return ApiResponse.fail(code="game_not_found", message="No game found")
     """
     success: bool
-    data: Optional[T] = None
-    error: Optional[ErrorDetail] = None
-    meta: Optional[ResponseMeta] = None
+    data: T | None = None
+    error: ErrorDetail | None = None
+    meta: ResponseMeta | None = None
 
     @classmethod
     def ok(
@@ -68,7 +68,7 @@ class ApiResponse(BaseModel, Generic[T]):
         page_size: int | None = None,
         total: int | None = None,
         version: str = "0.1.0",
-    ) -> "ApiResponse[T]":
+    ) -> ApiResponse[T]:
         """Build a success response."""
         meta = ResponseMeta(
             version=version,
@@ -85,7 +85,7 @@ class ApiResponse(BaseModel, Generic[T]):
         code: str,
         message: str,
         details: dict[str, Any] | None = None,
-    ) -> "ApiResponse[None]":
+    ) -> ApiResponse[None]:
         """Build an error response (prefer raising SteamIQException in handlers)."""
         return cls(
             success=False,
@@ -100,7 +100,7 @@ class TimingContext:
         self._start: float = 0.0
         self.elapsed_ms: float = 0.0
 
-    def __enter__(self) -> "TimingContext":
+    def __enter__(self) -> TimingContext:
         self._start = time.perf_counter()
         return self
 

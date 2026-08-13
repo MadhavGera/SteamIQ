@@ -7,7 +7,6 @@ All models import Base from here. The engine is configured async
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase

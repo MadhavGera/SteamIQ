@@ -17,13 +17,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import re
-import sys
-import time
-from collections import Counter, defaultdict
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from core.config import settings
@@ -37,7 +33,6 @@ from db.models import (
     RawReview,
 )
 from jobs.base_job import BaseJob
-
 
 # Standard fallback complaint taxonomy for gaming reviews
 COMPLAINT_TAXONOMY = [
@@ -86,7 +81,7 @@ class ProcessReviewsJob(BaseJob):
         self.engine = create_async_engine(settings.async_database_url, echo=False)
         self.session_factory = async_sessionmaker(self.engine, expire_on_commit=False)
 
-    async def run(self, app_id: Optional[int] = None, all_games: bool = False) -> None:
+    async def run(self, app_id: int | None = None, all_games: bool = False) -> None:
         async with self.session_factory() as session:
             if app_id is not None:
                 app_ids = [app_id]
@@ -289,7 +284,7 @@ class ProcessReviewsJob(BaseJob):
                 matched_snippets = [
                     f"Noticeable friction reported in {cat.lower()} during intense encounters.",
                     f"A subset of players noted that {cat.lower()} could benefit from further tuning.",
-                    f"Occasional frame drops or controller responsiveness issues reported on specific hardware.",
+                    "Occasional frame drops or controller responsiveness issues reported on specific hardware.",
                 ]
 
             vol_pct = 34.5 if "Performance" in cat else (22.0 if "Controls" in cat else 14.2)
@@ -323,7 +318,7 @@ class ProcessReviewsJob(BaseJob):
             "Polished art direction and soundtrack praised consistently across player cohorts.",
         ]
         pain_points = [
-            f"Early-game difficulty spike and steep learning curve catch some casual players off guard.",
+            "Early-game difficulty spike and steep learning curve catch some casual players off guard.",
             f"Occasional reports of {complaints[0]['category'].lower() if complaints else 'input latency'} on non-standard controller setups.",
         ]
         requests = [

@@ -11,9 +11,9 @@ TODO(Phase5): create GameOverviewSchema backed by mart_game_overview.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel
 
 
 class GenreSchema(BaseModel):
@@ -34,18 +34,18 @@ class GameSummarySchema(BaseModel):
     """
     app_id: int
     name: str
-    short_description: Optional[str] = None
-    header_image: Optional[str] = None
-    developer: Optional[str] = None
-    publisher: Optional[str] = None
-    release_date: Optional[str] = None
+    short_description: str | None = None
+    header_image: str | None = None
+    developer: str | None = None
+    publisher: str | None = None
+    release_date: str | None = None
     is_free: bool = False
-    final_price_usd: Optional[Decimal] = None
+    final_price_usd: Decimal | None = None
     discount_pct: int = 0
     positive_reviews: int = 0
     negative_reviews: int = 0
-    owners_estimate: Optional[str] = None
-    genres: Optional[list[dict[str, Any]]] = None
+    owners_estimate: str | None = None
+    genres: list[dict[str, Any]] | None = None
 
     model_config = {"from_attributes": True}
 
@@ -71,23 +71,23 @@ class GameDetailSchema(BaseModel):
     """
     app_id: int
     name: str
-    description: Optional[str] = None
-    short_description: Optional[str] = None
-    header_image: Optional[str] = None
-    website: Optional[str] = None
+    description: str | None = None
+    short_description: str | None = None
+    header_image: str | None = None
+    website: str | None = None
 
-    developer: Optional[str] = None
-    publisher: Optional[str] = None
-    release_date: Optional[str] = None
+    developer: str | None = None
+    publisher: str | None = None
+    release_date: str | None = None
     coming_soon: bool = False
 
-    genres: Optional[list[dict[str, Any]]] = None
-    categories: Optional[list[dict[str, Any]]] = None
-    tags: Optional[dict[str, Any]] = None
+    genres: list[dict[str, Any]] | None = None
+    categories: list[dict[str, Any]] | None = None
+    tags: dict[str, Any] | None = None
 
     is_free: bool = False
-    price_usd: Optional[Decimal] = None
-    final_price_usd: Optional[Decimal] = None
+    price_usd: Decimal | None = None
+    final_price_usd: Decimal | None = None
     discount_pct: int = 0
 
     platform_windows: bool = False
@@ -96,14 +96,14 @@ class GameDetailSchema(BaseModel):
 
     positive_reviews: int = 0
     negative_reviews: int = 0
-    review_score: Optional[int] = None
-    review_score_desc: Optional[str] = None
+    review_score: int | None = None
+    review_score_desc: str | None = None
 
-    owners_estimate: Optional[str] = None
+    owners_estimate: str | None = None
     average_playtime_forever: int = 0
     median_playtime_forever: int = 0
 
-    metacritic_score: Optional[int] = None
+    metacritic_score: int | None = None
 
     model_config = {"from_attributes": True}
 

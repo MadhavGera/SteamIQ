@@ -3,8 +3,7 @@ Pydantic schemas for Competitor Intelligence API (Phase 3).
 """
 from __future__ import annotations
 
-from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -17,25 +16,25 @@ class CompetitorItemSchema(BaseModel):
     similarity_score: float
     similarity_pct: int
     shared_tags: list[str] = Field(default_factory=list)
-    price_usd: Optional[str] = None
-    price_delta_usd: Optional[float] = None
+    price_usd: str | None = None
+    price_delta_usd: float | None = None
     positive_reviews: int = 0
     negative_reviews: int = 0
-    review_pct: Optional[int] = None
-    header_image: Optional[str] = None
-    genres: Optional[list[dict[str, Any]]] = None
+    review_pct: int | None = None
+    header_image: str | None = None
+    genres: list[dict[str, Any]] | None = None
 
 
 class SourceGameHeaderSchema(BaseModel):
     """Header context for the source game being analyzed."""
     app_id: int
     name: str
-    header_image: Optional[str] = None
-    final_price_usd: Optional[str] = None
+    header_image: str | None = None
+    final_price_usd: str | None = None
     positive_reviews: int = 0
     negative_reviews: int = 0
-    review_pct: Optional[int] = None
-    genres: Optional[list[dict[str, Any]]] = None
+    review_pct: int | None = None
+    genres: list[dict[str, Any]] | None = None
 
 
 class CompetitorListSchema(BaseModel):

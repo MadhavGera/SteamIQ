@@ -1,4 +1,4 @@
-.PHONY: setup migrate migrate-create ingest seed dev health test lint build-backend build-frontend
+.PHONY: setup migrate migrate-create ingest seed dev health test lint build-backend build-frontend build-features train-model train
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 PYTHON    := python
@@ -59,6 +59,20 @@ process-embeddings-all: ## Generate pgvector embeddings and competitor rankings 
 	@echo ">>> Processing pgvector embeddings for all games..."
 	cd $(BACKEND) && $(PYTHON) -m jobs.process_embeddings --all
 	@echo "✅  Competitor embeddings complete."
+
+# ─── Predictive ML (Phase 4) ──────────────────────────────────────────────────
+build-features: ## Build tabular game and market features: make build-features
+	@echo ">>> Building tabular ML features..."
+	cd $(BACKEND) && $(PYTHON) -m jobs.build_features --all
+	@echo "✅  Feature build complete."
+
+train-model: ## Train predictive models & promote champion: make train-model TRIALS=15
+	@echo ">>> Training baseline models and tuning ensemble..."
+	cd $(BACKEND) && $(PYTHON) -m jobs.train_success_model --trials $(or $(TRIALS),15)
+	@echo "✅  Model training and promotion complete."
+
+train: build-features train-model ## Full Phase 4 pipeline: build features and train models
+
 
 # ─── Development ──────────────────────────────────────────────────────────────
 dev: ## Start backend (uvicorn --reload) and frontend (next dev) locally
