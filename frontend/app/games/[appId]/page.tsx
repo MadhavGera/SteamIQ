@@ -22,6 +22,7 @@ export async function generateMetadata({
     const game = await api.getGame(Number(params.appId));
     return {
       title: `${game.name} — Game Intelligence | SteamIQ`,
+      // HONEST-FALLBACK: Real short description or descriptive fallback
       description:
         game.short_description ??
         `Game intelligence, review breakdown, and predictive analytics for ${game.name} on Steam.`,
@@ -43,6 +44,7 @@ export default async function GameDetailPage({
   const appId = Number(params.appId);
   if (isNaN(appId)) notFound();
 
+  // HONEST-FALLBACK: Default overview tab navigation
   const initialTab = searchParams?.tab ?? "overview";
 
   let game: GameDetail | null = null;

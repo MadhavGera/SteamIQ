@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   api,
@@ -82,6 +82,23 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [ingestedGames, setIngestedGames] = useState<Record<number, GameSummary>>({});
+
+  // Fetch real ingested game records to replace hardcoded strings with API data
+  useEffect(() => {
+    let isMounted = true;
+    api.searchGames("", 1, 50).then((res) => {
+      if (!isMounted || !res?.games) return;
+      const map: Record<number, GameSummary> = {};
+      for (const g of res.games) {
+        map[g.app_id] = g;
+      }
+      setIngestedGames(map);
+    }).catch(() => {
+      // Ignore initial load error if backend is cold
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   const doSearch = useCallback(async (q: string) => {
     const trimmed = q.trim();
@@ -294,44 +311,61 @@ export default function LandingPage() {
         </section>
       )}
 
-      {/* ── Featured & Ingested Games Grid (Default Stitch View) ── */}
+      {/* ── Featured & Ingested Games Grid (Honest Showcase with Live API Data) ── */}
       {!hasSearched && (
         <section className="featured-section">
           <div className="featured-section__header">
-            <span className="featured-section__eyebrow">Featured Games</span>
+            <span className="featured-section__eyebrow">Curated Showcase</span>
             <h2 className="featured-section__title">Ready to Analyze</h2>
             <p className="featured-section__subtitle">
-              These games have been fully ingested and are ready for deep intelligence.
+              Explore decision intelligence for indexed catalog titles, or search any Steam App ID to ingest live store telemetry.
             </p>
           </div>
 
           <div className="featured-grid">
-            {FEATURED_GAMES.map((g) => (
-              <Link
-                key={g.app_id}
-                href={`/games/${g.app_id}?tab=overview`}
-                className="featured-card"
-              >
-                <div
-                  className="featured-card__cover"
-                  style={{ background: g.gradient }}
-                >
-                  {g.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={g.image} alt={g.name} />
-                  ) : null}
-                  <div className="featured-card__badge">
-                    <span>ID:</span>
-                    <strong>{g.app_id}</strong>
-                  </div>
-                </div>
+            {FEATURED_GAMES.map((g) => {
+              const live = ingestedGames[g.app_id];
+              const liveGenre = live?.genres?.[0]?.description;
+              const liveDev = live?.developer;
 
-                <div className="featured-card__body">
-                  <h3 className="featured-card__title">{g.name}</h3>
-                  <p className="featured-card__meta">{g.genre}</p>
-                </div>
-              </Link>
-            ))}
+              return (
+                <Link
+                  key={g.app_id}
+                  href={`/games/${g.app_id}?tab=overview`}
+                  className="featured-card"
+                >
+                  <div
+                    className="featured-card__cover"
+                    style={{ background: g.gradient }}
+                  >
+                    {live?.header_image || g.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={live?.header_image || g.image} alt={live?.name || g.name} />
+                    ) : null}
+                    <div className="featured-card__badge">
+                      <span>ID:</span>
+                      <strong>{g.app_id}</strong>
+                    </div>
+                  </div>
+
+                  <div className="featured-card__body">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                      <h3 className="featured-card__title">{live?.name || g.name}</h3>
+                      {live && (
+                        <span className="badge-pill badge-pill--success" style={{ fontSize: "10px", padding: "1px 6px" }}>
+                          Indexed
+                        </span>
+                      )}
+                    </div>
+                    <p className="featured-card__meta">
+                      {liveGenre
+                        ? (liveDev ? `${liveDev} · ${liveGenre}` : liveGenre)
+                        : "Catalog Showcase"}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

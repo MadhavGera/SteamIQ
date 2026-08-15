@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "check:fallbacks": "python ../scripts/check_honest_fallbacks.py",
+    "lint": "next lint && python ../scripts/check_honest_fallbacks.py"
   },
   "dependencies": {
     "react": "^18",

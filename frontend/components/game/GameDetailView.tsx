@@ -54,22 +54,27 @@ export function GameDetailView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isPlayer, isDeveloper } = useUserMode();
-
-  const title = game?.name ?? (appId === 1145360 ? "Hades" : appId === 367520 ? "Hollow Knight" : `Steam Game #${appId}`);
-  const developer = game?.developer ?? (appId === 1145360 ? "Supergiant Games" : "Team Cherry");
-  const releaseDate = game?.release_date ?? "Feb 24, 2017";
+  // HONEST-FALLBACK: Real game name or unindexed app placeholder
+  const title = game?.name ?? `Steam App #${appId}`;
+  // HONEST-FALLBACK: Real developer or pending indicator
+  const developer = game?.developer ?? "--";
+  // HONEST-FALLBACK: Real release date or pending indicator
+  const releaseDate = game?.release_date ?? "--";
+  // HONEST-FALLBACK: Real positive reviews count or 0
   const posReviews = game?.positive_reviews ?? reviewsBundle?.sentiment.positive_count ?? 0;
+  // HONEST-FALLBACK: Real negative reviews count or 0
   const negReviews = game?.negative_reviews ?? reviewsBundle?.sentiment.negative_count ?? 0;
-  const score = reviewScore(posReviews, negReviews);
-  const priceStr = game ? formatPrice(game.final_price_usd, game.is_free) : "$14.99";
+  const score = (posReviews + negReviews > 0) ? reviewScore(posReviews, negReviews) : null;
+  const priceStr = game ? formatPrice(game.final_price_usd, game.is_free) : "--";
+  // HONEST-FALLBACK: Header image CDN url or default steam capsule URL
   const headerImage =
     game?.header_image ??
     `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
-  const description = game?.description
-    ? game.description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
-    : game?.short_description ?? "Comprehensive intelligence, review breakdown, and market performance metrics.";
+  const rawDesc = game?.description ? game.description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() : game?.short_description;
+  // HONEST-FALLBACK: Real description or pending indicator
+  const description = rawDesc ?? "--";
 
-  const hasData = reviewsBundle?.is_processed || posReviews > 0 || game !== null;
+  const hasData = Boolean(reviewsBundle?.is_processed || posReviews > 0 || game !== null);
 
   // Compute Mode-Specific Tabs per Amended IA (Roadmap v2 §2 & Blueprint §1)
   const availableTabs = useMemo(() => {
@@ -113,24 +118,23 @@ export function GameDetailView({
     router.push(`/games/${appId}?tab=${tabId}`, { scroll: false });
   };
 
-  const successScoreStr = game?.success_score
+  // HONEST-FALLBACK: Real metric values or explicit pending state indicator
+  const successScoreStr = game?.success_score != null
     ? `${Math.round(Number(game.success_score))}%`
-    : hasData
-    ? "84%"
     : "--";
 
-  const netSentimentStr = game?.net_sentiment_pct
+  // HONEST-FALLBACK: Real net sentiment percentage or explicit pending state
+  const netSentimentStr = game?.net_sentiment_pct != null
     ? `+${Number(game.net_sentiment_pct).toFixed(0)}%`
-    : reviewsBundle
+    : reviewsBundle?.sentiment?.positive_pct != null
     ? `+${reviewsBundle.sentiment.positive_pct.toFixed(0)}%`
-    : score
+    : score?.pct != null
     ? `+${score.pct}%`
     : "--";
 
-  const peakCcuStr = game?.peak_ccu_24h
+  // HONEST-FALLBACK: Real 24h peak CCU count or explicit pending state
+  const peakCcuStr = game?.peak_ccu_24h != null
     ? game.peak_ccu_24h.toLocaleString()
-    : hasData
-    ? "3,247"
     : "--";
 
   return (
@@ -311,8 +315,9 @@ export function GameDetailView({
               <div className="kpi-card">
                 <div className="kpi-card__top">
                   <span className="kpi-card__eyebrow">NET SENTIMENT</span>
-                  <span className="badge-pill badge-pill--success">
-                    {reviewsBundle?.sentiment.sentiment_label ?? "Positive"}
+                  <span className={`badge-pill ${reviewsBundle?.sentiment.sentiment_label ? "badge-pill--success" : "badge-pill--neutral"}`}>
+                    {/* HONEST-FALLBACK: Sentiment label from reviews or game overview or Unscored */}
+                    {reviewsBundle?.sentiment.sentiment_label ?? (game?.review_score_desc ?? "Unscored")}
                   </span>
                 </div>
                 <div>
@@ -320,7 +325,11 @@ export function GameDetailView({
                     {netSentimentStr}
                   </div>
                   <div className="kpi-card__sub">
-                    {reviewsBundle ? reviewsBundle.sentiment.total_count.toLocaleString() : (posReviews + negReviews).toLocaleString()} reviews analyzed
+                    {reviewsBundle
+                      ? `${reviewsBundle.sentiment.total_count.toLocaleString()} reviews analyzed`
+                      : (posReviews + negReviews > 0)
+                      ? `${(posReviews + negReviews).toLocaleString()} reviews recorded`
+                      : "No reviews recorded"}
                   </div>
                 </div>
               </div>
@@ -343,10 +352,11 @@ export function GameDetailView({
                 </div>
                 <div>
                   <div className="kpi-card__num" style={{ fontSize: "24px", color: "var(--accent-light)" }}>
-                    {game?.revenue_tier ?? "Standard"}
+                    {/* HONEST-FALLBACK: Real revenue tier or pending indicator */}
+                    {game?.revenue_tier ?? "--"}
                   </div>
                   <div className="kpi-card__sub">
-                    {game?.owners_estimate ? `Est. ${game.owners_estimate} owners` : "Market estimate tier"}
+                    {game?.owners_estimate ? `Est. ${game.owners_estimate} owners` : "Market estimate pending"}
                   </div>
                 </div>
               </div>
@@ -355,12 +365,15 @@ export function GameDetailView({
             {/* Explainability / SHAP & Executive Brief Panel (60/40 Split) */}
             <div className="panel-grid-60-40" style={{ marginBottom: "28px" }}>
               <ShapAttributionCard
+                // HONEST-FALLBACK: Real SHAP attributions or null
                 shapValues={game?.shap_values ?? null}
                 modelVersion={game?.model_run_id ? game.model_run_id.slice(0, 8) : null}
               />
               <ExecutiveBriefCard
                 title={title}
+                // HONEST-FALLBACK: Real executive brief or null
                 brief={game?.executive_brief ?? null}
+                // HONEST-FALLBACK: Real net sentiment percentage or null
                 netSentimentPct={
                   reviewsBundle?.sentiment.positive_pct ??
                   (game?.net_sentiment_pct ? Number(game.net_sentiment_pct) : null)
@@ -379,20 +392,22 @@ export function GameDetailView({
                 <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "12px" }}>
                   Top Review Themes
                 </h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>✦ Soundtrack &amp; Lore</span>
-                    <span className="badge-pill badge-pill--success">98% Praise</span>
+                {reviewsBundle?.topics && reviewsBundle.topics.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
+                    {reviewsBundle.topics.slice(0, 3).map((t) => (
+                      <div key={t.topic_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ color: "var(--text-primary)" }}>✦ {t.label}</span>
+                        <span className="badge-pill badge-pill--neutral" style={{ fontSize: "11px" }}>
+                          {t.review_count} reviews
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>✦ Boss Encounter Depth</span>
-                    <span className="badge-pill badge-pill--success">94% Praise</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>⚠ Difficulty Spikes</span>
-                    <span className="badge-pill badge-pill--danger">Top Complaint</span>
-                  </div>
-                </div>
+                ) : (
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6", margin: "0" }}>
+                    Review topic clustering pending. Run review NLP pipeline to extract topic clusters.
+                  </p>
+                )}
                 <div style={{ marginTop: "16px", fontSize: "12px", fontWeight: 600, color: "var(--accent-primary)", display: "flex", alignItems: "center", gap: "4px" }}>
                   View full NLP analysis <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>arrow_forward</span>
                 </div>
@@ -429,12 +444,20 @@ export function GameDetailView({
                   <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "12px" }}>
                     Priority Recommendation
                   </h3>
-                  <div style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
-                    <div style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
-                      Regional Pricing Optimization
+                  {recommendationsData?.recommendations && recommendationsData.recommendations.length > 0 ? (
+                    <div style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
+                      <div style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
+                        {recommendationsData.recommendations[0].title}
+                      </div>
+                      <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                        {recommendationsData.recommendations[0].rationale}
+                      </div>
                     </div>
-                    <div>Capture up to 22% higher unit volume in emerging Steam regions with local currency parity.</div>
-                  </div>
+                  ) : (
+                    <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6", margin: "0" }}>
+                      Recommendation pipeline pending. Run recommendation job to generate strategic action items.
+                    </p>
+                  )}
                   <div style={{ marginTop: "16px", fontSize: "12px", fontWeight: 600, color: "var(--accent-primary)", display: "flex", alignItems: "center", gap: "4px" }}>
                     View recommendation plan <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>arrow_forward</span>
                   </div>
@@ -450,10 +473,10 @@ export function GameDetailView({
                     Taste Alignment
                   </h3>
                   <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
-                    Take the 6-dimension playstyle match test to see if {title} fits your gaming habits.
+                    Adjust gameplay intensity sliders to see how this game matches your playstyle.
                   </p>
                   <div style={{ marginTop: "16px", fontSize: "12px", fontWeight: 600, color: "var(--accent-primary)", display: "flex", alignItems: "center", gap: "4px" }}>
-                    Test Playstyle Match <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>arrow_forward</span>
+                    Check Match <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>arrow_forward</span>
                   </div>
                 </button>
               )}
@@ -478,99 +501,64 @@ export function GameDetailView({
 
         {/* ── TAB: REVIEWS ── */}
         {hasData && activeTab === "reviews" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingTop: "24px" }}>
-            <div className="panel-grid-50-50">
-              <SentimentOverview
-                positivePct={reviewsBundle?.sentiment.positive_pct ?? 97.2}
-                mixedPct={reviewsBundle?.sentiment.mixed_pct ?? 1.8}
-                negativePct={reviewsBundle?.sentiment.negative_pct ?? 1.0}
-                positiveCount={reviewsBundle?.sentiment.positive_count ?? posReviews}
-                negativeCount={reviewsBundle?.sentiment.negative_count ?? negReviews}
-                totalCount={reviewsBundle?.sentiment.total_count ?? (posReviews + negReviews)}
-                sentimentLabel={reviewsBundle?.sentiment.sentiment_label ?? "Overwhelmingly Positive"}
-              />
-              <SentimentTimeline
-                data={reviewsBundle?.timeline ?? [
-                  { month: "2024-01", positive_reviews: 320, negative_reviews: 14, net_positive_pct: 95.8 },
-                  { month: "2024-02", positive_reviews: 410, negative_reviews: 12, net_positive_pct: 97.1 },
-                  { month: "2024-03", positive_reviews: 380, negative_reviews: 8, net_positive_pct: 97.9 },
-                  { month: "2024-04", positive_reviews: 490, negative_reviews: 15, net_positive_pct: 97.0 },
-                  { month: "2024-05", positive_reviews: 530, negative_reviews: 11, net_positive_pct: 98.0 },
-                  { month: "2024-06", positive_reviews: 620, negative_reviews: 16, net_positive_pct: 97.5 },
-                ]}
+          !reviewsBundle || !reviewsBundle.is_processed ? (
+            <div className="card" style={{ padding: "64px 24px", textAlign: "center", marginTop: "24px" }}>
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "50%",
+                  backgroundColor: "var(--bg-surface)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: "16px",
+                  border: "1px solid var(--border-subtle)",
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: "28px", color: "var(--text-secondary)" }}>
+                  rate_review
+                </span>
+              </div>
+              <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
+                Review Analysis Not Yet Available
+              </h2>
+              <p style={{ color: "var(--text-secondary)", fontSize: "14px", maxWidth: "520px", margin: "0 auto", lineHeight: "1.6" }}>
+                Review analysis is not yet available for this game. Run `make process-reviews` and `make materialize-marts` to generate sentiment timelines, NLP topic clusters, and complaint breakdowns.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingTop: "24px" }}>
+              <div className="panel-grid-50-50">
+                <SentimentOverview
+                  positivePct={reviewsBundle.sentiment.positive_pct}
+                  mixedPct={reviewsBundle.sentiment.mixed_pct}
+                  negativePct={reviewsBundle.sentiment.negative_pct}
+                  positiveCount={reviewsBundle.sentiment.positive_count}
+                  negativeCount={reviewsBundle.sentiment.negative_count}
+                  totalCount={reviewsBundle.sentiment.total_count}
+                  sentimentLabel={reviewsBundle.sentiment.sentiment_label}
+                />
+                <SentimentTimeline data={reviewsBundle.timeline} />
+              </div>
+
+              <div className="panel-grid-50-50">
+                <TopicDistribution topics={reviewsBundle.topics} />
+                <LovedFeatures features={reviewsBundle.loved_features} />
+              </div>
+
+              <ComplaintBreakdown complaints={reviewsBundle.complaints} />
+
+              <ReviewSummary
+                // HONEST-FALLBACK: Safe structural empty array for unpopulated summary items
+                strengths={reviewsBundle.summary.strengths ?? []}
+                // HONEST-FALLBACK: Safe structural empty array for unpopulated summary items
+                painPoints={reviewsBundle.summary.pain_points ?? []}
+                // HONEST-FALLBACK: Safe structural empty array for unpopulated summary items
+                featureRequests={reviewsBundle.summary.feature_requests ?? []}
               />
             </div>
-
-            <div className="panel-grid-50-50">
-              <TopicDistribution
-                topics={reviewsBundle?.topics ?? [
-                  { topic_id: 1, label: "Combat & Boss Encounters", review_count: 840, sentiment_score: 0.94, keywords: ["boss", "combat", "tight"] },
-                  { topic_id: 2, label: "World Atmosphere & Lore", review_count: 720, sentiment_score: 0.98, keywords: ["music", "lore", "art"] },
-                  { topic_id: 3, label: "Movement & Platforming", review_count: 510, sentiment_score: 0.91, keywords: ["fluid", "dash", "jump"] },
-                  { topic_id: 4, label: "Exploration & Map Design", review_count: 430, sentiment_score: 0.88, keywords: ["map", "secrets"] },
-                  { topic_id: 5, label: "Performance & Stability", review_count: 180, sentiment_score: 0.76, keywords: ["fps", "smooth"] },
-                ]}
-              />
-              <LovedFeatures
-                features={reviewsBundle?.loved_features ?? [
-                  { feature_name: "Atmosphere & Worldbuilding", mention_count: 920, praise_intensity: 98 },
-                  { feature_name: "Fluid Combat Mechanics", mention_count: 780, praise_intensity: 94 },
-                  { feature_name: "Soundtrack & Audio Design", mention_count: 650, praise_intensity: 97 },
-                  { feature_name: "Boss Design & Challenge Depth", mention_count: 590, praise_intensity: 91 },
-                  { feature_name: "Art Direction & Visuals", mention_count: 520, praise_intensity: 96 },
-                ]}
-              />
-            </div>
-
-            <ComplaintBreakdown
-              complaints={reviewsBundle?.complaints ?? [
-                {
-                  category: "Performance & Frame Drops",
-                  volume_pct: 34.5,
-                  severity: "high",
-                  representative_snippets: [
-                    "Experiencing occasional stutter during particle-heavy boss fights.",
-                    "Frame drops observed on Linux proton compatibility layer.",
-                    "Stutters when loading new biome rooms rapidly.",
-                  ],
-                },
-                {
-                  category: "Controls & Input Latency",
-                  volume_pct: 22.0,
-                  severity: "moderate",
-                  representative_snippets: [
-                    "Controller input delay noticed on Bluetooth mode.",
-                    "Analog stick deadzone settings should be customizable.",
-                  ],
-                },
-                {
-                  category: "Difficulty Spike & Balance",
-                  volume_pct: 14.2,
-                  severity: "moderate",
-                  representative_snippets: [
-                    "The third boss difficulty jump is very punishing for casual players.",
-                    "Corpse run penalty can feel tedious in late game areas.",
-                  ],
-                },
-              ]}
-            />
-
-            <ReviewSummary
-              strengths={reviewsBundle?.summary.strengths?.length ? reviewsBundle.summary.strengths : [
-                "Universally acclaimed for pristine audio-visual execution and rich world atmosphere.",
-                "Highly rewarding combat loop with deep mastery curve and memorable boss encounters.",
-                "Polished art direction and soundtrack praised consistently across player cohorts.",
-              ]}
-              painPoints={reviewsBundle?.summary.pain_points?.length ? reviewsBundle.summary.pain_points : [
-                "Early-game difficulty spike and steep learning curve catch some casual players off guard.",
-                "Occasional reports of input latency on non-standard controller setups.",
-              ]}
-              featureRequests={reviewsBundle?.summary.feature_requests?.length ? reviewsBundle.summary.feature_requests : [
-                "Players frequently request a dedicated Boss Rush / challenge gauntlet mode.",
-                "Desire for expanded map marking features and custom accessibility toggles.",
-              ]}
-            />
-          </div>
+          )
         )}
 
         {/* ── TAB: MARKET ── */}
@@ -588,8 +576,10 @@ export function GameDetailView({
               />
             )}
             <CompetitorTable
+              // HONEST-FALLBACK: Safe structural empty array for unpopulated competitors
               competitors={competitorData?.competitors ?? []}
               sourceName={title}
+              // HONEST-FALLBACK: Boolean flag default
               isProcessed={competitorData?.is_processed ?? false}
             />
           </div>
