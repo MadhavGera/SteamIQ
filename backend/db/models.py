@@ -24,6 +24,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -45,9 +46,6 @@ class RawGame(Base):
     """
     Game metadata ingested from the Steam Store API and SteamSpy.
     Written only by ingestion jobs.
-
-    Phase 1 stopgap: api/games.py reads from this table directly.
-    TODO(Phase5): repoint api/games.py to mart_game_overview once it exists.
     """
     __tablename__ = "raw_games"
 
@@ -114,6 +112,7 @@ class RawGame(Base):
     player_snapshots: Mapped[list[RawPlayerSnapshot]] = relationship(back_populates="game", lazy="noload")
     price_history: Mapped[list[RawPriceHistory]] = relationship(back_populates="game", lazy="noload")
     game_tags: Mapped[list[RawGameTag]] = relationship(back_populates="game", lazy="noload")
+    patch_notes: Mapped[list[RawPatchNote]] = relationship(back_populates="game", lazy="noload")
 
     def __repr__(self) -> str:
         return f"<RawGame app_id={self.app_id} name={self.name!r}>"
@@ -238,6 +237,42 @@ class RawPriceHistory(Base):
 
     def __repr__(self) -> str:
         return f"<RawPriceHistory app_id={self.app_id} price={self.final_price_usd}>"
+
+
+# ---------------------------------------------------------------------------
+# raw_patch_notes
+# ---------------------------------------------------------------------------
+
+class RawPatchNote(Base):
+    """
+    Authentic developer announcements and patch notes from Steam News API (ISteamNews/GetNewsForApp/v2).
+    Written by jobs/ingest_news.py.
+    """
+    __tablename__ = "raw_patch_notes"
+    __table_args__ = (
+        Index("ix_raw_patch_notes_app_published", "app_id", "published_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    gid: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    url: Mapped[str | None] = mapped_column(Text)
+    author: Mapped[str | None] = mapped_column(String(128))
+    contents: Mapped[str | None] = mapped_column(Text)
+    feedlabel: Mapped[str | None] = mapped_column(String(128))
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+
+    ingested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    game: Mapped[RawGame] = relationship(back_populates="patch_notes")
+
+    def __repr__(self) -> str:
+        return f"<RawPatchNote app_id={self.app_id} title={self.title!r} date={self.published_at}>"
 
 
 # ---------------------------------------------------------------------------
@@ -714,5 +749,293 @@ class ServingPrediction(Base):
 
     def __repr__(self) -> str:
         return f"<ServingPrediction app_id={self.app_id} type={self.prediction_type!r} score={self.score}>"
+
+
+# ---------------------------------------------------------------------------
+# serving_recommendations
+# ---------------------------------------------------------------------------
+
+class ServingRecommendation(Base):
+    """
+    Actionable recommendations synthesized by jobs/generate_recommendations.py.
+    Carries model_run_id when influenced by ML / SHAP predictions, nullable when rules-only.
+    Read by api/recommendations.py.
+    """
+    __tablename__ = "serving_recommendations"
+    __table_args__ = (
+        Index("ix_serving_recommendations_app_priority", "app_id", "priority_rank"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    model_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("model_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    recommendation_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    domain: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    priority_rank: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    impact_level: Mapped[str] = mapped_column(String(32), nullable=False)
+    difficulty_level: Mapped[str] = mapped_column(String(32), nullable=False)
+    confidence_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_payload: Mapped[dict | None] = mapped_column(JSONB)
+    action_items: Mapped[list | None] = mapped_column(JSONB)
+
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    game: Mapped[RawGame] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
+    model_run: Mapped[ModelRun | None] = relationship("ModelRun", foreign_keys=[model_run_id], lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<ServingRecommendation app_id={self.app_id} rank={self.priority_rank} title={self.title!r}>"
+
+
+# ===========================================================================
+# MART ZONE (Phase 5 — Decision Intelligence & Data Marts)
+# Written ONLY by materialization jobs, read by API handlers & dashboards.
+# ADR 0001, Decision 1 & 2.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# mart_game_overview
+# ---------------------------------------------------------------------------
+
+class MartGameOverview(Base):
+    """
+    Pre-materialized comprehensive game overview and dashboard KPI mart.
+    Written by jobs/materialize_marts.py.
+    Read by api/games.py and dashboard handlers.
+    """
+    __tablename__ = "mart_game_overview"
+    __table_args__ = (
+        Index("ix_mart_game_overview_genre_score", "primary_genre", "success_score"),
+    )
+
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    name: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
+    short_description: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
+
+    # Developer / publisher
+    developer: Mapped[str | None] = mapped_column(String(512))
+    publisher: Mapped[str | None] = mapped_column(String(512))
+
+    # Release
+    release_date: Mapped[str | None] = mapped_column(String(64))
+    coming_soon: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Genres / categories / tags
+    genres: Mapped[dict | list | None] = mapped_column(JSONB)
+    categories: Mapped[dict | list | None] = mapped_column(JSONB)
+    tags: Mapped[dict | None] = mapped_column(JSONB)
+
+    # Pricing
+    is_free: Mapped[bool] = mapped_column(Boolean, default=False)
+    price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    final_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    discount_pct: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Platform support
+    platform_windows: Mapped[bool] = mapped_column(Boolean, default=False)
+    platform_mac: Mapped[bool] = mapped_column(Boolean, default=False)
+    platform_linux: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Review aggregate
+    positive_reviews: Mapped[int] = mapped_column(Integer, default=0)
+    negative_reviews: Mapped[int] = mapped_column(Integer, default=0)
+    review_score: Mapped[int | None] = mapped_column(Integer)
+    review_score_desc: Mapped[str | None] = mapped_column(String(128))
+
+    # SteamSpy estimates
+    owners_estimate: Mapped[str | None] = mapped_column(String(64))
+    average_playtime_forever: Mapped[int] = mapped_column(Integer, default=0)
+    median_playtime_forever: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Metacritic & Media
+    metacritic_score: Mapped[int | None] = mapped_column(Integer)
+    header_image: Mapped[str | None] = mapped_column(String(512))
+    website: Mapped[str | None] = mapped_column(String(512))
+
+    # Decision / Mart Materialized Insights
+    primary_genre: Mapped[str | None] = mapped_column(String(128), index=True)
+    # Directional estimate based on public SteamSpy owner estimate range & final price (not verified financial data)
+    revenue_tier: Mapped[str | None] = mapped_column(String(64))
+    estimated_gross_revenue_usd: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    success_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), index=True)
+    net_sentiment_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), index=True)
+    peak_ccu_24h: Mapped[int | None] = mapped_column(Integer)
+    executive_brief: Mapped[dict | None] = mapped_column(JSONB)
+    top_strengths: Mapped[dict | list | None] = mapped_column(JSONB)
+    top_complaints: Mapped[dict | list | None] = mapped_column(JSONB)
+
+    # Pricing Intelligence (comparable-range output, historical low, no causal elasticity claims)
+    price_tracking_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    historical_lowest_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    historical_lowest_discount_pct: Mapped[int | None] = mapped_column(Integer, default=0)
+    genre_median_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    genre_min_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    genre_max_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    genre_p25_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    genre_p75_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    pricing_spectrum: Mapped[dict | None] = mapped_column(JSONB)
+    price_history_points: Mapped[list | dict | None] = mapped_column(JSONB)
+
+    materialized_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationship
+    game: Mapped[RawGame] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<MartGameOverview app_id={self.app_id} name={self.name!r}>"
+
+
+# ---------------------------------------------------------------------------
+# mart_trends
+# ---------------------------------------------------------------------------
+
+class MartTrend(Base):
+    """
+    Time-series and patch impact trends across games and market segments.
+    Written by jobs/materialize_marts.py.
+    """
+    __tablename__ = "mart_trends"
+    __table_args__ = (
+        Index("ix_mart_trends_app_type", "app_id", "trend_type"),
+        Index("ix_mart_trends_type_cat", "trend_type", "category"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    trend_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    category: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    recorded_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    metric_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    metric_value: Mapped[Decimal] = mapped_column(Numeric(12, 4), nullable=False)
+    change_pct_7d: Mapped[Decimal | None] = mapped_column(Numeric(7, 2))
+    change_pct_30d: Mapped[Decimal | None] = mapped_column(Numeric(7, 2))
+    metadata_payload: Mapped[dict | None] = mapped_column(JSONB)
+
+    materialized_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationship
+    game: Mapped[RawGame | None] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<MartTrend id={self.id} type={self.trend_type!r} metric={self.metric_name!r}>"
+
+
+# ---------------------------------------------------------------------------
+# mart_opportunity_scores
+# ---------------------------------------------------------------------------
+
+class MartOpportunityScore(Base):
+    """
+    Market opportunity analytics scores by genre and tag clusters.
+    Computed via weighted scoring formula (analytics only, not ML).
+    Written by jobs/materialize_marts.py.
+    """
+    __tablename__ = "mart_opportunity_scores"
+    __table_args__ = (
+        UniqueConstraint("genre_or_tag", "entity_type", name="uq_mart_opportunity_entity"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    genre_or_tag: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    entity_type: Mapped[str] = mapped_column(String(32), default="genre", nullable=False)
+    opportunity_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, index=True)
+    demand_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    saturation_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    sentiment_gap_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    monetization_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    game_count: Mapped[int] = mapped_column(Integer, default=0)
+    median_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    avg_review_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    top_complaint_themes: Mapped[dict | list | None] = mapped_column(JSONB)
+    top_loved_themes: Mapped[dict | list | None] = mapped_column(JSONB)
+    recommended_features: Mapped[dict | list | None] = mapped_column(JSONB)
+
+    materialized_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<MartOpportunityScore entity={self.genre_or_tag!r} type={self.entity_type!r} score={self.opportunity_score}>"
+
+
+# ---------------------------------------------------------------------------
+# mart_update_impact
+# ---------------------------------------------------------------------------
+
+class MartUpdateImpact(Base):
+    """
+    Pre-materialized update/patch impact before-and-after window metrics.
+    Compares sentiment, player CCU, and complaint shifts around detected patch dates.
+    Results are strictly labeled 'observed/correlated' (never 'caused').
+    Written by jobs/materialize_update_impact.py.
+    Read by api/updates.py.
+    """
+    __tablename__ = "mart_update_impact"
+    __table_args__ = (
+        Index("ix_mart_update_impact_app_date", "app_id", "patch_date"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    patch_name: Mapped[str] = mapped_column(String(256), nullable=False)
+    patch_version: Mapped[str | None] = mapped_column(String(64))
+    patch_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    is_inferred: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    window_days: Mapped[int] = mapped_column(Integer, default=14, nullable=False)
+
+    # Observed Sentiment Delta
+    pre_sentiment_positive_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    post_sentiment_positive_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    sentiment_delta_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    observed_sentiment_verdict: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    # Observed Player Activity Delta
+    pre_avg_ccu: Mapped[int | None] = mapped_column(Integer)
+    post_avg_ccu: Mapped[int | None] = mapped_column(Integer)
+    ccu_change_pct: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
+
+    # Observed Complaint Topic Shifts
+    pre_complaint_distribution: Mapped[dict | None] = mapped_column(JSONB)
+    post_complaint_distribution: Mapped[dict | None] = mapped_column(JSONB)
+    top_resolved_complaints: Mapped[list | None] = mapped_column(JSONB)
+    top_emerging_complaints: Mapped[list | None] = mapped_column(JSONB)
+
+    # Non-Causal Summary
+    correlation_summary: Mapped[str] = mapped_column(Text, nullable=False)
+
+    materialized_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationship
+    game: Mapped[RawGame] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<MartUpdateImpact app_id={self.app_id} patch={self.patch_name!r} verdict={self.observed_sentiment_verdict!r}>"
+
 
 

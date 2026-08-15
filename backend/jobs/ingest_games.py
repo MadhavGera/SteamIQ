@@ -62,20 +62,23 @@ STEAMSPY_DELAY_S    = 2.0   # SteamSpy is more sensitive
 
 class IngestGamesJob(BaseJob):
     """
-    Full ingestion pipeline for a single Steam game.
-    Phase 1: writes to raw_* tables only.
+    Full ingestion and recurring price snapshot pipeline for Steam games.
+    Writes strictly to raw_* tables only (raw_games, raw_reviews, raw_game_tags,
+    raw_price_history, raw_player_snapshots).
     """
     job_name = "ingest_games"
 
     def __init__(
         self,
-        app_id: int,
+        app_id: int | None = None,
         *,
+        snapshot_all_prices: bool = False,
         dry_run: bool = False,
         max_reviews: int = MAX_REVIEW_PAGES * REVIEW_BATCH_SIZE,
     ) -> None:
         super().__init__(dry_run=dry_run)
         self.app_id = app_id
+        self.snapshot_all_prices = snapshot_all_prices
         self.max_reviews = max_reviews
         self._steam_api_key: str = os.environ.get("STEAM_API_KEY", "")
         if not self._steam_api_key:
@@ -315,13 +318,18 @@ class IngestGamesJob(BaseJob):
         self,
         session: AsyncSession,
         steam_data: dict[str, Any],
+        app_id: int | None = None,
     ) -> None:
         """Record current price in raw_price_history."""
         from db.models import RawPriceHistory
 
+        target_id = app_id or self.app_id
+        if target_id is None:
+            return
+
         price_usd, final_price_usd, discount_pct = self._parse_price(steam_data)
         row = {
-            "app_id": self.app_id,
+            "app_id": target_id,
             "recorded_at": datetime.now(UTC),
             "price_usd": price_usd,
             "final_price_usd": final_price_usd,
@@ -336,7 +344,7 @@ class IngestGamesJob(BaseJob):
         self, session: AsyncSession, player_count: int | None
     ) -> None:
         """Record current player count in raw_player_snapshots."""
-        if player_count is None:
+        if player_count is None or self.app_id is None:
             return
         from db.models import RawPlayerSnapshot
 
@@ -358,7 +366,68 @@ class IngestGamesJob(BaseJob):
         """Synchronous entry point — delegates to async _run()."""
         return asyncio.run(self._run())
 
+    async def _run_recurring_price_snapshots(self) -> dict[str, Any]:
+        """
+        Recurring price snapshot pipeline:
+        Iterates over all games in raw_games and records a point-in-time price snapshot
+        in raw_price_history to maintain a continuous, reliable historical price time-series.
+
+        TODO(Phase7_Step7.2): Wire this recurring snapshot method to an RQ scheduler / cron daemon.
+        Currently invoked manually or via scheduled CLI job runner (`python -m jobs.ingest_games --snapshot-prices`).
+        materialize_marts.py degrades gracefully to reporting tracking_since and current price when only
+        1 or 2 snapshots exist.
+        """
+        from sqlalchemy import select
+
+        from db.base import _build_database_url
+        from db.models import RawGame
+
+        engine = create_async_engine(_build_database_url(), pool_pre_ping=True)
+        SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+        async with SessionLocal() as session:
+            res = await session.execute(select(RawGame.app_id, RawGame.name))
+            catalog = res.all()
+
+        total = len(catalog)
+        self.logger.info("Starting recurring price snapshot run for %d catalog games...", total)
+        snapshotted = 0
+
+        async with httpx.AsyncClient(
+            headers={"User-Agent": "SteamIQ-PriceTracker/0.1"},
+            follow_redirects=True,
+        ) as client:
+            for g_id, g_name in catalog:
+                try:
+                    data = await self._get(
+                        client,
+                        STEAM_STORE_API,
+                        {"appids": g_id, "cc": "us", "l": "english"},
+                        delay=REQUEST_DELAY_S,
+                    )
+                    if data:
+                        app_data = data.get(str(g_id), {})
+                        if app_data.get("success"):
+                            steam_data = app_data.get("data", {})
+                            if not self.dry_run:
+                                async with SessionLocal() as session, session.begin():
+                                    await self._insert_price_snapshot(session, steam_data, app_id=g_id)
+                            snapshotted += 1
+                except Exception as e:
+                    self.logger.warning("Price snapshot error for %s (%s): %s", g_name, g_id, e)
+
+        await engine.dispose()
+        self.logger.info("Completed recurring price snapshot: %d/%d recorded.", snapshotted, total)
+        return {
+            "mode": "recurring_price_snapshots",
+            "total_games": total,
+            "snapshotted": snapshotted,
+        }
+
     async def _run(self) -> dict[str, Any]:
+        if self.snapshot_all_prices or (self.app_id is None):
+            return await self._run_recurring_price_snapshots()
+
         stats: dict[str, Any] = {
             "app_id": self.app_id,
             "reviews_upserted": 0,
@@ -418,8 +487,14 @@ class IngestGamesJob(BaseJob):
 # ─── CLI entry point ──────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Ingest a Steam game into raw_* tables")
-    parser.add_argument("--appid", type=int, required=True, help="Steam app ID")
+    parser = argparse.ArgumentParser(description="Ingest Steam game metadata and recurring price history")
+    parser.add_argument("--appid", type=int, default=None, help="Steam app ID for single game ingestion")
+    parser.add_argument(
+        "--snapshot-prices",
+        "--all-prices",
+        action="store_true",
+        help="Run recurring scheduled price snapshots for all catalog games",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Fetch but don't write to DB")
     parser.add_argument(
         "--max-reviews",
@@ -428,6 +503,9 @@ def main() -> None:
         help=f"Max reviews to fetch (default: {MAX_REVIEW_PAGES * REVIEW_BATCH_SIZE})",
     )
     args = parser.parse_args()
+
+    if not args.appid and not args.snapshot_prices:
+        parser.error("Must provide either --appid <ID> or --snapshot-prices")
 
     # Load .env from the project root (parent of backend/)
     from pathlib import Path
@@ -442,10 +520,11 @@ def main() -> None:
 
     job = IngestGamesJob(
         app_id=args.appid,
+        snapshot_all_prices=args.snapshot_prices,
         dry_run=args.dry_run,
         max_reviews=args.max_reviews,
     )
-    job.execute(app_id=args.appid, dry_run=args.dry_run)
+    job.execute(app_id=args.appid, snapshot_prices=args.snapshot_prices, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":

@@ -51,6 +51,11 @@ process-reviews: ## Process NLP reviews for a game: make process-reviews APPID=1
 process-reviews-all: ## Process NLP reviews for all ingested games
 	cd $(BACKEND) && $(PYTHON) -m jobs.process_reviews --all
 
+ingest-news: ## Ingest Steam news and patch notes: make ingest-news
+	@echo ">>> Ingesting Steam news and patch notes..."
+	cd $(BACKEND) && $(PYTHON) -m jobs.ingest_news --all
+	@echo "✅  Patch notes ingestion complete."
+
 process-embeddings: ## Generate pgvector embeddings for a single game: make process-embeddings APPID=367520
 	@if [ -z "$(APPID)" ]; then echo "❌  Usage: make process-embeddings APPID=<steam_app_id>"; exit 1; fi
 	cd $(BACKEND) && $(PYTHON) -m jobs.process_embeddings --app-id $(APPID)
@@ -72,6 +77,24 @@ train-model: ## Train predictive models & promote champion: make train-model TRI
 	@echo "✅  Model training and promotion complete."
 
 train: build-features train-model ## Full Phase 4 pipeline: build features and train models
+
+# ─── Decision Intelligence (Phase 5) ──────────────────────────────────────────
+materialize-marts: ## Materialize decision marts (overview, trends, opportunity): make materialize-marts
+	@echo ">>> Materializing Phase 5 decision marts..."
+	cd $(BACKEND) && $(PYTHON) -m jobs.materialize_marts --all
+	@echo "✅  Decision marts materialized."
+
+materialize-updates: ## Materialize update impact tracker: make materialize-updates
+	@echo ">>> Materializing Update Impact Tracker windows..."
+	cd $(BACKEND) && $(PYTHON) -m jobs.materialize_update_impact --all
+	@echo "✅  Update impact materialized."
+
+generate-recommendations: ## Generate hybrid recommendations: make generate-recommendations
+	@echo ">>> Generating hybrid recommendations (SHAP + domain rules)..."
+	cd $(BACKEND) && $(PYTHON) -m jobs.generate_recommendations --all
+	@echo "✅  Recommendations generation complete."
+
+decision-pipeline: materialize-marts materialize-updates generate-recommendations ## Full Phase 5 pipeline
 
 
 # ─── Development ──────────────────────────────────────────────────────────────

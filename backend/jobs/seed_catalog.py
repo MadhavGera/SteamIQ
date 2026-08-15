@@ -293,7 +293,7 @@ class SeedCatalogJob(BaseJob):
                     )
                     await session.execute(stmt)
 
-                    # Upsert raw_price_history
+                    # Upsert raw_price_history (real T-0 snapshot at ingestion time)
                     price_row = {
                         "app_id": app_id,
                         "recorded_at": datetime.now(UTC),

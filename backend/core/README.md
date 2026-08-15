@@ -50,11 +50,7 @@ raise GameNotFoundError(f"No game found with app_id {app_id}")
 # → {"success": false, "error": {"code": "game_not_found", "message": "..."}}
 ```
 
-## Phase 1 stopgap (track and remove)
+## Phase 5 mart transition (complete)
 
-`api/games.py` reads from `raw_games` directly. Every read is marked:
-```python
-# TODO(Phase5): repoint to mart_game_overview once it exists
-```
+`api/games.py` now reads from `mart_game_overview` directly. The Phase 1 stopgap (`raw_games` read) has been removed in Phase 5 per ADR 0001, Decision 2. All handlers read exclusively from `mart_*` and `serving_*` tables.
 
-This stopgap is **bounded** — it goes away in Phase 5. Do not add new raw_* reads in handlers.

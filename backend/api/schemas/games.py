@@ -1,12 +1,8 @@
 """
-Pydantic response schemas for the games API.
+Pydantic response schemas for the games API — Phase 5.
 
-These are the shapes returned by api/games.py. They are intentionally
-separate from the ORM models so the API contract is decoupled from the
-database schema.
-
-Phase 1: schemas represent raw_games data.
-TODO(Phase5): create GameOverviewSchema backed by mart_game_overview.
+These are the shapes returned by api/games.py, backed directly by mart_game_overview.
+ADR 0001, Decision 2: API handlers read only from mart_* or serving_* tables.
 """
 from __future__ import annotations
 
@@ -31,6 +27,7 @@ class GameSummarySchema(BaseModel):
     """
     Lightweight game summary for search results.
     Returned by GET /api/v1/games/search.
+    Backed by mart_game_overview.
     """
     app_id: int
     name: str
@@ -46,6 +43,10 @@ class GameSummarySchema(BaseModel):
     negative_reviews: int = 0
     owners_estimate: str | None = None
     genres: list[dict[str, Any]] | None = None
+    primary_genre: str | None = None
+    revenue_tier: str | None = None
+    success_score: Decimal | None = None
+    net_sentiment_pct: Decimal | None = None
 
     model_config = {"from_attributes": True}
 
@@ -55,6 +56,8 @@ class GameSummarySchema(BaseModel):
 
     @property
     def positive_pct(self) -> float | None:
+        if self.net_sentiment_pct is not None:
+            return float(self.net_sentiment_pct)
         total = self.review_total
         if total == 0:
             return None
@@ -65,9 +68,7 @@ class GameDetailSchema(BaseModel):
     """
     Full game detail for a single game page.
     Returned by GET /api/v1/games/{app_id}.
-
-    TODO(Phase5): repoint to mart_game_overview once it exists.
-    This is the Phase 1 stopgap — reading directly from raw_games.
+    Backed by mart_game_overview.
     """
     app_id: int
     name: str
@@ -105,6 +106,18 @@ class GameDetailSchema(BaseModel):
 
     metacritic_score: int | None = None
 
+    # Decision / Mart layer additions (Phase 5)
+    primary_genre: str | None = None
+    # Directional estimate based on public SteamSpy owner estimate range & final price (not verified financial data)
+    revenue_tier: str | None = None
+    estimated_gross_revenue_usd: Decimal | None = None
+    success_score: Decimal | None = None
+    net_sentiment_pct: Decimal | None = None
+    peak_ccu_24h: int | None = None
+    executive_brief: dict[str, Any] | None = None
+    top_strengths: list[str] | None = None
+    top_complaints: list[dict[str, Any]] | None = None
+
     model_config = {"from_attributes": True}
 
     @property
@@ -113,6 +126,8 @@ class GameDetailSchema(BaseModel):
 
     @property
     def positive_pct(self) -> float | None:
+        if self.net_sentiment_pct is not None:
+            return float(self.net_sentiment_pct)
         total = self.review_total
         if total == 0:
             return None
