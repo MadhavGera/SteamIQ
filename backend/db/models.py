@@ -879,6 +879,8 @@ class MartGameOverview(Base):
     executive_brief: Mapped[dict | None] = mapped_column(JSONB)
     top_strengths: Mapped[dict | list | None] = mapped_column(JSONB)
     top_complaints: Mapped[dict | list | None] = mapped_column(JSONB)
+    shap_values: Mapped[dict | None] = mapped_column(JSONB)
+    model_run_id: Mapped[str | None] = mapped_column(String(64))
 
     # Pricing Intelligence (comparable-range output, historical low, no causal elasticity claims)
     price_tracking_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

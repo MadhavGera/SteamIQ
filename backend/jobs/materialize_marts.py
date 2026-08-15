@@ -505,6 +505,8 @@ class MaterializeMartsJob(BaseJob):
                 executive_brief=exec_brief,
                 top_strengths=top_strengths,
                 top_complaints=top_complaints,
+                shap_values=serving_pred.shap_values if serving_pred else None,
+                model_run_id=str(serving_pred.model_run_id) if (serving_pred and serving_pred.model_run_id) else None,
                 price_tracking_started_at=price_tracking_started_at,
                 historical_lowest_price_usd=hist_low_price,
                 historical_lowest_discount_pct=hist_low_discount,

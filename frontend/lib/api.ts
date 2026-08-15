@@ -60,6 +60,25 @@ export interface GameDetail extends GameSummary {
   average_playtime_forever: number;
   median_playtime_forever: number;
   metacritic_score: number | null;
+  // Decision & Mart Intelligence (Phase 5)
+  primary_genre: string | null;
+  revenue_tier: string | null;
+  estimated_gross_revenue_usd: number | string | null;
+  success_score: number | string | null;
+  net_sentiment_pct: number | string | null;
+  peak_ccu_24h: number | null;
+  executive_brief: {
+    market_position?: string;
+    growth_vector?: string;
+  } | null;
+  top_strengths: string[] | null;
+  top_complaints: Array<{
+    category: string;
+    volume_pct: number;
+    severity: string;
+  }> | null;
+  shap_values: Record<string, number> | null;
+  model_run_id: string | null;
 }
 
 export interface GameSearchResult {
@@ -68,6 +87,108 @@ export interface GameSearchResult {
   page: number;
   page_size: number;
   query: string;
+}
+
+// ─── Market & Pricing Intelligence Types (Phase 5 — Tab 4) ────────────────────
+
+export interface GenrePricingSpectrum {
+  genre: string;
+  median_price_usd: number;
+  q25_price_usd: number;
+  q75_price_usd: number;
+  min_price_usd: number;
+  max_price_usd: number;
+  discounted_game_share_pct: number;
+}
+
+export interface PriceSnapshotItem {
+  recorded_at: string;
+  price_usd: number | null;
+  final_price_usd: number | null;
+  discount_pct: number;
+}
+
+export interface MarketIntelligence {
+  app_id: number;
+  primary_genre: string | null;
+  current_price_usd: number | null;
+  price_tier: string;
+  historical_lowest_price_usd: number | null;
+  price_tracking_started_at: string | null;
+  genre_pricing_spectrum: GenrePricingSpectrum;
+  competitor_price_distribution: Record<string, number>;
+  recent_price_snapshots: PriceSnapshotItem[];
+}
+
+// ─── Update Impact Tracker Types (Phase 5 — Tab 6) ────────────────────────────
+
+export interface UpdateImpactItem {
+  id: number;
+  app_id: number;
+  patch_name: string;
+  patch_version: string | null;
+  patch_date: string;
+  is_inferred: boolean;
+  window_days: number;
+  pre_sentiment_positive_pct: number | null;
+  post_sentiment_positive_pct: number | null;
+  sentiment_delta_pct: number | null;
+  observed_sentiment_verdict: string;
+  pre_avg_ccu: number | null;
+  post_avg_ccu: number | null;
+  ccu_change_pct: number | null;
+  pre_complaint_distribution: Record<string, number> | null;
+  post_complaint_distribution: Record<string, number> | null;
+  top_resolved_complaints: Array<{
+    category: string;
+    pre_volume_pct: number;
+    post_volume_pct: number;
+    delta_pct: number;
+  }> | null;
+  top_emerging_complaints: Array<{
+    category: string;
+    pre_volume_pct: number;
+    post_volume_pct: number;
+    delta_pct: number;
+  }> | null;
+  correlation_summary: string;
+  materialized_at: string;
+}
+
+export interface UpdateImpactFeed {
+  app_id: number;
+  total_updates: number;
+  latest_verdict: string | null;
+  average_sentiment_delta: number | null;
+  updates: UpdateImpactItem[];
+}
+
+// ─── Recommendation Center Types (Phase 5 — Tab 7) ────────────────────────────
+
+export interface RecommendationItem {
+  id: number;
+  model_run_id: string | null;
+  recommendation_type: string;
+  domain: string;
+  priority_rank: number;
+  title: string;
+  impact_level: "High" | "Medium" | "Low";
+  difficulty_level: "High" | "Medium" | "Low";
+  confidence_score: number;
+  rationale: string;
+  evidence_type: string;
+  evidence_payload: Record<string, unknown> | null;
+  action_items: string[] | null;
+  generated_at: string;
+}
+
+export interface RecommendationBundle {
+  app_id: number;
+  total_recommendations: number;
+  generated_at: string;
+  model_run_id: string | null;
+  priority_action_summary: string | null;
+  recommendations: RecommendationItem[];
 }
 
 // ─── Review Intelligence Types (Phase 2) ──────────────────────────────────────
@@ -251,6 +372,30 @@ export const api = {
    */
   async getCompetitors(appId: number, limit = 10): Promise<CompetitorList> {
     return apiFetch<CompetitorList>(`/api/v1/games/${appId}/competitors?limit=${limit}`);
+  },
+
+  /**
+   * Get Market & Pricing Intelligence by Steam app_id (Phase 5).
+   * GET /api/v1/games/{appId}/market
+   */
+  async getMarket(appId: number): Promise<MarketIntelligence> {
+    return apiFetch<MarketIntelligence>(`/api/v1/games/${appId}/market`);
+  },
+
+  /**
+   * Get Update Impact Tracker timeline by Steam app_id (Phase 5).
+   * GET /api/v1/games/{appId}/updates
+   */
+  async getUpdates(appId: number): Promise<UpdateImpactFeed> {
+    return apiFetch<UpdateImpactFeed>(`/api/v1/games/${appId}/updates`);
+  },
+
+  /**
+   * Get Hybrid Recommendations bundle by Steam app_id (Phase 5).
+   * GET /api/v1/games/{appId}/recommendations
+   */
+  async getRecommendations(appId: number): Promise<RecommendationBundle> {
+    return apiFetch<RecommendationBundle>(`/api/v1/games/${appId}/recommendations`);
   },
 
   /**

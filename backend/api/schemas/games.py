@@ -117,6 +117,8 @@ class GameDetailSchema(BaseModel):
     executive_brief: dict[str, Any] | None = None
     top_strengths: list[str] | None = None
     top_complaints: list[dict[str, Any]] | None = None
+    shap_values: dict[str, float] | None = None
+    model_run_id: str | None = None
 
     model_config = {"from_attributes": True}
 

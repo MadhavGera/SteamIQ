@@ -72,6 +72,8 @@ def upgrade() -> None:
         sa.Column("executive_brief", JSONB, nullable=True),
         sa.Column("top_strengths", JSONB, nullable=True),
         sa.Column("top_complaints", JSONB, nullable=True),
+        sa.Column("shap_values", JSONB, nullable=True),
+        sa.Column("model_run_id", sa.String(64), nullable=True),
         sa.Column(
             "materialized_at",
             sa.DateTime(timezone=True),

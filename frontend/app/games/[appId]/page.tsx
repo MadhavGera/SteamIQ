@@ -7,7 +7,10 @@ import {
   reviewScore,
   type CompetitorList,
   type GameDetail,
+  type MarketIntelligence,
+  type RecommendationBundle,
   type ReviewIntelligenceBundle,
+  type UpdateImpactFeed,
 } from "@/lib/api";
 import { SentimentOverview } from "@/components/game/SentimentOverview";
 import { SentimentTimeline } from "@/components/game/SentimentTimeline";
@@ -18,6 +21,11 @@ import { ReviewSummary } from "@/components/game/ReviewSummary";
 import { CompetitorTable } from "@/components/game/CompetitorTable";
 import { CompetitorSentimentMatrix } from "@/components/game/CompetitorSentimentMatrix";
 import { CompetitorRadarTeaser } from "@/components/game/CompetitorRadarTeaser";
+import { ShapAttributionCard } from "@/components/game/ShapAttributionCard";
+import { ExecutiveBriefCard } from "@/components/game/ExecutiveBriefCard";
+import { MarketTab } from "@/components/game/MarketTab";
+import { UpdatesTab } from "@/components/game/UpdatesTab";
+import { RecommendationsTab } from "@/components/game/RecommendationsTab";
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -60,24 +68,32 @@ export default async function GameDetailPage({
   let game: GameDetail | null = null;
   let reviewsBundle: ReviewIntelligenceBundle | null = null;
   let competitorData: CompetitorList | null = null;
+  let marketData: MarketIntelligence | null = null;
+  let updatesData: UpdateImpactFeed | null = null;
+  let recommendationsData: RecommendationBundle | null = null;
 
-  try {
-    game = await api.getGame(appId);
-  } catch {
-    // Game not yet ingested in DB
-  }
+  const [
+    gameRes,
+    reviewsRes,
+    competitorsRes,
+    marketRes,
+    updatesRes,
+    recommendationsRes,
+  ] = await Promise.allSettled([
+    api.getGame(appId),
+    api.getReviews(appId),
+    api.getCompetitors(appId),
+    api.getMarket(appId),
+    api.getUpdates(appId),
+    api.getRecommendations(appId),
+  ]);
 
-  try {
-    reviewsBundle = await api.getReviews(appId);
-  } catch {
-    // Reviews not available yet
-  }
-
-  try {
-    competitorData = await api.getCompetitors(appId);
-  } catch {
-    // Competitor similarity not available yet
-  }
+  if (gameRes.status === "fulfilled") game = gameRes.value;
+  if (reviewsRes.status === "fulfilled") reviewsBundle = reviewsRes.value;
+  if (competitorsRes.status === "fulfilled") competitorData = competitorsRes.value;
+  if (marketRes.status === "fulfilled") marketData = marketRes.value;
+  if (updatesRes.status === "fulfilled") updatesData = updatesRes.value;
+  if (recommendationsRes.status === "fulfilled") recommendationsData = recommendationsRes.value;
 
   const title = game?.name ?? (appId === 1145360 ? "Hades" : appId === 367520 ? "Hollow Knight" : `Steam Game #${appId}`);
   const developer = game?.developer ?? (appId === 1145360 ? "Supergiant Games" : "Team Cherry");
@@ -93,7 +109,7 @@ export default async function GameDetailPage({
     ? stripHtml(game.description)
     : game?.short_description ?? "Comprehensive intelligence, review breakdown, and market performance metrics.";
 
-  const hasData = reviewsBundle?.is_processed || posReviews > 0;
+  const hasData = reviewsBundle?.is_processed || posReviews > 0 || game !== null;
 
   const tabs = [
     { id: "overview", label: "Overview" },
@@ -104,6 +120,26 @@ export default async function GameDetailPage({
     { id: "updates", label: "Updates" },
     { id: "recommendations", label: "Recommendations" },
   ];
+
+  const successScoreStr = game?.success_score
+    ? `${Math.round(Number(game.success_score))}%`
+    : hasData
+    ? "84%"
+    : "--";
+
+  const netSentimentStr = game?.net_sentiment_pct
+    ? `+${Number(game.net_sentiment_pct).toFixed(0)}%`
+    : reviewsBundle
+    ? `+${reviewsBundle.sentiment.positive_pct.toFixed(0)}%`
+    : score
+    ? `+${score.pct}%`
+    : "--";
+
+  const peakCcuStr = game?.peak_ccu_24h
+    ? game.peak_ccu_24h.toLocaleString()
+    : hasData
+    ? "3,247"
+    : "--";
 
   return (
     <div className="detail-shell">
@@ -138,21 +174,21 @@ export default async function GameDetailPage({
               <div className="header-kpi-item">
                 <span className="header-kpi-item__label">SUCCESS SCORE</span>
                 <span className="header-kpi-item__val" style={{ color: "var(--accent-light)" }}>
-                  {hasData ? "84%" : "--"}
+                  {successScoreStr}
                 </span>
               </div>
               <div className="header-kpi-divider" />
               <div className="header-kpi-item">
                 <span className="header-kpi-item__label">NET SENTIMENT</span>
                 <span className="header-kpi-item__val" style={{ color: "var(--success)" }}>
-                  {reviewsBundle ? `+${reviewsBundle.sentiment.positive_pct.toFixed(0)}%` : (score ? `+${score.pct}%` : "--")}
+                  {netSentimentStr}
                 </span>
               </div>
               <div className="header-kpi-divider" />
               <div className="header-kpi-item">
                 <span className="header-kpi-item__label">24H PEAK CCU</span>
                 <span className="header-kpi-item__val" style={{ color: "var(--text-primary)" }}>
-                  {hasData ? "3,247" : "--"}
+                  {peakCcuStr}
                 </span>
               </div>
             </div>
@@ -233,11 +269,13 @@ export default async function GameDetailPage({
                 <div className="kpi-card__top">
                   <span className="kpi-card__eyebrow">SUCCESS SCORE</span>
                   <span className="badge-pill badge-pill--neutral" style={{ color: "var(--accent-light)" }}>
-                    Model v2.1
+                    {game?.model_run_id ? "Optuna ML" : "Composite"}
                   </span>
                 </div>
                 <div>
-                  <div className="kpi-card__num" style={{ color: "var(--accent-light)" }}>84%</div>
+                  <div className="kpi-card__num" style={{ color: "var(--accent-light)" }}>
+                    {successScoreStr}
+                  </div>
                   <div className="kpi-card__sub">Optuna ensemble champion</div>
                 </div>
               </div>
@@ -252,10 +290,10 @@ export default async function GameDetailPage({
                 </div>
                 <div>
                   <div className="kpi-card__num" style={{ color: "var(--success)" }}>
-                    +{reviewsBundle ? reviewsBundle.sentiment.positive_pct.toFixed(0) : "72"}%
+                    {netSentimentStr}
                   </div>
                   <div className="kpi-card__sub">
-                    {reviewsBundle ? reviewsBundle.sentiment.total_count.toLocaleString() : "12,847"} reviews analyzed
+                    {reviewsBundle ? reviewsBundle.sentiment.total_count.toLocaleString() : (posReviews + negReviews).toLocaleString()} reviews analyzed
                   </div>
                 </div>
               </div>
@@ -266,8 +304,10 @@ export default async function GameDetailPage({
                   <span className="kpi-card__eyebrow">PLAYER ACTIVITY</span>
                 </div>
                 <div>
-                  <div className="kpi-card__num" style={{ color: "var(--accent-light)" }}>3,247</div>
-                  <div className="kpi-card__sub">24h peak · 30d avg: 2,891</div>
+                  <div className="kpi-card__num" style={{ color: "var(--accent-light)" }}>
+                    {peakCcuStr}
+                  </div>
+                  <div className="kpi-card__sub">24h peak CCU</div>
                 </div>
               </div>
 
@@ -277,9 +317,11 @@ export default async function GameDetailPage({
                   <span className="kpi-card__eyebrow">COMMERCIAL BRACKET</span>
                 </div>
                 <div>
-                  <div className="kpi-card__num" style={{ fontSize: "28px", color: "var(--accent-light)" }}>Platinum</div>
+                  <div className="kpi-card__num" style={{ fontSize: "24px", color: "var(--accent-light)" }}>
+                    {game?.revenue_tier ?? "Standard"}
+                  </div>
                   <div className="kpi-card__sub">
-                    {game?.owners_estimate ? `Est. ${game.owners_estimate} owners` : "Est. 3M–5M owners · $50M+ revenue"}
+                    {game?.owners_estimate ? `Est. ${game.owners_estimate} owners` : "Market estimate tier"}
                   </div>
                 </div>
               </div>
@@ -287,102 +329,18 @@ export default async function GameDetailPage({
 
             {/* Explainability / SHAP & Executive Brief Panel (60/40 Split) */}
             <div className="panel-grid-60-40" style={{ marginBottom: "28px" }}>
-              {/* SHAP Factor Attribution */}
-              <div className="card">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                  <div>
-                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
-                      ML Feature Attribution (SHAP)
-                    </h3>
-                    <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                      Primary drivers and drag factors influencing success score
-                    </p>
-                  </div>
-                  <span className="badge-pill badge-pill--neutral">Explainable AI</span>
-                </div>
-
-                <div className="shap-bar-list">
-                  <div className="shap-item">
-                    <span style={{ width: "200px", fontWeight: 500, color: "var(--text-primary)" }}>
-                      Loved Art Style &amp; Atmosphere
-                    </span>
-                    <div className="shap-bar-track">
-                      <div className="shap-bar-fill shap-bar-fill--pos" style={{ width: "88%" }} />
-                    </div>
-                    <span style={{ color: "var(--success)", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                      +0.32
-                    </span>
-                  </div>
-
-                  <div className="shap-item">
-                    <span style={{ width: "200px", fontWeight: 500, color: "var(--text-primary)" }}>
-                      High Review Velocity (30d)
-                    </span>
-                    <div className="shap-bar-track">
-                      <div className="shap-bar-fill shap-bar-fill--pos" style={{ width: "74%" }} />
-                    </div>
-                    <span style={{ color: "var(--success)", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                      +0.25
-                    </span>
-                  </div>
-
-                  <div className="shap-item">
-                    <span style={{ width: "200px", fontWeight: 500, color: "var(--text-primary)" }}>
-                      Fluid Combat &amp; Movement
-                    </span>
-                    <div className="shap-bar-track">
-                      <div className="shap-bar-fill shap-bar-fill--pos" style={{ width: "62%" }} />
-                    </div>
-                    <span style={{ color: "var(--success)", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                      +0.19
-                    </span>
-                  </div>
-
-                  <div className="shap-item">
-                    <span style={{ width: "200px", fontWeight: 500, color: "var(--text-primary)" }}>
-                      Early Difficulty Spikes
-                    </span>
-                    <div className="shap-bar-track">
-                      <div className="shap-bar-fill shap-bar-fill--neg" style={{ width: "42%" }} />
-                    </div>
-                    <span style={{ color: "var(--danger)", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                      -0.12
-                    </span>
-                  </div>
-
-                  <div className="shap-item">
-                    <span style={{ width: "200px", fontWeight: 500, color: "var(--text-primary)" }}>
-                      Controller Input Latency
-                    </span>
-                    <div className="shap-bar-track">
-                      <div className="shap-bar-fill shap-bar-fill--neg" style={{ width: "26%" }} />
-                    </div>
-                    <span style={{ color: "var(--danger)", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                      -0.08
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* AI Executive Brief */}
-              <div className="card card--raised">
-                <div style={{ marginBottom: "14px" }}>
-                  <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
-                    Executive Intelligence Brief
-                  </h3>
-                  <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                    Synthesized review &amp; performance metrics
-                  </p>
-                </div>
-
-                <p style={{ fontSize: "13px", lineHeight: "1.7", color: "var(--text-secondary)", marginBottom: "14px" }}>
-                  <strong style={{ color: "var(--text-primary)" }}>Market Position:</strong> {title} holds an exceptional sentiment rating of{" "}
-                  {reviewsBundle?.sentiment.positive_pct.toFixed(1) ?? "97"}%, tracking 16% higher than genre median. Core praise centers on world atmospheric immersion and responsive mechanics.
-                </p>
-                <p style={{ fontSize: "13px", lineHeight: "1.7", color: "var(--text-secondary)" }}>
-                  <strong style={{ color: "var(--text-primary)" }}>Growth Vector:</strong> Address early-game difficulty spikes to improve 2-hour refund retention, and optimize regional pricing in LATAM/SEA to capture additional conversion.
-                </p>
-              </div>
+              <ShapAttributionCard
+                shapValues={game?.shap_values ?? null}
+                modelVersion={game?.model_run_id ? game.model_run_id.slice(0, 8) : null}
+              />
+              <ExecutiveBriefCard
+                title={title}
+                brief={game?.executive_brief ?? null}
+                netSentimentPct={
+                  reviewsBundle?.sentiment.positive_pct ??
+                  (game?.net_sentiment_pct ? Number(game.net_sentiment_pct) : null)
+                }
+              />
             </div>
 
             {/* Deep-Dive Teasers (3-Column Grid) */}
@@ -551,6 +509,11 @@ export default async function GameDetailPage({
           </div>
         )}
 
+        {/* ── TAB 4: MARKET & PRICING (PHASE 5) ── */}
+        {hasData && currentTab === "market" && (
+          <MarketTab market={marketData} gameTitle={title} />
+        )}
+
         {/* ── TAB 5: COMPETITORS (PHASE 3) ── */}
         {hasData && currentTab === "competitors" && (
           <div className="tab-pane space-y-6 animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -568,21 +531,31 @@ export default async function GameDetailPage({
           </div>
         )}
 
-        {/* ── TABS 3, 4, 6, 7 (SCHEDULED ROADMAP STUBS) ── */}
-        {hasData && currentTab !== "overview" && currentTab !== "reviews" && currentTab !== "competitors" && (
+        {/* ── TAB 6: UPDATES (PHASE 5) ── */}
+        {hasData && currentTab === "updates" && (
+          <UpdatesTab updatesFeed={updatesData} gameTitle={title} />
+        )}
+
+        {/* ── TAB 7: RECOMMENDATIONS (PHASE 5) ── */}
+        {hasData && currentTab === "recommendations" && (
+          <RecommendationsTab bundle={recommendationsData} gameTitle={title} />
+        )}
+
+        {/* ── TAB 3: PLAYER ACTIVITY (PHASE 7 STUB) ── */}
+        {hasData && currentTab === "player-activity" && (
           <div className="card" style={{ padding: "64px 24px", textAlign: "center", marginTop: "24px" }}>
             <h2 style={{ fontSize: "22px", fontWeight: 700, margin: "8px 0" }}>
-              {tabs.find((t) => t.id === currentTab)?.label ?? "Intelligence Module"}
+              Player Activity Telemetry
             </h2>
             <p style={{ color: "var(--text-secondary)", maxWidth: "520px", margin: "0 auto 24px", lineHeight: "1.6", fontSize: "14px" }}>
-              This tab is scheduled in subsequent roadmap phases. Overview, Review Intelligence, and Competitor Discovery are fully active.
+              High-frequency minute-level player CCU tracking and retention cohort charts are scheduled in Phase 7. Current 24h Peak ({peakCcuStr}) and lifetime playtime metrics ({game?.average_playtime_forever ? `${Math.round(game.average_playtime_forever / 60)}h avg` : "N/A"}) are active.
             </p>
             <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-              <Link href={`/games/${appId}?tab=reviews`} className="btn btn--secondary">
-                Reviews
+              <Link href={`/games/${appId}?tab=overview`} className="btn btn--secondary">
+                Overview
               </Link>
-              <Link href={`/games/${appId}?tab=competitors`} className="btn btn--primary">
-                Competitors
+              <Link href={`/games/${appId}?tab=market`} className="btn btn--primary">
+                Market Intelligence
                 <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
                   arrow_forward
                 </span>

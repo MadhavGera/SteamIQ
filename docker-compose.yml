@@ -16,8 +16,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-steamiq} -d ${POSTGRES_DB:-steamiq}"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 10
+      start_period: 30s
 
   # ── Backend (FastAPI) ─────────────────────────────────────────────────────────
   backend:
