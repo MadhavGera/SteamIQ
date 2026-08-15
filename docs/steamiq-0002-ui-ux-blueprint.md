@@ -11,7 +11,7 @@ The Phase 1 frontend is a functional prototype only — it proved `PostgreSQL �
 
 ---
 
-## 1. Information Architecture (locked)
+## 1. Information Architecture (locked — amended per Roadmap v2)
 
 ```
 SteamIQ
@@ -19,31 +19,44 @@ SteamIQ
 ├── Search / Landing
 ├── Dashboard
 │
-├── Game Intelligence  (per game, tabbed)
+├── Game Intelligence  (per game, tabbed — shared by both modes)
 │   ├── Overview
-│   ├── Reviews                 — Review Intelligence
-│   ├── Player Activity         — Player Behaviour / activity forecasting
-│   ├── Market                  — Market Intelligence (success, revenue tier)
-│   │                             + Pricing Intelligence (merged in, not a separate tab)
-│   ├── Competitors             — Similarity Engine
-│   ├── Updates                 — Update Impact Tracker
-│   └── Recommendations         — Recommendation Engine
+│   ├── Reviews              — Review Intelligence
+│   ├── Player Activity      — Player Behaviour / activity
+│   ├── Market               — Price + Success/Revenue Intelligence
+│   │                           Player mode: "buy now or wait" framing
+│   │                           Dev mode: competitor price positioning
+│   ├── Competitors          — Similarity Engine
+│   │                           Player mode label: "Similar Games"
+│   │                           Dev mode label: "Competitors" (+ market presence column)
+│   ├── Match                — NEW. Player mode only. "Is this for me?"
+│   ├── Updates              — Dev mode only (Update Impact Tracker)
+│   └── Recommendations      — Dev mode only (Recommendation Engine)
 │
 ├── Compare Games
-├── Market Explorer             — Opportunity Finder + Market Trends (merged)
-├── Ask SteamIQ
-└── Settings
+├── Market Explorer          — Dev mode only (Opportunity Finder + Trends)
+├── Ask SteamIQ              — shared, responses adapt to mode
+└── Settings                 (mode toggle lives here + as a persistent header control)
 ```
 
-**Decisions locked this round:**
-- Player Behaviour does **not** get its own page — it's a tab inside Game Intelligence, alongside Reviews/Market/Competitors.
-- Pricing Intelligence does **not** get its own tab — its output (comparable price range, market position) renders as a section within the Market tab, next to success/revenue-tier content.
-- Opportunity Finder and Market Trends are **not** two separate pages — they merge into a single global page, **Market Explorer**, since both are cross-game/platform-wide analysis rather than per-game data.
+**Decisions locked this round (amended):**
+- **Mode Toggle (Player / Developer):** Global and session-persisted. It never forks routes — `/game/[app_id]` is one page for both modes.
+- **Shared Nav Shell & Single Product:** One shared Game Intelligence Engine with two audiences on top of it. The mode toggle changes labels, framing, and which tabs render — not which system answers the question.
+- **Match Tab:** `Match` tab is the only net-new tab (Player mode only, "Is this for me?"). Everything else is an existing tab with conditional visibility and/or relabeled framing.
+- **Conditional Visibility:** `Updates`, `Recommendations`, and `Market Explorer` are hidden (not deleted, not separately routed) in Player mode.
+- **Market Tab Dual Framing:** Pricing Intelligence renders within the Market tab. In Player mode, it frames price history as "buy now or wait" (vs historical low). In Dev mode, it frames price positioning against competitors & genre medians.
+- **Competitors Tab Dual Labeling:** Rendered as "Similar Games" in Player mode and "Competitors" (with market presence column) in Dev mode.
+- **Opportunity Finder & Trends:** Remain merged into the single global page **Market Explorer** (accessible in Dev mode).
+
+**Rejected from the original proposal:**
+- A second top-level nav (`Explore` vs `Developer Studio` as separate trees).
+- A standalone Price Intelligence page or separate Similar Games page.
+- Divergent routes or separate backend databases for players vs developers.
 
 **Still open (defer until each page is speced, don't decide now):**
-- Whether Dashboard and Search/Landing are one page or two
-- Exact tab order within Game Intelligence
-- Whether Settings ships in the MVP at all, or is a Phase 7 stretch
+- Whether Dashboard and Search/Landing are one page or two.
+- Exact tab order within Game Intelligence.
+- Whether Settings ships in the MVP at all, or is a Phase 7 stretch (mode toggle remains available as persistent header control).
 
 ---
 

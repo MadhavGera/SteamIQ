@@ -169,13 +169,60 @@ export function RecommendationsTab({ bundle, gameTitle }: RecommendationsTabProp
                   <span className="badge-pill badge-pill--neutral">
                     {rec.difficulty_level} Effort
                   </span>
-                  <span className="badge-pill badge-pill--neutral" style={{ color: "var(--accent-light)" }}>
-                    {rec.evidence_type === "hybrid"
-                      ? "Hybrid ML+NLP"
-                      : rec.evidence_type === "pricing_comparable"
-                      ? "Pricing Comparable"
-                      : "Review NLP"}
-                  </span>
+
+                  {/* Evidence Type Attribution Badge */}
+                  {rec.evidence_type === "hybrid" || rec.model_run_id ? (
+                    <span
+                      className="badge-pill"
+                      style={{
+                        backgroundColor: "rgba(56, 189, 248, 0.15)",
+                        color: "var(--accent-light)",
+                        border: "1px solid rgba(56, 189, 248, 0.3)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontWeight: 600,
+                      }}
+                      title="Directly derived from ML Success Model TreeSHAP feature attribution & NLP complaint clusters"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: "13px" }}>psychology</span>
+                      🤖 ML Model + NLP
+                    </span>
+                  ) : rec.evidence_type === "review_nlp" ? (
+                    <span
+                      className="badge-pill"
+                      style={{
+                        backgroundColor: "rgba(45, 212, 191, 0.15)",
+                        color: "#2dd4bf",
+                        border: "1px solid rgba(45, 212, 191, 0.3)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontWeight: 600,
+                      }}
+                      title="Derived from sentiment analysis and player complaint category volume"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: "13px" }}>reviews</span>
+                      💬 Review NLP Heuristic
+                    </span>
+                  ) : (
+                    <span
+                      className="badge-pill"
+                      style={{
+                        backgroundColor: "rgba(251, 146, 60, 0.15)",
+                        color: "#fb923c",
+                        border: "1px solid rgba(251, 146, 60, 0.3)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontWeight: 600,
+                      }}
+                      title="Derived from genre IQR pricing distribution and comparable benchmarks"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: "13px" }}>payments</span>
+                      📊 Pricing Benchmark Rule
+                    </span>
+                  )}
                 </div>
               </div>
 

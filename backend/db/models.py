@@ -529,6 +529,7 @@ class ServingSimilarGame(Base):
     rank: Mapped[int] = mapped_column(Integer, nullable=False)                      # 1, 2, 3...
     shared_tags: Mapped[dict | None] = mapped_column(JSONB)                      # ["Metroidvania", "Difficult", ...]
     price_delta_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))      # target price - source price
+    market_presence: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True, default=None)  # 0.00 - 100.00 market volume index (or None if unscored)
 
     computed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -1038,6 +1039,81 @@ class MartUpdateImpact(Base):
 
     def __repr__(self) -> str:
         return f"<MartUpdateImpact app_id={self.app_id} patch={self.patch_name!r} verdict={self.observed_sentiment_verdict!r}>"
+
+
+# ---------------------------------------------------------------------------
+# mart_game_match_profile
+# ---------------------------------------------------------------------------
+
+class MartGameMatchProfile(Base):
+    """
+    Pre-materialized 6-dimension intensity profile for player Game Match.
+    Dimensions: difficulty, story_weight, exploration, combat, multiplayer, session_length (0.0 to 10.0).
+    Derived from feature_review_topics + raw_game_tags via deterministic weighted scoring.
+    Written by jobs/materialize_match_profiles.py.
+    Read by api/match.py (Roadmap v2 §3).
+    """
+    __tablename__ = "mart_game_match_profile"
+
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    difficulty: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False, default=Decimal("5.0"))
+    story_weight: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False, default=Decimal("5.0"))
+    exploration: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False, default=Decimal("5.0"))
+    combat: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False, default=Decimal("5.0"))
+    multiplayer: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False, default=Decimal("0.0"))
+    session_length: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False, default=Decimal("5.0"))
+
+    confidence_score: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False, default=Decimal("0.80"))
+    profile_summary: Mapped[dict | None] = mapped_column(JSONB)
+
+    materialized_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationship
+    game: Mapped[RawGame] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<MartGameMatchProfile app_id={self.app_id} diff={self.difficulty} story={self.story_weight} combat={self.combat}>"
+
+
+# ---------------------------------------------------------------------------
+# mart_review_intelligence
+# ---------------------------------------------------------------------------
+
+class MartReviewIntelligence(Base):
+    """
+    Pre-materialized complete Review Intelligence bundle.
+    Contains sentiment overview, monthly timeline, NLP topic distribution,
+    loved features, complaint breakdown, and synthesized review summary.
+    Written by jobs/materialize_marts.py.
+    Read by api/reviews.py (Golden Rule pure mart read).
+    """
+    __tablename__ = "mart_review_intelligence"
+
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("raw_games.app_id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    sentiment_overview: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    timeline: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    topics: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    loved_features: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    complaints: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    summary: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    is_processed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    materialized_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationship
+    game: Mapped[RawGame] = relationship("RawGame", foreign_keys=[app_id], lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<MartReviewIntelligence app_id={self.app_id} processed={self.is_processed}>"
+
 
 
 

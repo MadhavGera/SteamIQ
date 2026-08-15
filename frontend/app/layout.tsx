@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { TopNavBar } from "@/components/TopNavBar";
+import { UserModeProvider } from "@/lib/UserModeContext";
 
 export const metadata: Metadata = {
   title: {
@@ -49,21 +50,23 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <TopNavBar />
+        <UserModeProvider>
+          <TopNavBar />
 
-        <div style={{ paddingTop: "64px", minHeight: "calc(100vh - 80px)" }}>
-          {children}
-        </div>
+          <div style={{ paddingTop: "64px", minHeight: "calc(100vh - 80px)" }}>
+            {children}
+          </div>
 
-        <footer className="footer">
-          <div className="container">
-            <div className="footer__inner">
-              <div>
-                <strong>SteamIQ</strong> · Advanced Steam Intelligence &amp; Predictive Analytics
+          <footer className="footer">
+            <div className="container">
+              <div className="footer__inner">
+                <div>
+                  <strong>SteamIQ</strong> · Advanced Steam Intelligence &amp; Predictive Analytics
+                </div>
               </div>
             </div>
-          </div>
-        </footer>
+          </footer>
+        </UserModeProvider>
       </body>
     </html>
   );

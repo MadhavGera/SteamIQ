@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -23,11 +24,18 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from core.config import settings
-from db.models import FeatureReviewTopic, ModelGameEmbedding, RawGame, ServingSimilarGame
+from db.models import (
+    FeatureReviewTopic,
+    ModelGameEmbedding,
+    RawGame,
+    RawPlayerSnapshot,
+    ServingSimilarGame,
+)
 from jobs.base_job import BaseJob
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 MODEL_VERSION = "1.0.0"
+MAX_SNAPSHOT_AGE_DAYS = 7  # Staleness threshold for CCU telemetry
 
 
 class ProcessEmbeddingsJob(BaseJob):
@@ -71,7 +79,7 @@ class ProcessEmbeddingsJob(BaseJob):
 
         if game.tags and isinstance(game.tags, dict):
             # Sort by vote count descending, take top 10 tags
-            sorted_tags = sorted(game.tags.items(), key=lambda x: -x[1] if isinstance(x[1], (int, float)) else 0)[:10]
+            sorted_tags = sorted(game.tags.items(), key=lambda x: -x[1] if isinstance(x[1], int | float) else 0)[:10]
             tag_names = [t[0] for t in sorted_tags if t[0]]
             if tag_names:
                 parts.append("Tags: " + ", ".join(tag_names))
@@ -85,8 +93,24 @@ class ProcessEmbeddingsJob(BaseJob):
         """Extract top SteamSpy tag names for a game."""
         if not game.tags or not isinstance(game.tags, dict):
             return set()
-        sorted_tags = sorted(game.tags.items(), key=lambda x: -x[1] if isinstance(x[1], (int, float)) else 0)[:12]
+        sorted_tags = sorted(game.tags.items(), key=lambda x: -x[1] if isinstance(x[1], int | float) else 0)[:12]
         return {t[0] for t in sorted_tags if t[0]}
+
+    def derive_market_presence(self, game: RawGame, ccu: int) -> Decimal:
+        """
+        Derives an additive normalized 0.0 - 100.0 market presence index from review count
+        and active player volume (raw_player_snapshots).
+        """
+        rev_count = (game.positive_reviews or 0) + (game.negative_reviews or 0)
+        rev_score = min(60.0, float(np.log10(max(1, rev_count))) * 12.0) if rev_count > 0 else 5.0
+
+        if ccu > 0:
+            ccu_score = min(40.0, float(np.log10(max(1, ccu))) * 8.0)
+        else:
+            ccu_score = min(40.0, (rev_score / 60.0) * 40.0)
+
+        presence = float(np.clip(rev_score + ccu_score, 5.0, 100.0))
+        return Decimal(str(round(presence, 2)))
 
     async def _run_async(self) -> dict[str, Any]:
         engine = create_async_engine(settings.async_database_url, echo=False)
@@ -109,7 +133,6 @@ class ProcessEmbeddingsJob(BaseJob):
             # Fetch all games in database for pairwise similarity computation
             all_res = await session.execute(select(RawGame))
             all_games_catalog = all_res.scalars().all()
-            game_map = {g.app_id: g for g in all_games_catalog}
 
             # Fetch all review topics for rich embeddings
             topics_res = await session.execute(select(FeatureReviewTopic))
@@ -117,6 +140,35 @@ class ProcessEmbeddingsJob(BaseJob):
             topics_by_game: dict[int, list[str]] = {}
             for t in all_topics:
                 topics_by_game.setdefault(t.app_id, []).append(t.topic_label)
+
+            # Fetch player snapshots for market presence scoring (sorted newest first)
+            snapshots_res = await session.execute(
+                select(RawPlayerSnapshot).order_by(RawPlayerSnapshot.snapshot_at.desc())
+            )
+            all_snapshots = snapshots_res.scalars().all()
+            snapshots_by_game: dict[int, list[RawPlayerSnapshot]] = {}
+            for s in all_snapshots:
+                snapshots_by_game.setdefault(s.app_id, []).append(s)
+
+            now_dt = datetime.now(UTC)
+            ccu_by_game: dict[int, int] = {}
+            for g_id, g_snaps in snapshots_by_game.items():
+                latest_snap = g_snaps[0]
+                snap_time = latest_snap.snapshot_at if latest_snap.snapshot_at.tzinfo else latest_snap.snapshot_at.replace(tzinfo=UTC)
+                age_days = (now_dt - snap_time).total_seconds() / 86400.0
+
+                # Freshness criteria:
+                # 1. More than 1 snapshot recorded (indicates recurring monitoring, not a single initial snapshot)
+                # 2. Latest snapshot is within MAX_SNAPSHOT_AGE_DAYS (7 days)
+                if len(g_snaps) > 1 and age_days <= MAX_SNAPSHOT_AGE_DAYS:
+                    recent_snaps = [
+                        s for s in g_snaps
+                        if (now_dt - (s.snapshot_at if s.snapshot_at.tzinfo else s.snapshot_at.replace(tzinfo=UTC))).total_seconds() / 86400.0 <= MAX_SNAPSHOT_AGE_DAYS
+                    ]
+                    ccu_by_game[g_id] = max([s.peak_24h or s.player_count or 0 for s in recent_snaps] or [0])
+                else:
+                    # Stale or isolated snapshot: fall back to review-only market presence calculation
+                    ccu_by_game[g_id] = 0
 
             self.logger.info("Found %d target games (catalog size: %d games)", len(target_games), len(all_games_catalog))
 
@@ -139,7 +191,7 @@ class ProcessEmbeddingsJob(BaseJob):
 
             # 3. Store / update model_game_embeddings
             if not self.dry_run:
-                for i, (game, text, text_hash) in enumerate(game_records):
+                for i, (game, _text, text_hash) in enumerate(game_records):
                     vec_list = embeddings[i].tolist()
                     existing_emb_res = await session.execute(
                         select(ModelGameEmbedding).where(
@@ -167,7 +219,6 @@ class ProcessEmbeddingsJob(BaseJob):
 
             # 4. Compute pairwise cosine similarity and populate serving_similar_games
             pairs_computed = 0
-            target_app_ids = [g.app_id for g in target_games]
 
             for src_game in target_games:
                 src_vec = emb_by_appid.get(src_game.app_id)
@@ -209,6 +260,7 @@ class ProcessEmbeddingsJob(BaseJob):
                         
                         tgt_price = float(tgt_game.final_price_usd) if tgt_game.final_price_usd is not None else 0.0
                         p_delta = round(tgt_price - src_price, 2)
+                        market_pres = self.derive_market_presence(tgt_game, ccu_by_game.get(tgt_game.app_id, 0))
 
                         serving_row = ServingSimilarGame(
                             source_app_id=src_game.app_id,
@@ -217,6 +269,7 @@ class ProcessEmbeddingsJob(BaseJob):
                             rank=rank_idx,
                             shared_tags=shared,
                             price_delta_usd=Decimal(str(p_delta)),
+                            market_presence=market_pres,
                         )
                         session.add(serving_row)
                         pairs_computed += 1

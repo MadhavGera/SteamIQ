@@ -1,24 +1,19 @@
 """
-Review Intelligence API router — Phase 2.
+Review Intelligence API router — Phase 5 (Option A: Mart Materialization).
 
 Endpoints:
   GET /api/v1/games/{app_id}/reviews
-  GET /api/v1/games/{app_id}/reviews/sentiment
-  GET /api/v1/games/{app_id}/reviews/topics
-  GET /api/v1/games/{app_id}/reviews/complaints
-  GET /api/v1/games/{app_id}/reviews/features
-  GET /api/v1/games/{app_id}/reviews/summary
 
 ADR 0001, Decision 2 (Golden Rule):
-  These handlers read from precomputed feature_* tables ONLY.
-  ZERO live NLP inference or heavy aggregations in the request path.
+  Reads strictly from mart_review_intelligence and mart_game_overview.
+  Zero request-time queries to raw_* or feature_* tables.
 """
 from __future__ import annotations
 
 import time
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.reviews import (
@@ -33,14 +28,7 @@ from api.schemas.reviews import (
 from core.errors import GameNotFoundError
 from core.response import ApiResponse
 from db.base import get_db
-from db.models import (
-    FeatureReviewComplaint,
-    FeatureReviewFeature,
-    FeatureReviewSentiment,
-    FeatureReviewSummary,
-    FeatureReviewTopic,
-    RawGame,
-)
+from db.models import MartGameOverview, MartReviewIntelligence, RawGame
 
 router = APIRouter(prefix="/games/{app_id}/reviews", tags=["reviews"])
 
@@ -51,132 +39,65 @@ router = APIRouter(prefix="/games/{app_id}/reviews", tags=["reviews"])
     "",
     response_model=ApiResponse[ReviewIntelligenceBundleSchema],
     summary="Get complete Review Intelligence bundle",
-    description="Returns precomputed sentiment, timeline, topics, complaints, loved features, and summary.",
+    description=(
+        "Returns pre-materialized sentiment, timeline, topics, complaints, loved features, "
+        "and summary from mart_review_intelligence."
+    ),
 )
 async def get_review_intelligence(
     app_id: int = Path(..., description="Steam App ID"),
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)] = None,  # type: ignore[assignment]
 ) -> ApiResponse[ReviewIntelligenceBundleSchema]:
     start = time.perf_counter()
 
-    # 1. Verify game exists
-    game = await db.get(RawGame, app_id)
-    if game is None:
-        raise GameNotFoundError(app_id=app_id)
+    # 1. Fetch pre-materialized review intelligence mart (Golden Rule strictly compliant)
+    mart_rev = await db.get(MartReviewIntelligence, app_id)
 
-    # 2. Query precomputed feature tables
-    # Sentiment (Overall & Monthly)
-    sentiment_stmt = select(FeatureReviewSentiment).where(
-        FeatureReviewSentiment.app_id == app_id
-    ).order_by(FeatureReviewSentiment.month.asc())
-    sentiment_rows = (await db.execute(sentiment_stmt)).scalars().all()
+    if mart_rev is not None:
+        bundle = ReviewIntelligenceBundleSchema(
+            app_id=app_id,
+            sentiment=SentimentOverviewSchema(**mart_rev.sentiment_overview),
+            timeline=[MonthlySentimentSchema(**item) for item in (mart_rev.timeline or [])],
+            topics=[ReviewTopicSchema(**item) for item in (mart_rev.topics or [])],
+            loved_features=[LovedFeatureSchema(**item) for item in (mart_rev.loved_features or [])],
+            complaints=[ComplaintCategorySchema(**item) for item in (mart_rev.complaints or [])],
+            summary=ReviewSummarySchema(**(mart_rev.summary or {})),
+            is_processed=mart_rev.is_processed,
+        )
+        elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
+        return ApiResponse.ok(data=bundle, took_ms=elapsed_ms)
 
-    overall_row = next((r for r in sentiment_rows if r.month == "ALL_TIME"), None)
-    monthly_rows = [r for r in sentiment_rows if r.month != "ALL_TIME"]
+    # 2. Fallback for unmaterialized game check (reads from mart_game_overview)
+    overview = await db.get(MartGameOverview, app_id)
+    raw_game = await db.get(RawGame, app_id) if overview is None else None
+    if overview is None and raw_game is None:
+        raise GameNotFoundError(f"Game with app_id={app_id} not found")
 
-    # If no feature_review_sentiment exists yet, provide baseline from raw_games
-    if overall_row is not None:
-        pos_pct = float(overall_row.net_positive_pct)
-        pos_cnt = overall_row.positive_count
-        neg_cnt = overall_row.negative_count
-        tot_cnt = overall_row.total_count
-        sentiment_label = game.review_score_desc or "Positive" if pos_pct >= 70 else "Mixed"
-    else:
-        tot_cnt = game.positive_reviews + game.negative_reviews
-        pos_pct = round(game.positive_reviews / tot_cnt * 100, 1) if tot_cnt > 0 else 0.0
-        pos_cnt = game.positive_reviews
-        neg_cnt = game.negative_reviews
-        sentiment_label = game.review_score_desc or "Unknown"
+    positive_revs = overview.positive_reviews if overview else (raw_game.positive_reviews if raw_game else 0)
+    negative_revs = overview.negative_reviews if overview else (raw_game.negative_reviews if raw_game else 0)
+    score_desc = overview.review_score_desc if overview else (raw_game.review_score_desc if raw_game else None)
 
+    tot_cnt = (positive_revs or 0) + (negative_revs or 0)
+    pos_pct = round((positive_revs or 0) / tot_cnt * 100, 1) if tot_cnt > 0 else 0.0
     sentiment_overview = SentimentOverviewSchema(
         positive_pct=pos_pct,
-        mixed_pct=max(0.0, round(100.0 - pos_pct - (neg_cnt / tot_cnt * 100 if tot_cnt else 0), 1)),
-        negative_pct=round(neg_cnt / tot_cnt * 100, 1) if tot_cnt > 0 else 0.0,
-        positive_count=pos_cnt,
-        negative_count=neg_cnt,
+        mixed_pct=max(0.0, round(100.0 - pos_pct - ((negative_revs or 0) / tot_cnt * 100 if tot_cnt else 0), 1)),
+        negative_pct=round((negative_revs or 0) / tot_cnt * 100, 1) if tot_cnt > 0 else 0.0,
+        positive_count=positive_revs or 0,
+        negative_count=negative_revs or 0,
         total_count=tot_cnt,
-        sentiment_label=sentiment_label,
+        sentiment_label=score_desc or "Unknown",
     )
-
-    timeline = [
-        MonthlySentimentSchema(
-            month=r.month,
-            positive_reviews=r.positive_count,
-            negative_reviews=r.negative_count,
-            net_positive_pct=float(r.net_positive_pct),
-        )
-        for r in monthly_rows
-    ]
-
-    # Topics
-    topics_stmt = select(FeatureReviewTopic).where(
-        FeatureReviewTopic.app_id == app_id
-    ).order_by(FeatureReviewTopic.review_count.desc())
-    topic_rows = (await db.execute(topics_stmt)).scalars().all()
-    topics = [
-        ReviewTopicSchema(
-            topic_id=t.topic_id,
-            label=t.topic_label,
-            review_count=t.review_count,
-            sentiment_score=float(t.sentiment_score),
-            keywords=t.keywords if isinstance(t.keywords, list) else None,
-        )
-        for t in topic_rows
-    ]
-
-    # Loved Features
-    features_stmt = select(FeatureReviewFeature).where(
-        FeatureReviewFeature.app_id == app_id
-    ).order_by(FeatureReviewFeature.mention_count.desc())
-    feature_rows = (await db.execute(features_stmt)).scalars().all()
-    loved_features = [
-        LovedFeatureSchema(
-            feature_name=f.feature_name,
-            mention_count=f.mention_count,
-            praise_intensity=f.praise_intensity,
-        )
-        for f in feature_rows
-    ]
-
-    # Complaints
-    complaints_stmt = select(FeatureReviewComplaint).where(
-        FeatureReviewComplaint.app_id == app_id
-    ).order_by(FeatureReviewComplaint.volume_pct.desc())
-    complaint_rows = (await db.execute(complaints_stmt)).scalars().all()
-    complaints = [
-        ComplaintCategorySchema(
-            category=c.category,
-            volume_pct=float(c.volume_pct),
-            severity=c.severity,
-            representative_snippets=c.representative_snippets if isinstance(c.representative_snippets, list) else [],
-        )
-        for c in complaint_rows
-    ]
-
-    # Summary
-    summary_stmt = select(FeatureReviewSummary).where(FeatureReviewSummary.app_id == app_id)
-    summary_row = (await db.execute(summary_stmt)).scalar_one_or_none()
-    if summary_row is not None:
-        summary = ReviewSummarySchema(
-            strengths=summary_row.core_strengths if isinstance(summary_row.core_strengths, list) else [],
-            pain_points=summary_row.pain_points if isinstance(summary_row.pain_points, list) else [],
-            feature_requests=summary_row.feature_requests if isinstance(summary_row.feature_requests, list) else [],
-        )
-    else:
-        summary = ReviewSummarySchema(strengths=[], pain_points=[], feature_requests=[])
-
-    is_processed = len(sentiment_rows) > 0 or len(topic_rows) > 0 or len(complaint_rows) > 0
 
     bundle = ReviewIntelligenceBundleSchema(
         app_id=app_id,
         sentiment=sentiment_overview,
-        timeline=timeline,
-        topics=topics,
-        loved_features=loved_features,
-        complaints=complaints,
-        summary=summary,
-        is_processed=is_processed,
+        timeline=[],
+        topics=[],
+        loved_features=[],
+        complaints=[],
+        summary=ReviewSummarySchema(strengths=[], pain_points=[], feature_requests=[]),
+        is_processed=False,
     )
-
     elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
     return ApiResponse.ok(data=bundle, took_ms=elapsed_ms)

@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUserMode } from "@/lib/UserModeContext";
+import { UserModeToggle } from "@/components/UserModeToggle";
 
 export function TopNavBar() {
   const pathname = usePathname();
+  const { isDeveloper } = useUserMode();
 
   const isSearchLanding = pathname === "/";
   const isGameIntelligence = pathname.startsWith("/games");
@@ -50,12 +53,14 @@ export function TopNavBar() {
           >
             Compare Games
           </span>
-          <span
-            className={`stitch-nav__link ${isMarket ? "stitch-nav__link--active" : ""}`}
-            style={{ opacity: 0.5, cursor: "not-allowed" }}
-          >
-            Market Explorer
-          </span>
+          {isDeveloper && (
+            <span
+              className={`stitch-nav__link ${isMarket ? "stitch-nav__link--active" : ""}`}
+              style={{ opacity: 0.5, cursor: "not-allowed" }}
+            >
+              Market Explorer
+            </span>
+          )}
           <span
             className={`stitch-nav__link ${isAsk ? "stitch-nav__link--active" : ""}`}
             style={{ opacity: 0.5, cursor: "not-allowed" }}
@@ -65,8 +70,9 @@ export function TopNavBar() {
           </span>
         </div>
 
-        {/* Action Button */}
-        <div className="stitch-nav__actions">
+        {/* Action Controls & Mode Toggle */}
+        <div className="stitch-nav__actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <UserModeToggle />
           <button className="btn-signin">
             Sign In
           </button>

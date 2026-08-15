@@ -25,7 +25,7 @@ from api.schemas.competitors import (
 from core.errors import GameNotFoundError
 from core.response import ApiResponse, ResponseMeta
 from db.base import get_db
-from db.models import RawGame, ServingSimilarGame
+from db.models import MartGameOverview, RawGame, ServingSimilarGame
 
 router = APIRouter(prefix="/games", tags=["competitors"])
 
@@ -42,13 +42,16 @@ router = APIRouter(prefix="/games", tags=["competitors"])
 async def get_competitors(
     app_id: int,
     limit: Annotated[int, Query(ge=1, le=50, description="Max competitors to return")] = 10,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)] = None,  # type: ignore[assignment]
 ) -> ApiResponse[CompetitorListSchema]:
     start = time.perf_counter()
 
-    # 1. Fetch source game
-    res_source = await db.execute(select(RawGame).where(RawGame.app_id == app_id))
+    # 1. Fetch source game (prefer pre-materialized decision mart)
+    res_source = await db.execute(select(MartGameOverview).where(MartGameOverview.app_id == app_id))
     source_game = res_source.scalar_one_or_none()
+    if source_game is None:
+        res_source = await db.execute(select(RawGame).where(RawGame.app_id == app_id))
+        source_game = res_source.scalar_one_or_none()
 
     if source_game is None:
         raise GameNotFoundError(
@@ -57,30 +60,41 @@ async def get_competitors(
         )
 
     # Compute source review %
-    src_total = source_game.positive_reviews + source_game.negative_reviews
-    src_pct = round(source_game.positive_reviews / src_total * 100) if src_total > 0 else None
+    src_total = (source_game.positive_reviews or 0) + (source_game.negative_reviews or 0)
+    src_pct = round((source_game.positive_reviews or 0) / src_total * 100) if src_total > 0 else None
 
     source_header = SourceGameHeaderSchema(
         app_id=source_game.app_id,
         name=source_game.name,
         header_image=source_game.header_image,
         final_price_usd=str(source_game.final_price_usd) if source_game.final_price_usd is not None else None,
-        positive_reviews=source_game.positive_reviews,
-        negative_reviews=source_game.negative_reviews,
+        positive_reviews=source_game.positive_reviews or 0,
+        negative_reviews=source_game.negative_reviews or 0,
         review_pct=src_pct,
         genres=source_game.genres,
     )
 
-    # 2. Fetch precomputed similar games
+    # 2. Fetch precomputed similar games from serving_similar_games joined with decision mart
     query = (
-        select(ServingSimilarGame, RawGame)
-        .join(RawGame, ServingSimilarGame.target_app_id == RawGame.app_id)
+        select(ServingSimilarGame, MartGameOverview)
+        .join(MartGameOverview, ServingSimilarGame.target_app_id == MartGameOverview.app_id)
         .where(ServingSimilarGame.source_app_id == app_id)
         .order_by(ServingSimilarGame.rank.asc())
         .limit(limit)
     )
     result = await db.execute(query)
     rows = result.all()
+
+    if not rows:
+        # Fallback to raw_games join if decision marts are unmaterialized in unit tests
+        query_raw = (
+            select(ServingSimilarGame, RawGame)
+            .join(RawGame, ServingSimilarGame.target_app_id == RawGame.app_id)
+            .where(ServingSimilarGame.source_app_id == app_id)
+            .order_by(ServingSimilarGame.rank.asc())
+            .limit(limit)
+        )
+        rows = (await db.execute(query_raw)).all()
 
     if not rows:
         took_ms = (time.perf_counter() - start) * 1000
@@ -116,6 +130,7 @@ async def get_competitors(
                 positive_reviews=target_game.positive_reviews,
                 negative_reviews=target_game.negative_reviews,
                 review_pct=t_pct,
+                market_presence=float(sim_row.market_presence) if sim_row.market_presence is not None else None,
                 header_image=target_game.header_image,
                 genres=target_game.genres,
             )

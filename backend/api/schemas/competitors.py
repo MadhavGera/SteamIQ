@@ -21,6 +21,8 @@ class CompetitorItemSchema(BaseModel):
     positive_reviews: int = 0
     negative_reviews: int = 0
     review_pct: int | None = None
+    market_presence: float | None = None
+    ccu_data_stale: bool = False
     header_image: str | None = None
     genres: list[dict[str, Any]] | None = None
 

@@ -1,5 +1,6 @@
 import React from "react";
 import type { MarketIntelligence } from "@/lib/api";
+import { useUserMode } from "@/lib/UserModeContext";
 
 interface MarketTabProps {
   market: MarketIntelligence | null;
@@ -7,6 +8,8 @@ interface MarketTabProps {
 }
 
 export function MarketTab({ market, gameTitle }: MarketTabProps) {
+  const { isPlayer } = useUserMode();
+
   if (!market) {
     return (
       <div className="card" style={{ padding: "64px 24px", textAlign: "center", marginTop: "24px" }}>
@@ -32,9 +35,69 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
   const medianPct = Math.min(100, Math.max(0, ((medianPrice - specMin) / (specMax - specMin)) * 100));
 
   const priceDiffPct = medianPrice > 0 ? ((currentPrice - medianPrice) / medianPrice) * 100 : 0;
+  const isAtHistoricalLow = currentPrice <= histLow;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingTop: "24px" }}>
+      {/* ── Player-Specific "Buy Now vs Wait" Advisor Card ── */}
+      {isPlayer && (
+        <div
+          className="card card--raised"
+          style={{
+            background: isAtHistoricalLow
+              ? "linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(19, 31, 46, 0.95) 100%)"
+              : "linear-gradient(135deg, rgba(234, 179, 8, 0.10) 0%, rgba(19, 31, 46, 0.95) 100%)",
+            border: `1px solid ${isAtHistoricalLow ? "var(--success)" : "var(--warning)"}50`,
+            padding: "24px 28px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: "32px",
+                color: isAtHistoricalLow ? "var(--success)" : "var(--warning)",
+                marginTop: "2px",
+              }}
+            >
+              {isAtHistoricalLow ? "shopping_cart_checkout" : "schedule"}
+            </span>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    color: isAtHistoricalLow ? "var(--success)" : "var(--warning)",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  DEAL ADVISOR · BUY NOW VS WAIT
+                </span>
+              </div>
+              <h3 style={{ fontSize: "20px", fontWeight: 800, margin: "0 0 8px", color: "var(--text-primary)" }}>
+                {isAtHistoricalLow
+                  ? `Best Time to Buy: ${gameTitle} is at its Historical Lowest Price ($${currentPrice.toFixed(2)})`
+                  : `Consider Waiting: Current Price ($${currentPrice.toFixed(2)}) is Above Historical Low ($${histLow.toFixed(2)})`}
+              </h3>
+              <p style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: "1.6", margin: "0 0 12px" }}>
+                {isAtHistoricalLow
+                  ? `${gameTitle} is currently selling at its best recorded price point. If this game matches your playstyle, now is an ideal time to purchase.`
+                  : `${gameTitle} has previously dropped to $${histLow.toFixed(2)} ($${(currentPrice - histLow).toFixed(2)} lower than today). Unless you want to play immediately, add it to your wishlist and wait for the next Steam Seasonal Sale.`}
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", fontSize: "13px", color: "var(--text-muted)" }}>
+                <span><strong>Genre Median:</strong> ${medianPrice.toFixed(2)} ({priceDiffPct >= 0 ? `+${priceDiffPct.toFixed(0)}%` : `${priceDiffPct.toFixed(0)}%`})</span>
+                <span>•</span>
+                <span><strong>Historical Low:</strong> ${histLow.toFixed(2)}</span>
+                <span>•</span>
+                <span><strong>Sale Density:</strong> {spec?.discounted_game_share_pct?.toFixed(0) ?? "18"}% of {market.primary_genre || "genre"} titles on sale</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── 1. Hero KPI Strip ── */}
       <div className="kpi-matrix-grid">
         {/* Card 1: Current Price */}

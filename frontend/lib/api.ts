@@ -191,6 +191,54 @@ export interface RecommendationBundle {
   recommendations: RecommendationItem[];
 }
 
+// ─── Game Match Types (Phase 5 — Player Match Tab) ──────────────────────────
+
+export interface GameMatchProfile {
+  app_id: number;
+  difficulty: number;
+  story_weight: number;
+  exploration: number;
+  combat: number;
+  multiplayer: number;
+  session_length: number;
+  confidence_score: number;
+  profile_summary: {
+    primary_traits?: string[];
+    tag_highlights?: string[];
+    intensity_vector?: Record<string, number>;
+  } | null;
+  materialized_at: string;
+}
+
+export interface UserMatchPreferences {
+  difficulty?: number;
+  story_weight?: number;
+  exploration?: number;
+  combat?: number;
+  multiplayer?: number;
+  session_length?: number;
+}
+
+export interface DimensionMatchScore {
+  dimension: string;
+  user_preference: number;
+  game_intensity: number;
+  delta: number;
+  dimension_match_pct: number;
+}
+
+export interface GameMatchResult {
+  app_id: number;
+  game_name: string;
+  overall_match_pct: number;
+  match_verdict: string;
+  dimension_scores: Record<string, DimensionMatchScore>;
+  alignment_highlights: string[];
+  friction_points: string[];
+  confidence_score: number;
+  materialized_at: string;
+}
+
 // ─── Review Intelligence Types (Phase 2) ──────────────────────────────────────
 
 export interface SentimentOverviewData {
@@ -259,6 +307,8 @@ export interface CompetitorItem {
   shared_tags: string[];
   price_usd: string | null;
   price_delta_usd: number | null;
+  market_presence?: number | null;
+  ccu_data_stale?: boolean;
   positive_reviews: number;
   negative_reviews: number;
   review_pct: number | null;
@@ -396,6 +446,26 @@ export const api = {
    */
   async getRecommendations(appId: number): Promise<RecommendationBundle> {
     return apiFetch<RecommendationBundle>(`/api/v1/games/${appId}/recommendations`);
+  },
+
+  /**
+   * Get 6-dimension intensity profile for Game Match (Phase 5 — Roadmap v2 §3).
+   * GET /api/v1/games/{appId}/match/profile
+   */
+  async getMatchProfile(appId: number): Promise<GameMatchProfile> {
+    return apiFetch<GameMatchProfile>(`/api/v1/games/${appId}/match/profile`);
+  },
+
+  /**
+   * Evaluate ephemeral user preferences against game match profile (Phase 5 — Roadmap v2 §3).
+   * POST /api/v1/games/{appId}/match
+   */
+  async matchGame(appId: number, prefs: UserMatchPreferences): Promise<GameMatchResult> {
+    return apiFetch<GameMatchResult>(`/api/v1/games/${appId}/match`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(prefs),
+    });
   },
 
   /**

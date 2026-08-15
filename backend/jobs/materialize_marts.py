@@ -37,6 +37,7 @@ from db.models import (
     FeatureReviewTopic,
     MartGameOverview,
     MartOpportunityScore,
+    MartReviewIntelligence,
     MartTrend,
     RawGame,
     RawGameTag,
@@ -333,9 +334,10 @@ class MaterializeMartsJob(BaseJob):
                     "max": 29.99,
                 }
 
-        # ── 3. Materialize mart_game_overview ────────────────────────────────
+        # ── 3. Materialize mart_game_overview & mart_review_intelligence ───
         overview_records: list[MartGameOverview] = []
         trend_records: list[MartTrend] = []
+        review_intel_records: list[MartReviewIntelligence] = []
 
         for game in target_games:
             primary_genre = self._extract_primary_genre(game)
@@ -574,6 +576,94 @@ class MaterializeMartsJob(BaseJob):
                     )
                 )
 
+            # ── Materialize Review Intelligence for this game (Golden Rule pure mart read) ──
+            overall_sent = next((s for s in game_sentiments if s.month == "ALL_TIME"), None)
+            monthly_sent_rows = [s for s in game_sentiments if s.month != "ALL_TIME"]
+
+            if overall_sent is not None:
+                pos_pct_f = float(overall_sent.net_positive_pct)
+                pos_c = overall_sent.positive_count
+                neg_c = overall_sent.negative_count
+                tot_c = overall_sent.total_count
+                sent_label = game.review_score_desc or ("Positive" if pos_pct_f >= 70 else "Mixed")
+            else:
+                tot_c = (game.positive_reviews or 0) + (game.negative_reviews or 0)
+                pos_pct_f = round((game.positive_reviews or 0) / tot_c * 100, 1) if tot_c > 0 else 0.0
+                pos_c = game.positive_reviews or 0
+                neg_c = game.negative_reviews or 0
+                sent_label = game.review_score_desc or "Unknown"
+
+            sentiment_overview_payload = {
+                "positive_pct": pos_pct_f,
+                "mixed_pct": max(0.0, round(100.0 - pos_pct_f - (neg_c / tot_c * 100 if tot_c else 0), 1)),
+                "negative_pct": round(neg_c / tot_c * 100, 1) if tot_c > 0 else 0.0,
+                "positive_count": pos_c,
+                "negative_count": neg_c,
+                "total_count": tot_c,
+                "sentiment_label": sent_label,
+            }
+
+            timeline_payload = [
+                {
+                    "month": s.month,
+                    "positive_reviews": s.positive_count,
+                    "negative_reviews": s.negative_count,
+                    "net_positive_pct": float(s.net_positive_pct),
+                }
+                for s in monthly_sent_rows
+            ]
+
+            topics_payload = [
+                {
+                    "topic_id": t.topic_id,
+                    "label": t.topic_label,
+                    "review_count": t.review_count,
+                    "sentiment_score": float(t.sentiment_score),
+                    "keywords": t.keywords or [],
+                }
+                for t in (topics_by_game.get(game.app_id) or [])
+            ]
+
+            loved_features_payload = [
+                {
+                    "feature_name": f.feature_name,
+                    "mention_count": f.mention_count,
+                    "praise_intensity": int(f.praise_intensity) if f.praise_intensity is not None else 80,
+                }
+                for f in (features_by_game.get(game.app_id) or [])
+            ]
+
+            complaints_payload = [
+                {
+                    "category": c.category,
+                    "volume_pct": float(c.volume_pct),
+                    "severity": c.severity,
+                    "representative_snippets": c.representative_snippets or [],
+                }
+                for c in (complaints_by_game.get(game.app_id) or [])
+            ]
+
+            g_sum = summaries_by_game.get(game.app_id)
+            summary_payload = {
+                "strengths": g_sum.core_strengths if (g_sum and g_sum.core_strengths) else [],
+                "pain_points": g_sum.pain_points if (g_sum and g_sum.pain_points) else [],
+                "feature_requests": g_sum.feature_requests if (g_sum and g_sum.feature_requests) else [],
+            }
+
+            review_intel_records.append(
+                MartReviewIntelligence(
+                    app_id=game.app_id,
+                    sentiment_overview=sentiment_overview_payload,
+                    timeline=timeline_payload,
+                    topics=topics_payload,
+                    loved_features=loved_features_payload,
+                    complaints=complaints_payload,
+                    summary=summary_payload,
+                    is_processed=bool(overall_sent or topics_payload or complaints_payload or g_sum),
+                    materialized_at=now,
+                )
+            )
+
         # ── 4. Materialize Genre-Wide Trends ─────────────────────────────────
         for genre, glist in games_by_genre.items():
             g_prices = [float(g.final_price_usd) for g in glist if g.final_price_usd is not None and not g.is_free]
@@ -709,6 +799,9 @@ class MaterializeMartsJob(BaseJob):
                 delete(MartGameOverview).where(MartGameOverview.app_id.in_(target_ids))
             )
             await session.execute(
+                delete(MartReviewIntelligence).where(MartReviewIntelligence.app_id.in_(target_ids))
+            )
+            await session.execute(
                 delete(MartTrend).where(
                     (MartTrend.app_id.in_(target_ids)) | (MartTrend.app_id.is_(None))
                 )
@@ -717,6 +810,8 @@ class MaterializeMartsJob(BaseJob):
 
             for ov in overview_records:
                 session.add(ov)
+            for rvi in review_intel_records:
+                session.add(rvi)
             for tr in trend_records:
                 session.add(tr)
             for opp in opportunity_records:
@@ -724,14 +819,16 @@ class MaterializeMartsJob(BaseJob):
 
             await session.commit()
             self.logger.info(
-                "Persisted %d mart_game_overview, %d mart_trends, and %d mart_opportunity_scores rows",
+                "Persisted %d mart_game_overview, %d mart_review_intelligence, %d mart_trends, and %d mart_opportunity_scores rows",
                 len(overview_records),
+                len(review_intel_records),
                 len(trend_records),
                 len(opportunity_records),
             )
 
         return {
             "overview_rows": len(overview_records),
+            "review_intel_rows": len(review_intel_records),
             "trend_rows": len(trend_records),
             "opportunity_rows": len(opportunity_records),
         }

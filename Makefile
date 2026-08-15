@@ -94,7 +94,12 @@ generate-recommendations: ## Generate hybrid recommendations: make generate-reco
 	cd $(BACKEND) && $(PYTHON) -m jobs.generate_recommendations --all
 	@echo "✅  Recommendations generation complete."
 
-decision-pipeline: materialize-marts materialize-updates generate-recommendations ## Full Phase 5 pipeline
+materialize-match-profiles: ## Materialize Game Match 6D intensity profiles: make materialize-match-profiles
+	@echo ">>> Materializing Game Match 6D intensity profiles..."
+	cd $(BACKEND) && $(PYTHON) -m jobs.materialize_match_profiles --all
+	@echo "✅  Game match profiles materialized."
+
+decision-pipeline: materialize-marts materialize-updates generate-recommendations materialize-match-profiles ## Full Phase 5 pipeline
 
 
 # ─── Development ──────────────────────────────────────────────────────────────

@@ -147,12 +147,40 @@ export function UpdatesTab({ updatesFeed, gameTitle }: UpdatesTabProps) {
                       {item.patch_name}
                     </h3>
                     {item.is_inferred ? (
-                      <span className="badge-pill badge-pill--neutral" title="Detected via statistical review volume surge">
-                        Inferred Activity Surge
+                      <span
+                        className="badge-pill"
+                        style={{
+                          backgroundColor: "rgba(168, 85, 247, 0.15)",
+                          color: "#c084fc",
+                          border: "1px solid rgba(168, 85, 247, 0.3)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "11px",
+                          fontWeight: 600,
+                        }}
+                        title="Detected via statistical review volume surge rather than official changelog"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: "13px" }}>insights</span>
+                        Detected from Activity
                       </span>
                     ) : (
-                      <span className="badge-pill badge-pill--success" title="Official Steam developer news announcement">
-                        Official Steam Patch
+                      <span
+                        className="badge-pill"
+                        style={{
+                          backgroundColor: "rgba(56, 189, 248, 0.15)",
+                          color: "var(--accent-light)",
+                          border: "1px solid rgba(56, 189, 248, 0.3)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "11px",
+                          fontWeight: 600,
+                        }}
+                        title="Authentic developer patch notes from official Steam News API"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: "13px" }}>campaign</span>
+                        From Steam Announcement
                       </span>
                     )}
                   </div>

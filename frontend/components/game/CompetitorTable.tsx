@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CompetitorItem, formatPrice } from "@/lib/api";
+import { useUserMode } from "@/lib/UserModeContext";
 
 interface CompetitorTableProps {
   competitors: CompetitorItem[];
@@ -14,6 +15,8 @@ export function CompetitorTable({
   sourceName = "Selected Game",
   isProcessed = true,
 }: CompetitorTableProps) {
+  const { isPlayer, isDeveloper } = useUserMode();
+
   if (!isProcessed || competitors.length === 0) {
     return (
       <div className="card" style={{ padding: "48px 24px", textAlign: "center" }}>
@@ -21,11 +24,12 @@ export function CompetitorTable({
           <span className="material-symbols-outlined" style={{ fontSize: "24px" }}>radar</span>
         </div>
         <h3 style={{ fontSize: "18px", fontWeight: 700, color: "var(--text-primary)" }}>
-          Competitor Discovery In Progress
+          {isPlayer ? "Similar Games Ingestion Pending" : "Competitor Discovery In Progress"}
         </h3>
         <p style={{ maxWidth: "420px", margin: "8px auto 0", fontSize: "14px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
-          Vector embeddings and similarity matrix for this game have not been generated yet.
-          Run <code style={{ backgroundColor: "var(--bg-base)", padding: "2px 6px", borderRadius: "4px", fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--accent-primary)" }}>make process-embeddings</code> to compute similar benchmark titles.
+          {isPlayer
+            ? "We are currently analyzing gameplay themes and tags to find the best matching games."
+            : "Vector embeddings and similarity matrix for this game have not been generated yet. Run make process-embeddings to compute benchmark titles."}
         </p>
       </div>
     );
@@ -37,17 +41,21 @@ export function CompetitorTable({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid var(--border-subtle)" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span className="material-symbols-outlined" style={{ color: "var(--accent-primary)", fontSize: "20px" }}>hub</span>
+            <span className="material-symbols-outlined" style={{ color: "var(--accent-primary)", fontSize: "20px" }}>
+              {isPlayer ? "sports_esports" : "hub"}
+            </span>
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
-              Top Market Competitors
+              {isPlayer ? `Similar Games to ${sourceName}` : "Top Market Competitors"}
             </h3>
           </div>
           <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Ranked by multi-dimensional semantic vector similarity to {sourceName} (pgvector 384-dim)
+            {isPlayer
+              ? `Games with matching gameplay feel, genre DNA, and tags to ${sourceName}`
+              : `Ranked by multi-dimensional semantic vector similarity to ${sourceName} (pgvector 384-dim)`}
           </p>
         </div>
         <span className="badge-pill badge-pill--neutral" style={{ fontFamily: "var(--font-mono)" }}>
-          {competitors.length} Nearest Titles
+          {competitors.length} {isPlayer ? "Similar Titles" : "Nearest Titles"}
         </span>
       </div>
 
@@ -58,7 +66,8 @@ export function CompetitorTable({
             <tr>
               <th style={{ width: "60px", textAlign: "center" }}>Rank</th>
               <th>Game Title</th>
-              <th style={{ width: "180px" }}>Vector Match</th>
+              <th style={{ width: "160px" }}>Match</th>
+              {isDeveloper && <th style={{ width: "150px" }}>Market Presence</th>}
               <th>Price &amp; Delta</th>
               <th>Steam Sentiment</th>
               <th>Overlapping Tags</th>
@@ -137,6 +146,45 @@ export function CompetitorTable({
                       </div>
                     </div>
                   </td>
+
+                  {/* Market Presence (Dev Mode Only) */}
+                  {isDeveloper && (
+                    <td>
+                      {comp.market_presence !== null && comp.market_presence !== undefined ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", fontFamily: "var(--font-mono)" }}>
+                            <span style={{ fontWeight: 700, color: "var(--accent-light)" }}>
+                              {comp.market_presence.toFixed(1)} / 100
+                            </span>
+                          </div>
+                          <div style={{ height: "6px", width: "100%", backgroundColor: "var(--bg-base)", borderRadius: "3px", overflow: "hidden" }}>
+                            <div
+                              style={{
+                                height: "100%",
+                                width: `${Math.min(100, Math.max(5, comp.market_presence))}%`,
+                                backgroundColor: "var(--accent-light)",
+                                borderRadius: "3px",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <span
+                          className="badge-pill badge-pill--neutral"
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--text-muted)",
+                            padding: "2px 8px",
+                            fontFamily: "var(--font-mono)",
+                            backgroundColor: "var(--bg-base)",
+                            border: "1px dashed var(--border-subtle)",
+                          }}
+                        >
+                          Not yet scored
+                        </span>
+                      )}
+                    </td>
+                  )}
 
                   {/* Price & Delta */}
                   <td>

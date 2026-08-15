@@ -65,6 +65,7 @@ def create_app() -> FastAPI:
     from api.competitors import router as competitors_router
     from api.games import router as games_router
     from api.market import router as market_router
+    from api.match import router as match_router
     from api.recommendations import router as recommendations_router
     from api.reviews import router as reviews_router
     from api.updates import router as updates_router
@@ -75,6 +76,7 @@ def create_app() -> FastAPI:
     app.include_router(market_router, prefix="/api/v1")
     app.include_router(updates_router, prefix="/api/v1")
     app.include_router(recommendations_router, prefix="/api/v1")
+    app.include_router(match_router, prefix="/api/v1")
 
     logger.info("SteamIQ API v%s started in %s mode", settings.app_version, settings.app_env)
     return app
