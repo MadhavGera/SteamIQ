@@ -16,7 +16,7 @@ COPY . .
 
 # ADR 0001, Decision 7: URL must be set at build time for Next.js static export
 # This is overridden by the docker-compose environment at runtime for SSR pages
-ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_API_URL=http://localhost:8001
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 RUN npm run build

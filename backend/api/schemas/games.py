@@ -47,6 +47,7 @@ class GameSummarySchema(BaseModel):
     revenue_tier: str | None = None
     success_score: Decimal | None = None
     net_sentiment_pct: Decimal | None = None
+    is_ingested: bool = True
 
     model_config = {"from_attributes": True}
 

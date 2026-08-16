@@ -43,6 +43,7 @@ export interface GameSummary {
   negative_reviews: number;
   owners_estimate: string | null;
   genres: Array<{ id: string; description: string }> | null;
+  is_ingested?: boolean;
 }
 
 export interface GameDetail extends GameSummary {

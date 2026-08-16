@@ -63,11 +63,13 @@ def upgrade() -> None:
         "ix_serving_recommendations_app_priority",
         "serving_recommendations",
         ["app_id", "priority_rank"],
+        if_not_exists=True,
     )
     op.create_index(
         "ix_serving_recommendations_domain",
         "serving_recommendations",
         ["domain"],
+        if_not_exists=True,
     )
 
 

@@ -70,6 +70,10 @@ export default async function GameDetailPage({
     api.getRecommendations(appId),
   ]);
 
+  if (gameRes.status === "rejected") {
+    notFound();
+  }
+
   if (gameRes.status === "fulfilled") game = gameRes.value;
   if (reviewsRes.status === "fulfilled") reviewsBundle = reviewsRes.value;
   if (competitorsRes.status === "fulfilled") competitorData = competitorsRes.value;

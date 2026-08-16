@@ -83,6 +83,8 @@ export default function LandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [ingestedGames, setIngestedGames] = useState<Record<number, GameSummary>>({});
+  
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
   // Fetch real ingested game records to replace hardcoded strings with API data
   useEffect(() => {
@@ -128,6 +130,21 @@ export default function LandingPage() {
       setLoading(false);
     }
   }, []);
+
+  // Debounce the query for live search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [query]);
+
+  // Trigger search when debounced query changes
+  useEffect(() => {
+    if (debouncedQuery) {
+      doSearch(debouncedQuery);
+    }
+  }, [debouncedQuery, doSearch]);
 
   return (
     <div className="container" style={{ paddingTop: "24px", paddingBottom: "64px" }}>
@@ -261,10 +278,10 @@ export default function LandingPage() {
                 </span>
               </div>
               <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>
-                No Ingested Games Found
+                No Games Found
               </h3>
               <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6", marginBottom: "20px" }}>
-                We couldn&apos;t find any analyzed games matching &ldquo;{query}&rdquo;. Enter a valid Steam App ID to trigger data ingestion.
+                We couldn&apos;t find any games matching &ldquo;{query}&rdquo; on Steam.
               </p>
               <button
                 type="button"
@@ -293,9 +310,16 @@ export default function LandingPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={g.header_image} alt={g.name} />
                     ) : null}
-                    <div className="featured-card__badge">
-                      <span>ID:</span>
-                      <strong>{g.app_id}</strong>
+                    <div className="featured-card__badge" style={{ display: "flex", gap: "6px" }}>
+                      {g.is_ingested ? (
+                        <span className="badge-pill badge-pill--success" style={{ fontSize: "10px", padding: "1px 6px" }}>Indexed</span>
+                      ) : (
+                        <span className="badge-pill badge-pill--neutral" style={{ fontSize: "10px", padding: "1px 6px" }}>Unindexed</span>
+                      )}
+                      <div>
+                        <span>ID:</span>
+                        <strong>{g.app_id}</strong>
+                      </div>
                     </div>
                   </div>
                   <div className="featured-card__body">

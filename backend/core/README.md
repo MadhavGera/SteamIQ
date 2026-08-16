@@ -6,11 +6,17 @@
 > **It reads from `serving_*` or `mart_*` only.**
 > **If the data isn't there yet, add or fix a job — never add a bigger query to the handler.**
 
-### Golden Rule Addendum (Game Match Scoring Exception — Phase 5 / Roadmap v2 §3)
+### Golden Rule Addendum 1 (Game Match Scoring Exception — Phase 5 / Roadmap v2 A 3)
 
 > **Game Match scoring (`POST /api/v1/games/{app_id}/match`):**
 > Given a user-supplied preference vector ($\le 6$ intensity numbers, never persisted server-side), the endpoint computes an in-memory percentage match directly against the pre-materialized row in `mart_game_match_profile`.
 > This is a documented, narrow exception to the Golden Rule: the handler performs a small fixed-size comparison ($\le 6$ numbers) against precomputed data in a single indexed mart row, not an aggregate, model run, or table scan.
+
+### Golden Rule Addendum 2 (Steam Store Search Exception)
+
+> **Steam Store Search Proxy (`GET /api/v1/games/search`):**
+> To allow users to search for and discover games outside of the locally ingested catalog, the search handler performs a real-time HTTP request to the external Steam Store API (`https://store.steampowered.com/api/storesearch/`). 
+> This is a documented, narrow exception to the Golden Rule. Its bounds are strict: it is a read-only passthrough. It does not write to the database, it does not trigger synchronous ingestion, and it performs no local computation on the result other than deduplication against `mart_game_overview`.
 
 Pin this on your monitor. It's the single rule that, if followed from Phase 1, prevents SteamIQ from repeating the mistake nearly every past project made.
 
