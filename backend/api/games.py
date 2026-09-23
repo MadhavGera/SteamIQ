@@ -12,7 +12,9 @@ ADR 0001, Decision 2 (Golden Rule):
 from __future__ import annotations
 
 import time
-from typing import Annotated
+import logging
+import httpx
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
@@ -24,7 +26,34 @@ from core.response import ApiResponse, ResponseMeta
 from db.base import get_db
 from db.models import MartGameOverview
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/games", tags=["games"])
+
+# Simple in-memory cache for Steam API search results
+_steam_search_cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
+STEAM_SEARCH_CACHE_TTL_SEC = 60
+
+async def fetch_steam_search(query: str) -> list[dict[str, Any]]:
+    """Fetch search results from Steam Store API with a 3s timeout and 60s cache."""
+    now = time.time()
+    if query in _steam_search_cache:
+        cached_time, cached_results = _steam_search_cache[query]
+        if now - cached_time < STEAM_SEARCH_CACHE_TTL_SEC:
+            return cached_results
+
+    url = f"https://store.steampowered.com/api/storesearch/?term={query}&l=english&cc=US"
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            data = response.json()
+            items = data.get("items", [])
+            _steam_search_cache[query] = (now, items)
+            return items
+    except Exception as e:
+        logger.error(f"Steam search API failed for query {query!r}: {e}")
+        return []
+
 
 
 # ─── Search ───────────────────────────────────────────────────────────────────
@@ -53,19 +82,55 @@ async def search_games(
     count_query = select(func.count()).select_from(base_query.subquery())
     total: int = (await db.execute(count_query)).scalar_one()
 
-    # Paginate
+    # Paginate local database matches
     offset = (page - 1) * page_size
     result = await db.execute(
         base_query.order_by(MartGameOverview.positive_reviews.desc()).offset(offset).limit(page_size)
     )
-    games = result.scalars().all()
+    db_games = result.scalars().all()
+    
+    # Track which app_ids are in the local database matches
+    local_app_ids = {g.app_id for g in db_games}
+    
+    # Fetch from Steam API (only realistically needed for the first page)
+    steam_items = await fetch_steam_search(q) if page == 1 else []
+    
+    merged_games = [GameSummarySchema.model_validate(g) for g in db_games]
+    
+    # Append uningested games from Steam
+    for item in steam_items:
+        app_id = item.get("id")
+        if app_id and app_id not in local_app_ids:
+            # HONEST-FALLBACK: Explicitly nulling fields not provided by storesearch API
+            merged_games.append(
+                GameSummarySchema(
+                    app_id=app_id,
+                    name=item.get("name", "Unknown Game"),
+                    header_image=item.get("tiny_image"),
+                    is_ingested=False,
+                    short_description=None,
+                    developer=None,
+                    publisher=None,
+                    release_date=None,
+                    final_price_usd=None,
+                    owners_estimate=None,
+                    genres=None,
+                    primary_genre=None,
+                    revenue_tier=None,
+                    success_score=None,
+                    net_sentiment_pct=None,
+                )
+            )
+            local_app_ids.add(app_id)  # Deduplicate within Steam results if necessary
+
+    total += len(steam_items)  # Approximate total increase
 
     took_ms = (time.perf_counter() - start) * 1000
 
     return ApiResponse(
         success=True,
         data=GameSearchResultSchema(
-            games=[GameSummarySchema.model_validate(g) for g in games],
+            games=merged_games,
             total=total,
             page=page,
             page_size=page_size,

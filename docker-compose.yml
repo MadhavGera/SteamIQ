@@ -19,6 +19,19 @@ services:
       retries: 10
       start_period: 30s
 
+  # ── Redis (Job Queue) ─────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: steamiq_redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ── Backend (FastAPI) ─────────────────────────────────────────────────────────
   backend:
     build:
@@ -42,6 +55,7 @@ services:
       STEAM_API_KEY: ${STEAM_API_KEY:-}
       # App config
       APP_ENV: ${APP_ENV:-development}
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "8001:8000"
     volumes:
@@ -59,6 +73,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8001
     container_name: steamiq_frontend
     restart: unless-stopped
     depends_on:
@@ -70,6 +86,31 @@ services:
       INTERNAL_API_URL: http://backend:8000
     ports:
       - "3001:3000"
+
+  # ── RQ Worker ─────────────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: steamiq_worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-steamiq}
+      POSTGRES_USER: ${POSTGRES_USER:-steamiq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      REDIS_URL: redis://redis:6379/0
+      STEAM_API_KEY: ${STEAM_API_KEY:-}
+      APP_ENV: ${APP_ENV:-development}
+    volumes:
+      - ./backend:/app
+    command: ["sh", "-c", "rq worker -u redis://redis:6379/0"]
 
 volumes:
   postgres_data:

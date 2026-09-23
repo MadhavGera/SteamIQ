@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   api,
@@ -82,6 +82,25 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [ingestedGames, setIngestedGames] = useState<Record<number, GameSummary>>({});
+  
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  // Fetch real ingested game records to replace hardcoded strings with API data
+  useEffect(() => {
+    let isMounted = true;
+    api.searchGames("", 1, 50).then((res) => {
+      if (!isMounted || !res?.games) return;
+      const map: Record<number, GameSummary> = {};
+      for (const g of res.games) {
+        map[g.app_id] = g;
+      }
+      setIngestedGames(map);
+    }).catch(() => {
+      // Ignore initial load error if backend is cold
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   const doSearch = useCallback(async (q: string) => {
     const trimmed = q.trim();
@@ -111,6 +130,21 @@ export default function LandingPage() {
       setLoading(false);
     }
   }, []);
+
+  // Debounce the query for live search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [query]);
+
+  // Trigger search when debounced query changes
+  useEffect(() => {
+    if (debouncedQuery) {
+      doSearch(debouncedQuery);
+    }
+  }, [debouncedQuery, doSearch]);
 
   return (
     <div className="container" style={{ paddingTop: "24px", paddingBottom: "64px" }}>
@@ -244,10 +278,10 @@ export default function LandingPage() {
                 </span>
               </div>
               <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>
-                No Ingested Games Found
+                No Games Found
               </h3>
               <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6", marginBottom: "20px" }}>
-                We couldn&apos;t find any analyzed games matching &ldquo;{query}&rdquo;. Enter a valid Steam App ID to trigger data ingestion.
+                We couldn&apos;t find any games matching &ldquo;{query}&rdquo; on Steam.
               </p>
               <button
                 type="button"
@@ -276,9 +310,16 @@ export default function LandingPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={g.header_image} alt={g.name} />
                     ) : null}
-                    <div className="featured-card__badge">
-                      <span>ID:</span>
-                      <strong>{g.app_id}</strong>
+                    <div className="featured-card__badge" style={{ display: "flex", gap: "6px" }}>
+                      {g.is_ingested ? (
+                        <span className="badge-pill badge-pill--success" style={{ fontSize: "10px", padding: "1px 6px" }}>Indexed</span>
+                      ) : (
+                        <span className="badge-pill badge-pill--neutral" style={{ fontSize: "10px", padding: "1px 6px" }}>Unindexed</span>
+                      )}
+                      <div>
+                        <span>ID:</span>
+                        <strong>{g.app_id}</strong>
+                      </div>
                     </div>
                   </div>
                   <div className="featured-card__body">
@@ -294,44 +335,61 @@ export default function LandingPage() {
         </section>
       )}
 
-      {/* ── Featured & Ingested Games Grid (Default Stitch View) ── */}
+      {/* ── Featured & Ingested Games Grid (Honest Showcase with Live API Data) ── */}
       {!hasSearched && (
         <section className="featured-section">
           <div className="featured-section__header">
-            <span className="featured-section__eyebrow">Featured Games</span>
+            <span className="featured-section__eyebrow">Curated Showcase</span>
             <h2 className="featured-section__title">Ready to Analyze</h2>
             <p className="featured-section__subtitle">
-              These games have been fully ingested and are ready for deep intelligence.
+              Explore decision intelligence for indexed catalog titles, or search any Steam App ID to ingest live store telemetry.
             </p>
           </div>
 
           <div className="featured-grid">
-            {FEATURED_GAMES.map((g) => (
-              <Link
-                key={g.app_id}
-                href={`/games/${g.app_id}?tab=overview`}
-                className="featured-card"
-              >
-                <div
-                  className="featured-card__cover"
-                  style={{ background: g.gradient }}
-                >
-                  {g.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={g.image} alt={g.name} />
-                  ) : null}
-                  <div className="featured-card__badge">
-                    <span>ID:</span>
-                    <strong>{g.app_id}</strong>
-                  </div>
-                </div>
+            {FEATURED_GAMES.map((g) => {
+              const live = ingestedGames[g.app_id];
+              const liveGenre = live?.genres?.[0]?.description;
+              const liveDev = live?.developer;
 
-                <div className="featured-card__body">
-                  <h3 className="featured-card__title">{g.name}</h3>
-                  <p className="featured-card__meta">{g.genre}</p>
-                </div>
-              </Link>
-            ))}
+              return (
+                <Link
+                  key={g.app_id}
+                  href={`/games/${g.app_id}?tab=overview`}
+                  className="featured-card"
+                >
+                  <div
+                    className="featured-card__cover"
+                    style={{ background: g.gradient }}
+                  >
+                    {live?.header_image || g.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={live?.header_image || g.image} alt={live?.name || g.name} />
+                    ) : null}
+                    <div className="featured-card__badge">
+                      <span>ID:</span>
+                      <strong>{g.app_id}</strong>
+                    </div>
+                  </div>
+
+                  <div className="featured-card__body">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                      <h3 className="featured-card__title">{live?.name || g.name}</h3>
+                      {live && (
+                        <span className="badge-pill badge-pill--success" style={{ fontSize: "10px", padding: "1px 6px" }}>
+                          Indexed
+                        </span>
+                      )}
+                    </div>
+                    <p className="featured-card__meta">
+                      {liveGenre
+                        ? (liveDev ? `${liveDev} · ${liveGenre}` : liveGenre)
+                        : "Catalog Showcase"}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

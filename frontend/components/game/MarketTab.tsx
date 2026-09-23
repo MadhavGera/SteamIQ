@@ -24,17 +24,21 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
   }
 
   const spec = market.genre_pricing_spectrum;
+  // HONEST-FALLBACK: Real list price or 0 for free/unpriced games
   const currentPrice = market.current_price_usd ?? 0;
-  const medianPrice = spec?.median_price_usd ?? 14.99;
-  const histLow = market.historical_lowest_price_usd ?? currentPrice;
+  // HONEST-FALLBACK: Real median price from genre pricing spectrum or null if uncalculated
+  const medianPrice = spec?.median_price_usd != null ? spec.median_price_usd : null;
+  const histLow = market.historical_lowest_price_usd != null ? market.historical_lowest_price_usd : currentPrice;
 
   // Calculate percentage position of current price relative to min and max for the spectrum bar
+  // HONEST-FALLBACK: Spectrum minimum bound or 0
   const specMin = spec?.min_price_usd ?? 0;
-  const specMax = Math.max(spec?.max_price_usd ?? 59.99, currentPrice, 30.0);
-  const pricePct = Math.min(100, Math.max(0, ((currentPrice - specMin) / (specMax - specMin)) * 100));
-  const medianPct = Math.min(100, Math.max(0, ((medianPrice - specMin) / (specMax - specMin)) * 100));
+  // HONEST-FALLBACK: Spectrum maximum bound or calculated ceiling
+  const specMax = Math.max(spec?.max_price_usd ?? (currentPrice > 0 ? currentPrice * 1.5 : 30.0), currentPrice, 30.0);
+  const pricePct = specMax > specMin ? Math.min(100, Math.max(0, ((currentPrice - specMin) / (specMax - specMin)) * 100)) : 50;
+  const medianPct = (medianPrice != null && specMax > specMin) ? Math.min(100, Math.max(0, ((medianPrice - specMin) / (specMax - specMin)) * 100)) : 50;
 
-  const priceDiffPct = medianPrice > 0 ? ((currentPrice - medianPrice) / medianPrice) * 100 : 0;
+  const priceDiffPct = (medianPrice != null && medianPrice > 0) ? ((currentPrice - medianPrice) / medianPrice) * 100 : null;
   const isAtHistoricalLow = currentPrice <= histLow;
 
   return (
@@ -87,11 +91,19 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
                   : `${gameTitle} has previously dropped to $${histLow.toFixed(2)} ($${(currentPrice - histLow).toFixed(2)} lower than today). Unless you want to play immediately, add it to your wishlist and wait for the next Steam Seasonal Sale.`}
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", fontSize: "13px", color: "var(--text-muted)" }}>
-                <span><strong>Genre Median:</strong> ${medianPrice.toFixed(2)} ({priceDiffPct >= 0 ? `+${priceDiffPct.toFixed(0)}%` : `${priceDiffPct.toFixed(0)}%`})</span>
-                <span>•</span>
+                {medianPrice != null && (
+                  <>
+                    <span><strong>Genre Median:</strong> ${medianPrice.toFixed(2)} {priceDiffPct != null ? `(${priceDiffPct >= 0 ? `+${priceDiffPct.toFixed(0)}%` : `${priceDiffPct.toFixed(0)}%`})` : ""}</span>
+                    <span>•</span>
+                  </>
+                )}
                 <span><strong>Historical Low:</strong> ${histLow.toFixed(2)}</span>
-                <span>•</span>
-                <span><strong>Sale Density:</strong> {spec?.discounted_game_share_pct?.toFixed(0) ?? "18"}% of {market.primary_genre || "genre"} titles on sale</span>
+                {spec?.discounted_game_share_pct != null && (
+                  <>
+                    <span>•</span>
+                    <span><strong>Sale Density:</strong> {spec.discounted_game_share_pct.toFixed(0)}% of {market.primary_genre || "genre"} titles on sale</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -111,11 +123,13 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
               ${currentPrice.toFixed(2)}
             </div>
             <div className="kpi-card__sub">
-              {priceDiffPct > 0
-                ? `+${priceDiffPct.toFixed(1)}% above genre median`
-                : priceDiffPct < 0
-                ? `${Math.abs(priceDiffPct).toFixed(1)}% below genre median`
-                : "Exact match with genre median"}
+              {priceDiffPct != null
+                ? priceDiffPct > 0
+                  ? `+${priceDiffPct.toFixed(1)}% above genre median`
+                  : priceDiffPct < 0
+                  ? `${Math.abs(priceDiffPct).toFixed(1)}% below genre median`
+                  : "Exact match with genre median"
+                : "Genre median benchmark pending"}
             </div>
           </div>
         </div>
@@ -128,10 +142,12 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
           </div>
           <div>
             <div className="kpi-card__num" style={{ color: "var(--text-primary)" }}>
-              ${medianPrice.toFixed(2)}
+              {medianPrice != null ? `$${medianPrice.toFixed(2)}` : "--"}
             </div>
             <div className="kpi-card__sub">
-              IQR Range: ${spec?.q25_price_usd?.toFixed(2) ?? "9.99"} – ${spec?.q75_price_usd?.toFixed(2) ?? "19.99"}
+              {spec?.q25_price_usd != null && spec?.q75_price_usd != null
+                ? `IQR Range: $${spec.q25_price_usd.toFixed(2)} – $${spec.q75_price_usd.toFixed(2)}`
+                : "IQR Range: --"}
             </div>
           </div>
         </div>
@@ -161,7 +177,7 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
           </div>
           <div>
             <div className="kpi-card__num" style={{ color: "var(--accent-light)" }}>
-              {spec?.discounted_game_share_pct?.toFixed(0) ?? "18"}%
+              {spec?.discounted_game_share_pct != null ? `${spec.discounted_game_share_pct.toFixed(0)}%` : "--"}
             </div>
             <div className="kpi-card__sub">Games currently on promotional discount</div>
           </div>
@@ -199,18 +215,20 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
             )}
 
             {/* Median Marker */}
-            <div
-              style={{
-                position: "absolute",
-                left: `${medianPct}%`,
-                top: "-4px",
-                bottom: "-4px",
-                width: "3px",
-                backgroundColor: "var(--text-secondary)",
-                zIndex: 2,
-              }}
-              title={`Genre Median: $${medianPrice.toFixed(2)}`}
-            />
+            {medianPrice != null && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: `${medianPct}%`,
+                  top: "-4px",
+                  bottom: "-4px",
+                  width: "3px",
+                  backgroundColor: "var(--text-secondary)",
+                  zIndex: 2,
+                }}
+                title={`Genre Median: $${medianPrice.toFixed(2)}`}
+              />
+            )}
 
             {/* Current Game Price Marker */}
             <div
@@ -242,11 +260,13 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
 
           {/* Scale Labels */}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--text-secondary)", marginTop: "32px" }}>
-            <span>Min: ${specMin.toFixed(2)}</span>
-            <span>25th: ${spec?.q25_price_usd?.toFixed(2) ?? "9.99"}</span>
-            <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>Median: ${medianPrice.toFixed(2)}</span>
-            <span>75th: ${spec?.q75_price_usd?.toFixed(2) ?? "19.99"}</span>
-            <span>Max: ${specMax.toFixed(2)}</span>
+            <span>Min: {spec?.min_price_usd != null ? `$${spec.min_price_usd.toFixed(2)}` : "--"}</span>
+            <span>25th: {spec?.q25_price_usd != null ? `$${spec.q25_price_usd.toFixed(2)}` : "--"}</span>
+            <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+              Median: {medianPrice != null ? `$${medianPrice.toFixed(2)}` : "--"}
+            </span>
+            <span>75th: {spec?.q75_price_usd != null ? `$${spec.q75_price_usd.toFixed(2)}` : "--"}</span>
+            <span>Max: {spec?.max_price_usd != null ? `$${spec.max_price_usd.toFixed(2)}` : "--"}</span>
           </div>
         </div>
       </div>
@@ -269,8 +289,8 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
                 </div>
               ))
             ) : (
-              <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-                Standard distribution centered on ${medianPrice.toFixed(2)} median range.
+              <div style={{ fontSize: "13px", color: "var(--text-secondary)", fontStyle: "italic" }}>
+                Competitor price distribution pending market materialization.
               </div>
             )}
           </div>

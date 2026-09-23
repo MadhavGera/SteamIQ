@@ -85,12 +85,18 @@ export function UpdatesTab({ updatesFeed, gameTitle }: UpdatesTabProps) {
               className="kpi-card__num"
               style={{
                 color:
-                  (updatesFeed.average_sentiment_delta ?? 0) >= 0 ? "var(--success)" : "var(--danger)",
+                  updatesFeed.average_sentiment_delta != null
+                    ? updatesFeed.average_sentiment_delta >= 0
+                      ? "var(--success)"
+                      : "var(--danger)"
+                    : "var(--text-secondary)",
               }}
             >
-              {(updatesFeed.average_sentiment_delta ?? 0) >= 0
-                ? `+${(updatesFeed.average_sentiment_delta ?? 0).toFixed(1)}%`
-                : `${(updatesFeed.average_sentiment_delta ?? 0).toFixed(1)}%`}
+              {updatesFeed.average_sentiment_delta != null
+                ? updatesFeed.average_sentiment_delta >= 0
+                  ? `+${updatesFeed.average_sentiment_delta.toFixed(1)}%`
+                  : `${updatesFeed.average_sentiment_delta.toFixed(1)}%`
+                : "--"}
             </div>
             <div className="kpi-card__sub">Net positive delta pre vs post patch</div>
           </div>
@@ -134,6 +140,7 @@ export function UpdatesTab({ updatesFeed, gameTitle }: UpdatesTabProps) {
       {/* ── 3. Update Impact Cards Feed ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {updatesFeed.updates.map((item) => {
+          // HONEST-FALLBACK: Numeric sentiment delta or 0
           const delta = item.sentiment_delta_pct ?? 0;
           const isPos = delta >= 0;
           const patchDateStr = item.patch_date ? new Date(item.patch_date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "Recent";
@@ -237,8 +244,21 @@ export function UpdatesTab({ updatesFeed, gameTitle }: UpdatesTabProps) {
                     {item.pre_avg_ccu != null && item.post_avg_ccu != null ? (
                       <>
                         {item.pre_avg_ccu.toLocaleString()} → {item.post_avg_ccu.toLocaleString()} (
-                        <span style={{ color: (item.ccu_change_pct ?? 0) >= 0 ? "var(--success)" : "var(--danger)" }}>
-                          {(item.ccu_change_pct ?? 0) >= 0 ? `+${item.ccu_change_pct?.toFixed(1)}%` : `${item.ccu_change_pct?.toFixed(1)}%`}
+                        <span
+                          style={{
+                            color:
+                              item.ccu_change_pct != null
+                                ? item.ccu_change_pct >= 0
+                                  ? "var(--success)"
+                                  : "var(--danger)"
+                                : "var(--text-secondary)",
+                          }}
+                        >
+                          {item.ccu_change_pct != null
+                            ? item.ccu_change_pct >= 0
+                              ? `+${item.ccu_change_pct.toFixed(1)}%`
+                              : `${item.ccu_change_pct.toFixed(1)}%`
+                            : "--"}
                         </span>
                         )
                       </>

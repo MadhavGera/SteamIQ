@@ -51,7 +51,7 @@ export function MatchTab({ appId, gameTitle }: MatchTabProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [evaluating, setEvaluating] = useState<boolean>(false);
 
-  // 1. Initial Load: Fetch Profile
+  // 1. Initial Load: Fetch Profile only (do not pre-compute a match before user interaction)
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
@@ -60,18 +60,6 @@ export function MatchTab({ appId, gameTitle }: MatchTabProps) {
         const p = await api.getMatchProfile(appId);
         if (isMounted) {
           setProfile(p);
-          // Set initial preferences to match baseline or defaults
-          const initialPrefs: UserMatchPreferences = {
-            difficulty: p.difficulty,
-            story_weight: p.story_weight,
-            exploration: p.exploration,
-            combat: p.combat,
-            multiplayer: p.multiplayer,
-            session_length: p.session_length,
-          };
-          setPrefs(initialPrefs);
-          const res = await api.matchGame(appId, initialPrefs);
-          if (isMounted) setMatchResult(res);
         }
       } catch (err) {
         console.error("Failed to load match profile:", err);
@@ -128,10 +116,13 @@ export function MatchTab({ appId, gameTitle }: MatchTabProps) {
     );
   }
 
-  const matchPct = matchResult?.overall_match_pct ?? 75.0;
-  const verdict = matchResult?.match_verdict ?? "Strong Match";
+  // HONEST-FALLBACK: Real computed match score or null if pending calculation
+  const matchPct = matchResult?.overall_match_pct != null ? matchResult.overall_match_pct : null;
+  // HONEST-FALLBACK: Real verdict or prompt state for user interaction
+  const verdict = matchResult?.match_verdict ?? (evaluating ? "Evaluating Taste Alignment..." : "Adjust Sliders to Check Match");
 
-  const getVerdictColor = (score: number) => {
+  const getVerdictColor = (score: number | null) => {
+    if (score == null) return "var(--accent-primary)";
     if (score >= 85) return "var(--success)";
     if (score >= 70) return "var(--accent-primary)";
     if (score >= 50) return "var(--warning)";
@@ -214,7 +205,7 @@ export function MatchTab({ appId, gameTitle }: MatchTabProps) {
               MATCH SCORE
             </span>
             <div style={{ fontSize: "44px", fontWeight: 800, color: getVerdictColor(matchPct), lineHeight: "1.1", margin: "4px 0" }}>
-              {Math.round(matchPct)}%
+              {matchPct != null ? `${Math.round(matchPct)}%` : "--"}
             </div>
             <div
               style={{
@@ -293,6 +284,7 @@ export function MatchTab({ appId, gameTitle }: MatchTabProps) {
               { key: "multiplayer", label: "Multiplayer Focus", icon: "groups", desc: "0 = Strictly Solo → 10 = Heavy Co-op / Competitive" },
               { key: "session_length", label: "Session Length & Scope", icon: "schedule", desc: "0 = Short / Bite-sized → 10 = Epic 40h+ Campaign" },
             ].map((dim) => {
+              // HONEST-FALLBACK: Neutral midpoint (5.0) for interactive slider position
               const currentVal = prefs[dim.key as keyof UserMatchPreferences] ?? 5.0;
               return (
                 <div key={dim.key} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -342,7 +334,7 @@ export function MatchTab({ appId, gameTitle }: MatchTabProps) {
             <span>Dimension Alignment vs {gameTitle}</span>
           </h3>
 
-          {matchResult && (
+          {matchResult ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {Object.entries(matchResult.dimension_scores).map(([key, score]: [string, DimensionMatchScore]) => {
                 const isClose = score.delta <= 1.5;
@@ -403,6 +395,15 @@ export function MatchTab({ appId, gameTitle }: MatchTabProps) {
                   </div>
                 );
               })}
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-secondary)" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: "36px", color: "var(--accent-primary)", marginBottom: "8px" }}>
+                tune
+              </span>
+              <p style={{ margin: "4px 0 0", fontSize: "13px", lineHeight: "1.6" }}>
+                Adjust any preference slider on the left or select a Quick Preset above to calculate your personalized taste alignment.
+              </p>
             </div>
           )}
 

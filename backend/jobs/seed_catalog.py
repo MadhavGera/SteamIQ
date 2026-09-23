@@ -214,6 +214,7 @@ class SeedCatalogJob(BaseJob):
 
                 # 2. Fetch Recent Steam Reviews (with graceful fallback)
                 reviews_list: list[dict[str, Any]] = []
+                query_summary: dict[str, Any] = {}
                 try:
                     r_resp = await client.get(
                         STEAM_REVIEWS_API.format(appid=app_id),
@@ -231,6 +232,7 @@ class SeedCatalogJob(BaseJob):
                         r_data = r_resp.json()
                         if r_data.get("success"):
                             reviews_list = r_data.get("reviews", [])
+                            query_summary = r_data.get("query_summary", {})
                 except Exception as e:
                     self.logger.debug("Reviews fetch failed for %d: %s", app_id, e)
 
@@ -281,10 +283,12 @@ class SeedCatalogJob(BaseJob):
                         "platform_linux": steam_data.get("platforms", {}).get("linux", False),
                         "positive_reviews": pos_reviews,
                         "negative_reviews": neg_reviews,
-                        "review_score": steam_data.get("metacritic", {}).get("score"),
+                        "review_score": query_summary.get("review_score"),
+                        "review_score_desc": query_summary.get("review_score_desc"),
                         "owners_estimate": spy_data.get("owners"),
                         "average_playtime_forever": spy_data.get("average_forever", 0),
                         "median_playtime_forever": spy_data.get("median_forever", 0),
+                        "metacritic_score": steam_data.get("metacritic", {}).get("score") if steam_data.get("metacritic") else None,
                     }
                     stmt = pg_insert(RawGame).values(**game_row)
                     stmt = stmt.on_conflict_do_update(

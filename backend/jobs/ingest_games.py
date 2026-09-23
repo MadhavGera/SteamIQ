@@ -132,12 +132,14 @@ class IngestGamesJob(BaseJob):
 
     async def fetch_reviews(
         self, client: httpx.AsyncClient
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
         """
         Paginate through Steam review API.
         Stops at max_reviews or when no more reviews are returned.
+        Returns (reviews_list, query_summary_dict).
         """
         reviews: list[dict[str, Any]] = []
+        query_summary: dict[str, Any] | None = None
         cursor = "*"
         pages_fetched = 0
 
@@ -157,6 +159,9 @@ class IngestGamesJob(BaseJob):
             if not data or not data.get("success"):
                 break
 
+            if query_summary is None and "query_summary" in data:
+                query_summary = data.get("query_summary")
+
             batch = data.get("reviews", [])
             if not batch:
                 break
@@ -170,7 +175,7 @@ class IngestGamesJob(BaseJob):
                 break
 
         logger.info("Fetched %s reviews for app_id=%s", len(reviews), self.app_id)
-        return reviews
+        return reviews, query_summary
 
     async def fetch_player_count(self, client: httpx.AsyncClient) -> int | None:
         """Get current concurrent player count."""
@@ -218,12 +223,36 @@ class IngestGamesJob(BaseJob):
         session: AsyncSession,
         steam_data: dict[str, Any],
         spy_data: dict[str, Any] | None,
+        query_summary: dict[str, Any] | None = None,
     ) -> None:
         """Upsert into raw_games. On conflict (app_id), update all fields."""
         from db.models import RawGame  # local import avoids circular at module level
 
         price_usd, final_price_usd, discount_pct = self._parse_price(steam_data)
         release = steam_data.get("release_date", {})
+
+        # Extract review score (1-9 scale) and description from Steam query_summary
+        steam_review_score = query_summary.get("review_score") if query_summary else None
+        steam_review_score_desc = query_summary.get("review_score_desc") if query_summary else None
+
+        pos_count = (
+            int(spy_data.get("positive", 0) or 0)
+            if (spy_data and spy_data.get("positive"))
+            else (
+                query_summary.get("total_positive")
+                if (query_summary and query_summary.get("total_positive") is not None)
+                else (steam_data.get("recommendations", {}).get("total", 0) if steam_data.get("recommendations") else 0)
+            )
+        )
+        neg_count = (
+            int(spy_data.get("negative", 0) or 0)
+            if (spy_data and spy_data.get("negative"))
+            else (
+                query_summary.get("total_negative", 0)
+                if (query_summary and query_summary.get("total_negative") is not None)
+                else 0
+            )
+        )
 
         row = {
             "app_id": self.app_id,
@@ -244,10 +273,10 @@ class IngestGamesJob(BaseJob):
             "platform_windows": steam_data.get("platforms", {}).get("windows", False),
             "platform_mac": steam_data.get("platforms", {}).get("mac", False),
             "platform_linux": steam_data.get("platforms", {}).get("linux", False),
-            "positive_reviews": int(spy_data.get("positive", 0) or 0) if (spy_data and spy_data.get("positive")) else (steam_data.get("recommendations", {}).get("total", 0) if steam_data.get("recommendations") else 0),
-            "negative_reviews": int(spy_data.get("negative", 0) or 0) if (spy_data and spy_data.get("negative")) else 0,
-            "review_score": steam_data.get("metacritic", {}).get("score") if steam_data.get("metacritic") else None,
-            "review_score_desc": None,
+            "positive_reviews": pos_count,
+            "negative_reviews": neg_count,
+            "review_score": steam_review_score,
+            "review_score_desc": steam_review_score_desc,
             "owners_estimate": spy_data.get("owners") if spy_data else None,
             "average_playtime_forever": spy_data.get("average_forever", 0) if spy_data else 0,
             "median_playtime_forever": spy_data.get("median_forever", 0) if spy_data else 0,
@@ -446,12 +475,15 @@ class IngestGamesJob(BaseJob):
 
             stats["game_name"] = steam_data.get("name", "unknown")
 
-            spy_data     = await self.fetch_steamspy_details(client)
-            reviews      = await self.fetch_reviews(client)
+            spy_data = await self.fetch_steamspy_details(client)
+            reviews, query_summary = await self.fetch_reviews(client)
             player_count = await self.fetch_player_count(client)
 
             stats["reviews_fetched"] = len(reviews)
-            stats["player_count"]    = player_count
+            stats["player_count"] = player_count
+            if query_summary:
+                stats["review_score"] = query_summary.get("review_score")
+                stats["review_score_desc"] = query_summary.get("review_score_desc")
 
             if self.dry_run:
                 self.logger.info(
@@ -466,7 +498,7 @@ class IngestGamesJob(BaseJob):
             SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
             async with SessionLocal() as session, session.begin():
-                await self._upsert_game(session, steam_data, spy_data)
+                await self._upsert_game(session, steam_data, spy_data, query_summary=query_summary)
                 reviews_count = await self._upsert_reviews(session, reviews)
                 if spy_data:
                     await self._upsert_tags(session, spy_data)

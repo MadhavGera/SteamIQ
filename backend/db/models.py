@@ -1117,3 +1117,32 @@ class MartReviewIntelligence(Base):
 
 
 
+
+# ===========================================================================
+# JOB TRACKING ZONE
+# ===========================================================================
+
+class IngestionJob(Base):
+    """
+    Tracks async data ingestion tasks triggered from the UI.
+    """
+    __tablename__ = "ingestion_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    app_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False)  # pending, running, completed, failed
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_ingestion_jobs_app_id_running", "app_id", unique=True, postgresql_where=(status == 'running')),
+    )
+
+    def __repr__(self) -> str:
+        return f"<IngestionJob id={self.id} app_id={self.app_id} status={self.status}>"

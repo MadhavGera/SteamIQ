@@ -97,6 +97,7 @@ export function CompetitorSentimentMatrix({
                 style={{
                   fontFamily: "var(--font-mono)",
                   fontWeight: 600,
+                  // HONEST-FALLBACK: Null-safe numeric comparison for badge color
                   color: (sourceGame.review_pct ?? 0) >= 80 ? "var(--success)" : "var(--warning)",
                 }}
               >
@@ -177,6 +178,7 @@ export function CompetitorSentimentMatrix({
                     style={{
                       fontFamily: "var(--font-mono)",
                       fontWeight: 600,
+                      // HONEST-FALLBACK: Null-safe numeric comparison for badge color
                       color: (comp.review_pct ?? 0) >= 80 ? "var(--success)" : "var(--warning)",
                     }}
                   >
