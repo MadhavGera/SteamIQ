@@ -31,6 +31,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -1141,7 +1142,12 @@ class IngestionJob(Base):
     )
 
     __table_args__ = (
-        Index("ix_ingestion_jobs_app_id_running", "app_id", unique=True, postgresql_where=(status == 'running')),
+        Index(
+            "ix_ingestion_jobs_app_id_active",
+            "app_id",
+            unique=True,
+            postgresql_where=text("status IN ('pending', 'running')"),
+        ),
     )
 
     def __repr__(self) -> str:

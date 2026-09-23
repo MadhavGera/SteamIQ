@@ -110,7 +110,7 @@ services:
       APP_ENV: ${APP_ENV:-development}
     volumes:
       - ./backend:/app
-    command: ["sh", "-c", "rq worker -u redis://redis:6379/0"]
+    command: ["sh", "-c", "python -m services.ingestion_runner"]
 
 volumes:
   postgres_data:

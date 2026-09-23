@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { getApiBaseUrl } from "@/lib/api";
 
 export default function NotFound() {
   const pathname = usePathname();
@@ -13,21 +14,11 @@ export default function NotFound() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const getApiUrl = () => {
-    if (typeof window !== "undefined") {
-      if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes(":8000")) {
-        return process.env.NEXT_PUBLIC_API_URL;
-      }
-      return `${window.location.protocol}//${window.location.hostname}:8001`;
-    }
-    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
-  };
-
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
     if (status === "polling" && jobId) {
-      const apiUrl = getApiUrl();
+      const apiUrl = getApiBaseUrl();
       intervalId = setInterval(async () => {
         try {
           const res = await fetch(`${apiUrl}/api/v1/ingestion/status/${jobId}`);
@@ -63,7 +54,7 @@ export default function NotFound() {
     setStatus("triggering");
     setErrorMessage(null);
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = getApiBaseUrl();
       const res = await fetch(`${apiUrl}/api/v1/ingestion/trigger`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
