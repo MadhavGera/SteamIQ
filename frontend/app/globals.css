@@ -306,7 +306,7 @@ img {
   max-width: 640px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-card);
   padding: 4px 6px 4px 16px;
   display: flex;
   align-items: center;
@@ -341,7 +341,7 @@ img {
   background-color: var(--accent-primary);
   color: var(--bg-surface-lowest);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 700;
