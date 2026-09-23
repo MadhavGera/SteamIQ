@@ -193,7 +193,7 @@ export function RecommendationsTab({ bundle, gameTitle }: RecommendationsTabProp
                       className="badge-pill"
                       style={{
                         backgroundColor: "rgba(45, 212, 191, 0.15)",
-                        color: "#2dd4bf",
+                        color: "var(--accent-review-nlp)",
                         border: "1px solid rgba(45, 212, 191, 0.3)",
                         display: "inline-flex",
                         alignItems: "center",
@@ -210,7 +210,7 @@ export function RecommendationsTab({ bundle, gameTitle }: RecommendationsTabProp
                       className="badge-pill"
                       style={{
                         backgroundColor: "rgba(251, 146, 60, 0.15)",
-                        color: "#fb923c",
+                        color: "var(--accent-pricing)",
                         border: "1px solid rgba(251, 146, 60, 0.3)",
                         display: "inline-flex",
                         alignItems: "center",

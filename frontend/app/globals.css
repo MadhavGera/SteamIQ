@@ -1,55 +1,68 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300;0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800;1,6..12,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+/* Font note: Steam uses proprietary "Motiva Sans" (geometric humanist, not on Google Fonts).
+   Nunito Sans is the closest freely-licensed equivalent — both are rounded geometric sans-serifs. */
 
 /* ─── SteamIQ Stitch Design Tokens (DESIGN.md) ───────────────────────────────── */
 :root {
-  /* Surfaces & Background */
-  --bg-base:              #021522;
-  --bg-surface-lowest:    #00101c;
-  --bg-surface-low:       #0a1d2b;
-  --bg-surface:           #0e212f;
-  --bg-surface-raised:    #192c3a;
-  --bg-surface-highest:   #243745;
-  --bg-surface-bright:    #293b4a;
+  /* Surfaces & Background — Steam dark blue-grey store palette */
+  /* Source: store.steampowered.com shared_global.css (--gpStoreDarkerGrey etc.) */
+  --bg-base:              #1b2838;  /* Steam page background */
+  --bg-surface-lowest:    #0e141b;  /* Steam darkest surface */
+  --bg-surface-low:       #16202d;  /* slightly lighter than base */
+  --bg-surface:           #1e2d3d;  /* primary card surface */
+  --bg-surface-raised:    #2a475e;  /* --gpStoreDarkGrey — hover/raised surface */
+  --bg-surface-highest:   #3d4450;  /* --gpSystemDarkGrey — elevated chips/badges */
+  --bg-surface-bright:    #4e697d;  /* --gpStoreGrey — light surface highlight */
 
-  /* Text & On-Surfaces */
-  --text-primary:         #d1e5f8;
-  --text-secondary:       #bec8cf;
-  --text-muted:           #889299;
+  /* Text & On-Surfaces — Steam store body text colors */
+  --text-primary:         #c6d4df;  /* Steam primary body (#c6d4df from store.css) */
+  --text-secondary:       #acb2b8;  /* Steam secondary text */
+  --text-muted:           #8f98a0;  /* Steam muted/breadcrumb text */
 
   /* Borders & Outlines */
-  --border-subtle:        #3e484e;
-  --border-strong:        #889299;
+  --border-subtle:        #2a475e;  /* Store dark grey — subtle dividers */
+  --border-strong:        #4e697d;  /* Store grey — stronger outlines */
 
-  /* Primary Interactive Accents */
-  --accent-primary:       #5ec2f0;
-  --accent-primary-hover: #73d1ff;
-  --accent-light:         #98dbff;
-  --accent-glow:          rgba(94, 194, 240, 0.15);
-  --secondary-container:  #0f4a73;
-  --on-secondary-container: #8ab9e9;
+  /* Primary Interactive Accents — Steam's signature chalky/link blue */
+  /* Source: a:hover { color: #66c0f4 } from store.css; --gpColor-ChalkyBlue */
+  --accent-primary:       #66c0f4;  /* Steam chalky blue — links & interactive accent */
+  --accent-primary-hover: #87d4ff;  /* slightly brighter hover state */
+  --accent-light:         #a8d8f0;  /* light-mode variant of chalky blue */
+  --accent-glow:          rgba(102, 192, 244, 0.15);
+  --secondary-container:  #2a475e;
+  --on-secondary-container: #c6d4df;
 
-  /* Semantics (Data & Signal Only) */
-  --success:              #4ade80;
-  --success-bg:           rgba(74, 222, 128, 0.15);
-  --warning:              #f5a64c;
-  --warning-bg:           rgba(245, 166, 76, 0.15);
-  --danger:               #ffb4ab;
-  --danger-bg:            rgba(255, 180, 171, 0.15);
+  /* Semantics — Steam review sentiment color coding */
+  /* Overwhelmingly/Mostly Positive → Steam green (--gpColor-Green) */
+  --success:              #59bf40;  /* Steam #5ba32b/GreenHi — positive reviews */
+  --success-bg:           rgba(89, 191, 64, 0.15);
+  /* Mixed / Mostly Positive → Steam amber-yellow */
+  --warning:              #c7b24a;  /* amber for Mixed sentiment */
+  --warning-bg:           rgba(199, 178, 74, 0.15);
+  /* Mostly/Overwhelmingly Negative → Steam red (--gpColor-Red) */
+  --danger:               #d94126;  /* Steam #D94126 — negative reviews */
+  --danger-bg:            rgba(217, 65, 38, 0.15);
 
-  /* Typography */
-  --font-sans:            'Inter', system-ui, -apple-system, sans-serif;
+  /* Typography — Nunito Sans as Motiva Sans substitute */
+  --font-sans:            'Nunito Sans', Arial, Helvetica, sans-serif;
   --font-mono:            'JetBrains Mono', monospace;
 
   /* Spacing */
   --grid-max-width:       1440px;
-  --radius-sm:            4px;
-  --radius-md:            8px;
-  --radius-card:          12px;
+  /* Steam uses very flat radii: --gpCorner-Small:1px, Medium:2px, Large:3px */
+  --radius-sm:            2px;
+  --radius-md:            3px;
+  --radius-card:          3px;  /* Steam cards are essentially square-cornered */
   --radius-pill:          9999px;
 
+  /* Evidence-badge accent colors (RecommendationsTab / UpdatesTab) — controlled from here */
+  --accent-inferred:     #c084fc;  /* mauve/purple: AI-inferred activity detection */
+  --accent-review-nlp:  #2dd4bf;  /* teal: review NLP sentiment analysis source */
+  --accent-pricing:     #fb923c;  /* orange: pricing benchmark rule source */
+
   /* Elevation */
-  --shadow-dropdown:      0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-dropdown:      0 8px 24px rgba(0, 0, 0, 0.55);
   --transition-fast:      150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base:      200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -108,8 +121,8 @@ img {
   left: 0;
   width: 100%;
   height: 64px;
-  background-color: var(--bg-base);
-  border-bottom: 1px solid var(--border-subtle);
+  background-color: #171a21;  /* Steam's actual global header background color */
+  border-bottom: 1px solid #000000;
   z-index: 100;
 }
 
@@ -776,19 +789,19 @@ img {
 .badge-pill--success {
   background-color: var(--success-bg);
   color: var(--success);
-  border: 1px solid rgba(74, 222, 128, 0.2);
+  border: 1px solid rgba(89, 191, 64, 0.3);
 }
 
 .badge-pill--warning {
   background-color: var(--warning-bg);
   color: var(--warning);
-  border: 1px solid rgba(245, 166, 76, 0.2);
+  border: 1px solid rgba(199, 178, 74, 0.3);
 }
 
 .badge-pill--danger {
   background-color: var(--danger-bg);
   color: var(--danger);
-  border: 1px solid rgba(255, 180, 171, 0.2);
+  border: 1px solid rgba(217, 65, 38, 0.3);
 }
 
 .badge-pill--neutral {

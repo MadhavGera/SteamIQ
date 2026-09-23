@@ -158,7 +158,7 @@ export function UpdatesTab({ updatesFeed, gameTitle }: UpdatesTabProps) {
                         className="badge-pill"
                         style={{
                           backgroundColor: "rgba(168, 85, 247, 0.15)",
-                          color: "#c084fc",
+                          color: "var(--accent-inferred)",
                           border: "1px solid rgba(168, 85, 247, 0.3)",
                           display: "inline-flex",
                           alignItems: "center",
