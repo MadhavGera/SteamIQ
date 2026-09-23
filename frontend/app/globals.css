@@ -61,6 +61,11 @@
   --accent-review-nlp:  #2dd4bf;  /* teal: review NLP sentiment analysis source */
   --accent-pricing:     #fb923c;  /* orange: pricing benchmark rule source */
 
+  /* Navigation — Steam's actual header is darker than the page canvas */
+  /* Source: body.v6 > div#global_header { border-bottom-color: #171a21 } from store.css */
+  --bg-nav:               #171a21;  /* Steam global header — noticeably darker than --bg-base */
+  --border-nav:           #000000;  /* Steam header bottom border — pure black hairline */
+
   /* Elevation */
   --shadow-dropdown:      0 8px 24px rgba(0, 0, 0, 0.55);
   --transition-fast:      150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -121,8 +126,8 @@ img {
   left: 0;
   width: 100%;
   height: 64px;
-  background-color: #171a21;  /* Steam's actual global header background color */
-  border-bottom: 1px solid #000000;
+  background-color: var(--bg-nav);       /* #171a21 — Steam global header */
+  border-bottom: 1px solid var(--border-nav);  /* #000000 — Steam black hairline */
   z-index: 100;
 }
 
