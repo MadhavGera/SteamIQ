@@ -542,6 +542,15 @@ img {
   margin-bottom: 24px;
 }
 
+.detail-header__hero-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
 .detail-header__game-info {
   display: flex;
   align-items: center;

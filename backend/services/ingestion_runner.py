@@ -177,5 +177,17 @@ def start_worker():
     worker.work(with_scheduler=True)
 
 if __name__ == "__main__":
+    # WARNING: Do NOT run this module via `python -m services.ingestion_runner` in
+    # production or Docker. Running with -m sets __name__ = "__main__", which causes
+    # RQ to serialize enqueued functions as `__main__.<func>` — an address the worker
+    # process cannot import, producing:
+    #   ValueError: Functions from the __main__ module cannot be processed by workers
+    #
+    # The docker-compose worker command uses an explicit import instead:
+    #   python -c 'from services.ingestion_runner import start_worker; start_worker()'
+    # This keeps the module's real dotted path (services.ingestion_runner) intact.
+    #
+    # This guard is only safe for local one-off runs where no scheduled re-enqueueing
+    # is needed (i.e. no call to register_scheduled_price_snapshots / enqueue_in).
     start_worker()
 

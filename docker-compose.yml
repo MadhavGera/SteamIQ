@@ -110,7 +110,7 @@ services:
       APP_ENV: ${APP_ENV:-development}
     volumes:
       - ./backend:/app
-    command: ["sh", "-c", "python -m services.ingestion_runner"]
+    command: ["sh", "-c", "python -c 'from services.ingestion_runner import start_worker; start_worker()'"]
 
 volumes:
   postgres_data:
