@@ -1,88 +1,87 @@
 ---
 name: SteamIQ Intelligence System
+# ──────────────────────────────────────────────────────────────────────────────
+# DESIGN TOKENS — source of truth (kept in sync with frontend/app/globals.css)
+# Theme: Steam Store dark palette (reskinned 2026-09)
+# Source: store.steampowered.com / shared_global.css (shared_global.css v2026)
+# ──────────────────────────────────────────────────────────────────────────────
 colors:
-  surface: '#021522'
-  surface-dim: '#021522'
-  surface-bright: '#293b4a'
-  surface-container-lowest: '#00101c'
-  surface-container-low: '#0a1d2b'
-  surface-container: '#0e212f'
-  surface-container-high: '#192c3a'
-  surface-container-highest: '#243745'
-  on-surface: '#d1e5f8'
-  on-surface-variant: '#bec8cf'
-  inverse-surface: '#d1e5f8'
-  inverse-on-surface: '#203241'
-  outline: '#889299'
-  outline-variant: '#3e484e'
-  surface-tint: '#73d1ff'
-  primary: '#98dbff'
-  on-primary: '#003548'
-  primary-container: '#5ec2f0'
-  on-primary-container: '#004e68'
-  inverse-primary: '#006687'
-  secondary: '#9bcbfb'
-  on-secondary: '#003354'
-  secondary-container: '#0f4a73'
-  on-secondary-container: '#8ab9e9'
-  tertiary: '#ffc891'
-  on-tertiary: '#492900'
-  tertiary-container: '#f5a64c'
-  on-tertiary-container: '#6a3d00'
-  error: '#ffb4ab'
-  on-error: '#690005'
-  error-container: '#93000a'
-  on-error-container: '#ffdad6'
-  primary-fixed: '#c1e8ff'
-  primary-fixed-dim: '#73d1ff'
-  on-primary-fixed: '#001e2b'
-  on-primary-fixed-variant: '#004d67'
-  secondary-fixed: '#cee5ff'
-  secondary-fixed-dim: '#9bcbfb'
-  on-secondary-fixed: '#001d33'
-  on-secondary-fixed-variant: '#0f4a73'
-  tertiary-fixed: '#ffdcbc'
-  tertiary-fixed-dim: '#ffb86c'
-  on-tertiary-fixed: '#2c1600'
-  on-tertiary-fixed-variant: '#683c00'
-  background: '#021522'
-  on-background: '#d1e5f8'
-  surface-variant: '#243745'
+  # Backgrounds — Steam dark blue-grey store palette
+  # (mapped from Steam's --gpStoreDarkerGrey / --gpStoreDarkGrey / --gpSystemDarkGrey)
+  surface: '#1b2838'          # --bg-base: Steam page background
+  surface-dim: '#0e141b'      # --bg-surface-lowest: darkest (Steam --gpStoreDarkestGrey)
+  surface-container-lowest: '#0e141b'
+  surface-container-low: '#16202d'
+  surface-container: '#1e2d3d'         # primary card surface
+  surface-container-high: '#2a475e'    # --gpStoreDarkGrey — hover/raised
+  surface-container-highest: '#3d4450' # --gpSystemDarkGrey — elevated chips
+  surface-bright: '#4e697d'            # --gpStoreGrey — highlight surfaces
+  background: '#1b2838'
+  # Text — Steam store body text
+  on-surface: '#c6d4df'        # Steam primary body text (from store.css body.v6)
+  on-surface-variant: '#acb2b8' # Steam secondary text
+  on-background: '#c6d4df'
+  # Borders
+  outline-variant: '#2a475e'   # subtle divider (--gpStoreDarkGrey)
+  outline: '#4e697d'           # stronger border (--gpStoreGrey)
+  # Interactive accent — Steam's signature chalky blue
+  # Source: store.css `a:hover { color: #66c0f4 }` / --gpColor-ChalkyBlue
+  primary: '#66c0f4'            # Steam chalky blue — links & interactive accent
+  primary-container: '#2a475e'
+  on-primary: '#0e141b'
+  on-primary-container: '#c6d4df'
+  surface-tint: '#87d4ff'
+  # Sentiment semantic colors — Steam review color coding
+  # Overwhelmingly/Mostly Positive → Steam green (--gpColor-Green / GreenHi)
+  # Mixed → amber-yellow; Negative → Steam red (--gpColor-Red)
+  success: '#59bf40'    # Steam GreenHi — Positive reviews badge
+  warning: '#c7b24a'    # Steam amber — Mixed reviews badge
+  danger: '#d94126'     # Steam #D94126 — Negative reviews badge (--gpColor-Red)
+  error: '#d94126'
+  # Evidence-badge accent series (not on Steam store; internal SteamIQ classification)
+  accent-inferred: '#c084fc'    # mauve: AI-inferred activity detection badge
+  accent-review-nlp: '#2dd4bf'  # teal: review NLP evidence badge
+  accent-pricing: '#fb923c'     # orange: pricing benchmark rule badge
 typography:
+  # Font note: Steam uses proprietary "Motiva Sans" (geometric humanist, unavailable on
+  # Google Fonts). SteamIQ substitutes Nunito Sans — closest freely-licensed equivalent
+  # with matching rounded stroke and x-height characteristics.
+  font-stack-primary: '"Nunito Sans", Arial, Helvetica, sans-serif'
+  font-stack-mono: '"JetBrains Mono", monospace'
   display-lg:
-    fontFamily: JetBrains Mono
+    fontFamily: Nunito Sans
     fontSize: 48px
     fontWeight: '700'
     lineHeight: 56px
     letterSpacing: -0.02em
   headline-lg:
-    fontFamily: Inter
+    fontFamily: Nunito Sans
     fontSize: 32px
     fontWeight: '600'
     lineHeight: 40px
     letterSpacing: -0.01em
   headline-md:
-    fontFamily: Inter
+    fontFamily: Nunito Sans
     fontSize: 24px
     fontWeight: '600'
     lineHeight: 32px
   headline-sm:
-    fontFamily: Inter
+    fontFamily: Nunito Sans
     fontSize: 20px
     fontWeight: '600'
     lineHeight: 28px
   body-lg:
-    fontFamily: Inter
+    fontFamily: Nunito Sans
     fontSize: 16px
     fontWeight: '400'
     lineHeight: 24px
   body-md:
-    fontFamily: Inter
+    fontFamily: Nunito Sans
     fontSize: 14px
     fontWeight: '400'
     lineHeight: 20px
   body-sm:
-    fontFamily: Inter
+    fontFamily: Nunito Sans
     fontSize: 12px
     fontWeight: '400'
     lineHeight: 16px
@@ -97,18 +96,17 @@ typography:
     fontWeight: '500'
     lineHeight: 24px
   label-caps:
-    fontFamily: Inter
+    fontFamily: Nunito Sans
     fontSize: 11px
     fontWeight: '700'
     lineHeight: 16px
     letterSpacing: 0.05em
 rounded:
-  sm: 0.25rem
-  DEFAULT: 0.5rem
-  md: 0.75rem
-  lg: 1rem
-  xl: 1.5rem
-  full: 9999px
+  # Steam uses extremely flat radii: --gpCorner-Small:1px / Medium:2px / Large:3px
+  sm: 2px       # --radius-sm (was 4px, now matches Steam --gpCorner-Medium)
+  DEFAULT: 3px  # --radius-md (was 8px, now matches Steam --gpCorner-Large)
+  md: 3px       # --radius-card (was 12px, Steam cards are near-square-cornered)
+  full: 9999px  # --radius-pill — pills remain fully rounded
 spacing:
   scale-4: 4px
   scale-8: 8px
@@ -126,81 +124,83 @@ spacing:
 
 ## Brand & Style
 
-The design system is engineered for technical precision and data density, catering to indie developers who require actionable, explainable insights. The brand personality is rooted in the aesthetic of high-stakes environments like trading terminals and engineering dashboards—where clarity and speed of information retrieval are paramount.
-
-The visual style is **Modern/Corporate** with a lean toward **Minimalism**. It prioritizes functional utility over aesthetic decoration. Surfaces are kept flat to minimize visual noise, and the hierarchy is driven strictly by typography and contrast. The emotional response should be one of confidence and clinical objectivity; the UI acts as a transparent lens through which the data is viewed.
+The design system is engineered for technical precision and data density, catering to indie developers who require actionable, explainable insights. The visual style is **Steam-adjacent dark** — matching the aesthetic of the real Steam Store to feel native to the gaming context — while preserving the dashboard's analytical character. Surfaces are flat, hierarchy is driven by typography and contrast, and the color palette is sourced directly from Steam's live CSS.
 
 ## Colors
 
-The palette is optimized for long-duration focus in low-light environments. 
+The palette matches Steam's actual dark store theme (sourced from `store.steampowered.com/public/shared/css/shared_global.css` and `store.css`).
 
-- **Foundation:** The system uses a deep navy base (`#0B1420`) to reduce eye strain, with layered surfaces creating depth through tonal shifts rather than shadows.
-- **Accents:** The primary accent (`#5EC2F0`) is reserved for interactive elements and critical Key Performance Indicators (KPIs). 
-- **Semantics:** Color is used exclusively as a data signal. `Success` and `Danger` values are applied to SHAP (Shapley Additive Explanations) values and sentiment analysis to provide immediate visual cues for positive or negative impact on game performance.
-- **Data Series:** Secondary accents should use cool-toned blues and greys to maintain a professional, analytical tone.
+- **Foundation:** `#1b2838` (`--gpStoreDarkerGrey`) as the page canvas. Layered surfaces step through `#1e2d3d` → `#2a475e` (`--gpStoreDarkGrey`) → `#3d4450` (`--gpSystemDarkGrey`).
+- **Text:** `#c6d4df` for primary body (from Steam `body.v6` color), `#acb2b8` secondary, `#8f98a0` muted.
+- **Accent (Steam Blue):** `#66c0f4` — Steam's `--gpColor-ChalkyBlue`, the link-hover and interactive highlight color. All buttons, active tab indicators, and key KPIs use this value.
+- **Nav Header:** `#171a21` — Steam's actual `#global_header` background (darker than the page canvas), with `#000000` bottom border.
+- **Review Sentiment Color Coding** (matching Steam's own Positive/Mixed/Negative badge treatment):
+  - **Positive / Overwhelmingly Positive** → `#59bf40` (`--gpColor-GreenHi`)
+  - **Mixed / Mostly Positive** → `#c7b24a` (amber-gold)
+  - **Negative / Overwhelmingly Negative** → `#d94126` (`--gpColor-Red`)
+- **Evidence Badges (SteamIQ-internal):** Mauve `#c084fc` (inferred), Teal `#2dd4bf` (NLP), Orange `#fb923c` (pricing) — not from Steam's own palette but used to distinguish AI evidence sources.
 
 ## Typography
 
-This design system utilizes a dual-font strategy to distinguish between UI narrative and raw data.
+Steam uses proprietary **Motiva Sans** (geometric humanist sans-serif), which is not available via Google Fonts or any free license.
 
-- **Inter:** The primary typeface for all UI labels, navigation, and body copy. It provides maximum legibility at small sizes common in data-dense dashboards.
-- **JetBrains Mono:** Used exclusively for numeric values, statistics, and code-related technical data. The monospaced nature ensures that numbers align perfectly in tables and KPI stacks, allowing users to compare values by scanning vertically.
-- **Hierarchy:** Use `label-caps` for secondary metadata and table headers to create a distinct structural break from data rows.
+- **Substitution:** SteamIQ uses **Nunito Sans** as the closest freely-licensed equivalent. Both typefaces share rounded strokes, similar x-height proportions, and a warm geometric character that matches the Steam store's visual identity.
+- **JetBrains Mono** is retained for numeric KPIs, statistics, and data-dense table cells.
+- **Label hierarchy:** `label-caps` (11px / 700 / 0.05em tracking) for secondary metadata and table headers.
 
 ## Layout & Spacing
 
 The layout follows a **Fluid Grid** model with a hard constraint on maximum width to ensure readability on ultra-wide monitors.
 
 - **Grid Model:** A 12-column system with a 16px gutter.
-- **Responsive Behavior:** 
-  - **Desktop:** 24px margins, standard 24px card padding. 
+- **Responsive Behavior:**
+  - **Desktop:** 24px margins, standard 24px card padding.
   - **Tablet:** Gutter reduces to 12px, content reflows to 6-column or 1-column stacks.
   - **Mobile:** 16px margins, card padding reduces to 16px to maximize data real-estate.
-- **Rhythm:** All component heights and internal spacing must adhere to the 4px/8px baseline increment to maintain a rigorous, "engineered" alignment.
+- **Rhythm:** All component heights and internal spacing must adhere to the 4px/8px baseline increment.
 
 ## Elevation & Depth
 
-This design system uses a **Tonal Layering** and **Low-Contrast Outline** approach rather than traditional shadows.
+Tonal layering rather than shadows, matching Steam's flat, matte aesthetic.
 
-- **Surface Tiers:** 
-  - Level 0: `bg/base` (The main application canvas).
-  - Level 1: `bg/surface` (Primary cards and containers).
-  - Level 2: `bg/surface-raised` (Hovered states or nested modules).
-- **Outlines:** Every container at Level 1 and Level 2 must have a 1px solid border of `border/subtle`. 
-- **Shadows:** Shadows are prohibited for standard UI elements. They are reserved exclusively for temporary "floating" components like dropdown menus, tooltips, and modals to provide a clear separation from the logic-heavy layers beneath. Use a concentrated dark shadow: `0 8px 24px rgba(0,0,0,0.35)`.
+- **Surface Tiers:**
+  - Level 0: `#1b2838` — main canvas.
+  - Level 1: `#1e2d3d` — primary cards and containers.
+  - Level 2: `#2a475e` — hovered states or nested modules.
+- **Outlines:** Every container at Level 1 and 2 carries a 1px solid `border-subtle (#2a475e)`.
+- **Shadows:** Reserved only for dropdowns/modals: `0 8px 24px rgba(0,0,0,0.55)`.
 
 ## Shapes
 
-The shape language is controlled and geometric, reflecting the precision of the data it contains.
+Steam uses very flat, near-rectangular corner treatment across its store UI.
 
-- **Cards:** Use `12px` (rounded-lg) for large containers to soften the technical edge slightly without appearing "playful."
-- **Interactive Elements:** Buttons and Input fields use `8px` (rounded) for a more compact, focused appearance.
-- **Badges/Labels:** Use `pill-shaped` (fully rounded) to immediately distinguish categorical labels or status indicators from buttons and structural containers.
+- **Steam's radii (source: `--gpCorner-*`):** 1px (small), 2px (medium), 3px (large).
+- **Cards (`--radius-card`):** `3px` — matches Steam's store card treatment (was 12px before retheme).
+- **Interactive Elements (`--radius-md`):** `3px` — buttons and inputs match Steam's compact button style.
+- **Badges/Labels:** `pill-shaped (9999px)` — retained to distinguish categorical labels from structural containers.
 
 ## Components
 
 ### Buttons
-- **Primary:** `accent/primary` fill with `bg/base` text. No shadow. Bold typography.
-- **Secondary:** Transparent background with a `1px` border in `border/subtle`. Text is `text/primary`.
-- **Ghost:** No border or fill. Text is `text/secondary`. Use for low-priority actions.
-- **Danger:** `semantic/danger` fill with `bg/base` text.
+- **Primary:** `#66c0f4` (Steam chalky blue) fill with `#0e141b` text. No shadow. Bold typography.
+- **Secondary:** Transparent background with a `1px` border in `#2a475e`. Text is `#c6d4df`.
+- **Ghost:** No border or fill. Text is `#acb2b8`.
 
 ### Cards
-- **Standard:** `bg/surface` background with `border/subtle` outline. Use for secondary modules.
-- **Emphasis:** `bg/surface-raised` background. Use for primary data focus or active states.
+- **Standard:** `#1e2d3d` background with `#2a475e` outline. `3px` corner radius.
+- **Emphasis:** `#2a475e` background. Use for primary data focus or active/hover states.
 
 ### Badges & Chips
-- **Status Badges:** Use the pill shape. Fill color should be the semantic color (Success/Warning/Danger) set to 15% opacity. Text must be the same semantic color at 100% opacity for high legibility.
+- **Status Badges (Review Sentiment):** Pill shape. Fill = semantic color at 15% opacity. Text = semantic color at 100%. Steam-matched colors: green `#59bf40` / amber `#c7b24a` / red `#d94126`.
 
 ### Navigation
-- **Top Navbar:** 64px height, `bg/base` background, and a 1px bottom border using `border/subtle`.
-- **Sub-nav:** Horizontal tab bar. Active states are indicated by a 2px bottom stroke in `accent/primary`.
+- **Top Navbar:** 64px height, `#171a21` background (Steam's actual header), `#000000` bottom border.
+- **Sub-nav:** Horizontal tab bar. Active states: 2px bottom stroke in `#66c0f4` (Steam chalky blue).
 
 ### Form Fields
-- **Inputs:** `bg/base` fill, `border/subtle` stroke. On focus, the border changes to `accent/primary`.
-- **Labels:** Always use `body-sm` in `text/muted` above the input.
+- **Inputs:** `#1b2838` fill, `#2a475e` stroke. On focus, border changes to `#66c0f4`.
 
 ### Charts & Visualization
 - **Style:** Flat fills only. No gradients or 3D effects.
-- **Gridlines:** Use `border/subtle` at 50% opacity. 
-- **Icons:** Use Lucide (outline style). 20px for navigation, 24px for card headers, and 16px for inline text or small data rows.
+- **Gridlines:** Use `border/subtle (#2a475e)` at 50% opacity.
+- **Icons:** Material Symbols Outlined style.

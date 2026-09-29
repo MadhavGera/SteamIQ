@@ -50,7 +50,18 @@ async def trigger_ingestion(req: TriggerRequest, request: Request, db: AsyncSess
     redis_conn.incr(rate_limit_key)
     redis_conn.expire(rate_limit_key, 3600)  # 1 hour
     
-    # 3. Create job (with dedup check)
+    # 3. Dedup check: reject if an active job (pending or running) already exists
+    res = await db.execute(
+        select(IngestionJob).where(
+            IngestionJob.app_id == app_id,
+            IngestionJob.status.in_(["pending", "running"]),
+        )
+    )
+    existing_job = res.scalar_one_or_none()
+    if existing_job:
+        raise HTTPException(status_code=409, detail="A job is already running for this app_id.")
+
+    # 4. Create new job (with IntegrityError fallback for concurrent races)
     new_job = IngestionJob(app_id=app_id, status="pending")
     db.add(new_job)
     try:
@@ -58,15 +69,9 @@ async def trigger_ingestion(req: TriggerRequest, request: Request, db: AsyncSess
         await db.refresh(new_job)
     except IntegrityError:
         await db.rollback()
-        res = await db.execute(
-            select(IngestionJob).where(IngestionJob.app_id == app_id, IngestionJob.status == 'running')
-        )
-        existing_job = res.scalar_one_or_none()
-        if existing_job:
-            return {"job_id": existing_job.id, "status": existing_job.status}
         raise HTTPException(status_code=409, detail="A job is already running for this app_id.")
 
-    # 4. Enqueue RQ task
+    # 5. Enqueue RQ task
     q.enqueue(run_full_pipeline, new_job.id, app_id, job_timeout="1h")
     
     return {"job_id": new_job.id, "status": new_job.status}

@@ -120,3 +120,106 @@ async def test_worker_failure_surfacing(mock_session_maker, mock_ingest, db_sess
     await db_session.refresh(job)
     assert job.status == "failed"
     assert "Simulated pipeline crash" in job.error_message
+
+
+async def test_register_scheduled_price_snapshots_new():
+    from services.ingestion_runner import (
+        RECURRING_PRICE_SNAPSHOT_JOB_ID,
+        DEFAULT_SNAPSHOT_INTERVAL,
+        register_scheduled_price_snapshots,
+        run_recurring_price_snapshots,
+    )
+
+    mock_queue = MagicMock()
+    mock_queue.name = "default"
+    mock_queue.get_job_ids.return_value = []
+    
+    with patch("services.ingestion_runner.ScheduledJobRegistry") as mock_registry_cls:
+        mock_registry = MagicMock()
+        mock_registry.get_job_ids.return_value = []
+        mock_registry_cls.return_value = mock_registry
+
+        mock_job = MagicMock()
+        mock_job.id = RECURRING_PRICE_SNAPSHOT_JOB_ID
+        mock_queue.enqueue_in.return_value = mock_job
+
+        job = register_scheduled_price_snapshots(mock_queue)
+
+        assert job == mock_job
+        mock_queue.enqueue_in.assert_called_once_with(
+            DEFAULT_SNAPSHOT_INTERVAL,
+            run_recurring_price_snapshots,
+            job_id=RECURRING_PRICE_SNAPSHOT_JOB_ID,
+            job_timeout="2h",
+            description="Daily recurring price snapshot for catalog games",
+        )
+
+
+async def test_register_scheduled_price_snapshots_deduplication():
+    from services.ingestion_runner import (
+        RECURRING_PRICE_SNAPSHOT_JOB_ID,
+        register_scheduled_price_snapshots,
+    )
+
+    mock_queue = MagicMock()
+    mock_queue.name = "default"
+    
+    with patch("services.ingestion_runner.ScheduledJobRegistry") as mock_registry_cls:
+        mock_registry = MagicMock()
+        mock_registry.get_job_ids.return_value = [RECURRING_PRICE_SNAPSHOT_JOB_ID]
+        mock_registry_cls.return_value = mock_registry
+
+        existing_job = MagicMock()
+        existing_job.id = RECURRING_PRICE_SNAPSHOT_JOB_ID
+        mock_queue.fetch_job.return_value = existing_job
+
+        job = register_scheduled_price_snapshots(mock_queue)
+
+        assert job == existing_job
+        mock_queue.enqueue_in.assert_not_called()
+
+
+@patch("services.ingestion_runner.Redis.from_url")
+@patch("services.ingestion_runner.Queue")
+@patch("services.ingestion_runner.register_scheduled_price_snapshots")
+async def test_worker_startup_registration(mock_register, mock_queue_cls, mock_redis_from_url):
+    from services.ingestion_runner import start_worker
+    import os
+
+    mock_queue = MagicMock()
+    mock_queue.name = "default"
+    mock_queue_cls.return_value = mock_queue
+
+    worker_patch_target = (
+        "services.ingestion_runner.SimpleWorker"
+        if os.name == "nt"
+        else "services.ingestion_runner.Worker"
+    )
+
+    with patch(worker_patch_target) as mock_worker_cls:
+        mock_worker = MagicMock()
+        mock_worker_cls.return_value = mock_worker
+
+        start_worker()
+
+        mock_register.assert_called_once_with(mock_queue)
+        mock_worker.work.assert_called_once_with(with_scheduler=True)
+
+
+@patch("services.ingestion_runner.IngestGamesJob")
+@patch("services.ingestion_runner.register_scheduled_price_snapshots")
+@patch("services.ingestion_runner.Redis.from_url")
+async def test_run_recurring_price_snapshots_task(mock_redis, mock_register, mock_job_cls):
+    from services.ingestion_runner import run_recurring_price_snapshots
+
+    mock_job_inst = MagicMock()
+    mock_job_inst.execute.return_value = {"total_games": 10, "snapshotted": 10}
+    mock_job_cls.return_value = mock_job_inst
+
+    result = run_recurring_price_snapshots()
+
+    assert result == {"total_games": 10, "snapshotted": 10}
+    mock_job_cls.assert_called_once_with(snapshot_all_prices=True)
+    mock_job_inst.execute.assert_called_once()
+    mock_register.assert_called_once()
+

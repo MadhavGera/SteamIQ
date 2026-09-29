@@ -350,15 +350,44 @@ export class SteamIQApiError extends Error {
   }
 }
 
+// ─── Base URL resolution (ADR 0001, Decision 7) ──────────────────────────────
+
+/**
+ * Resolves the backend API base URL from environment variables.
+ *
+ * ADR 0001, Decision 7:
+ * - Server-side (Node / SSR / Server Components): prefers INTERNAL_API_URL, falls back to NEXT_PUBLIC_API_URL.
+ * - Client-side (Browser): uses NEXT_PUBLIC_API_URL.
+ * - Never hardcodes localhost or port numbers.
+ * - Fails loudly if the required environment variable is missing.
+ */
+export function getApiBaseUrl(): string {
+  if (typeof window === "undefined") {
+    const url = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL;
+    if (!url) {
+      throw new Error(
+        "[SteamIQ Configuration Error] Backend API base URL is missing. " +
+        "Please set INTERNAL_API_URL (container/server) or NEXT_PUBLIC_API_URL in your environment (ADR 0001, Decision 7)."
+      );
+    }
+    return url;
+  }
+
+  const url = process.env.NEXT_PUBLIC_API_URL;
+  if (!url) {
+    throw new Error(
+      "[SteamIQ Configuration Error] Client-side API base URL is missing. " +
+      "Please set NEXT_PUBLIC_API_URL in your environment (ADR 0001, Decision 7)."
+    );
+  }
+  return url;
+}
+
 // ─── Base fetch helper ────────────────────────────────────────────────────────
 
-const BASE_URL =
-  (typeof window === "undefined"
-    ? process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://backend:8000"
-    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001");
-
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const url = `${BASE_URL}${path}`;
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}${path}`;
 
   const resp = await fetch(url, {
     ...options,

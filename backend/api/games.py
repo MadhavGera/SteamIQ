@@ -130,7 +130,7 @@ async def search_games(
     return ApiResponse(
         success=True,
         data=GameSearchResultSchema(
-            games=merged_games,
+            games=merged_games[:page_size],
             total=total,
             page=page,
             page_size=page_size,

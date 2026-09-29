@@ -401,8 +401,9 @@ class IngestGamesJob(BaseJob):
         Iterates over all games in raw_games and records a point-in-time price snapshot
         in raw_price_history to maintain a continuous, reliable historical price time-series.
 
-        TODO(Phase7_Step7.2): Wire this recurring snapshot method to an RQ scheduler / cron daemon.
-        Currently invoked manually or via scheduled CLI job runner (`python -m jobs.ingest_games --snapshot-prices`).
+        Automatically scheduled to run once daily (24h interval) via the RQ worker scheduler
+        (`services.ingestion_runner.register_scheduled_price_snapshots`), or invocable manually via CLI
+        (`python -m jobs.ingest_games --snapshot-prices`).
         materialize_marts.py degrades gracefully to reporting tracking_since and current price when only
         1 or 2 snapshots exist.
         """
