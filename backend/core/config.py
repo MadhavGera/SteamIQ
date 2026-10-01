@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     # ── Redis (Phase 2+ job queue) ────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
 
+    # ── Ingestion Rate Limiting ───────────────────────────────────────────────
+    rate_limit_ingest_max_per_hour: int = 50
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

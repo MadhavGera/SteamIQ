@@ -62,7 +62,8 @@ async def test_trigger_duplicate_rejection(mock_redis, mock_enqueue, mock_get, c
 @patch("api.ingestion.redis_conn")
 async def test_trigger_rate_limit(mock_redis, mock_enqueue, mock_get, client: AsyncClient):
     # Setup redis to say rate limit is hit
-    mock_redis.get.return_value = "3"
+    from core.config import settings
+    mock_redis.get.return_value = str(settings.rate_limit_ingest_max_per_hour)
     
     response = await client.post("/api/v1/ingestion/trigger", json={"app_id": 123})
     assert response.status_code == 429
