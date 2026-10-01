@@ -110,6 +110,12 @@ services:
       APP_ENV: ${APP_ENV:-development}
     volumes:
       - ./backend:/app
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"from redis import Redis; r = Redis.from_url('redis://redis:6379/0'); r.ping()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     command: ["sh", "-c", "python -c 'from services.ingestion_runner import start_worker; start_worker()'"]
 
 volumes:

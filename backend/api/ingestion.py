@@ -31,7 +31,7 @@ async def trigger_ingestion(req: TriggerRequest, request: Request, db: AsyncSess
     rate_limit_key = f"rate_limit:ingest:{client_ip}"
     
     current_count = redis_conn.get(rate_limit_key)
-    if current_count and int(current_count) >= 3:
+    if current_count and int(current_count) >= settings.rate_limit_ingest_max_per_hour:
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
         
     # 2. Validate against Steam API
