@@ -45,6 +45,18 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 
+@pytest.fixture(autouse=True)
+def isolate_recsys_data_dir(tmp_path, monkeypatch):
+    """
+    Points settings.recsys_data_dir to tmp_path for all tests,
+    preventing any test from modifying or polluting backend/data/recsys.
+    """
+    from core.config import get_settings, settings
+
+    monkeypatch.setattr(settings, "recsys_data_dir", str(tmp_path))
+    get_settings.cache_clear()
+
+
 @pytest.fixture(scope="session")
 def anyio_backend():
     return "asyncio"

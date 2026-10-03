@@ -1,9 +1,9 @@
+from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock, patch
+
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, MagicMock, AsyncMock
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from datetime import datetime, timedelta, timezone
 
 from db.models import IngestionJob
 from services.ingestion_runner import run_full_pipeline_async
@@ -71,7 +71,7 @@ async def test_trigger_rate_limit(mock_redis, mock_enqueue, mock_get, client: As
 
 
 async def test_staleness_timeout(client: AsyncClient, db_session: AsyncSession):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     stale_time = now - timedelta(minutes=15)
     
     job = IngestionJob(app_id=123, status="running")
@@ -125,8 +125,8 @@ async def test_worker_failure_surfacing(mock_session_maker, mock_ingest, db_sess
 
 async def test_register_scheduled_price_snapshots_new():
     from services.ingestion_runner import (
-        RECURRING_PRICE_SNAPSHOT_JOB_ID,
         DEFAULT_SNAPSHOT_INTERVAL,
+        RECURRING_PRICE_SNAPSHOT_JOB_ID,
         register_scheduled_price_snapshots,
         run_recurring_price_snapshots,
     )
@@ -184,8 +184,9 @@ async def test_register_scheduled_price_snapshots_deduplication():
 @patch("services.ingestion_runner.Queue")
 @patch("services.ingestion_runner.register_scheduled_price_snapshots")
 async def test_worker_startup_registration(mock_register, mock_queue_cls, mock_redis_from_url):
-    from services.ingestion_runner import start_worker
     import os
+
+    from services.ingestion_runner import start_worker
 
     mock_queue = MagicMock()
     mock_queue.name = "default"

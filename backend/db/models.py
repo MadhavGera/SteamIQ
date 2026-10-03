@@ -1152,3 +1152,94 @@ class IngestionJob(Base):
 
     def __repr__(self) -> str:
         return f"<IngestionJob id={self.id} app_id={self.app_id} status={self.status}>"
+
+
+# ===========================================================================
+# RECOMMENDER SERVING ZONE
+# ===========================================================================
+
+class ServingRecItem(Base):
+    """
+    Catalog of universe games for the recommender system.
+    Populated by jobs/prepare_recsys_data.py.
+    """
+    __tablename__ = "serving_rec_items"
+
+    app_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    item_idx: Mapped[int] = mapped_column(Integer, unique=True, index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    date_release: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    price_final: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    positive_ratio: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    user_reviews: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tags: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    description_short: Mapped[str | None] = mapped_column(Text, nullable=True)
+    has_description: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    train_positives: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    popularity_rank: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    win: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    mac: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    linux: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    steam_deck: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    header_image_url: Mapped[str] = mapped_column(Text, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    projection: Mapped[ServingRecItemProjection | None] = relationship(
+        "ServingRecItemProjection", back_populates="item", uselist=False, cascade="all, delete-orphan", lazy="noload"
+    )
+
+    def __repr__(self) -> str:
+        return f"<ServingRecItem app_id={self.app_id} idx={self.item_idx} title={self.title!r}>"
+
+
+class ServingRecItemProjection(Base):
+    """
+    2D coordinate projections and clusters for universe items.
+    """
+    __tablename__ = "serving_rec_item_projection"
+
+    app_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("serving_rec_items.app_id", ondelete="CASCADE"), primary_key=True
+    )
+    x: Mapped[float] = mapped_column(Float, nullable=False)
+    y: Mapped[float] = mapped_column(Float, nullable=False)
+    cluster_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cluster_label: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    item: Mapped[ServingRecItem] = relationship("ServingRecItem", back_populates="projection", lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<ServingRecItemProjection app_id={self.app_id} (x={self.x:.2f}, y={self.y:.2f})>"
+
+
+class ServingRecReport(Base):
+    """
+    Recommender evaluations, offline metrics, and data audit reports.
+    """
+    __tablename__ = "serving_rec_reports"
+
+    report_key: Mapped[str] = mapped_column(Text, primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    dataset_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    model_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("model_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    model_run: Mapped[ModelRun | None] = relationship("ModelRun", foreign_keys=[model_run_id], lazy="noload")
+
+    def __repr__(self) -> str:
+        return f"<ServingRecReport key={self.report_key!r} version={self.dataset_version!r}>"
+

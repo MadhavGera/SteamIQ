@@ -7,6 +7,7 @@ Create Date: 2026-09-23 01:05:00.000000
 from __future__ import annotations
 
 from collections.abc import Sequence
+
 import sqlalchemy as sa
 from alembic import op
 

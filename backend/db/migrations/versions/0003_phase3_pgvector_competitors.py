@@ -26,8 +26,18 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # ── 1. Enable pgvector extension ──────────────────────────────────────────
-    op.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+    # ── 1. Enable pgvector extension if available on PostgreSQL server ────────
+    bind = op.get_bind()
+    has_vector = False
+    try:
+        res = bind.execute(sa.text("SELECT 1 FROM pg_available_extensions WHERE name = 'vector'")).scalar()
+        if res:
+            op.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+            has_vector = True
+    except Exception:
+        has_vector = False
+
+    embedding_type = Vector(384) if has_vector else JSONB
 
     # ── 2. model_game_embeddings ──────────────────────────────────────────────
     op.create_table(
@@ -41,7 +51,7 @@ def upgrade() -> None:
         ),
         sa.Column("model_name", sa.String(128), server_default="all-MiniLM-L6-v2", nullable=False),
         sa.Column("model_version", sa.String(64), server_default="1.0.0", nullable=False),
-        sa.Column("embedding", Vector(384), nullable=False),
+        sa.Column("embedding", embedding_type, nullable=False),
         sa.Column("text_hash", sa.String(64), nullable=True),
         sa.Column(
             "created_at",

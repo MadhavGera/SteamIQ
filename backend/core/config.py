@@ -10,8 +10,11 @@ ADR 0001, Decision 4: CORS_ALLOWED_ORIGINS is always an explicit list, never "*"
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
@@ -62,6 +65,24 @@ class Settings(BaseSettings):
 
     # ── Ingestion Rate Limiting ───────────────────────────────────────────────
     rate_limit_ingest_max_per_hour: int = 50
+
+    # ── Recommender System Configuration ──────────────────────────────────────
+    recsys_raw_dir: str = str(BACKEND_DIR / "data" / "raw_steam")
+    recsys_data_dir: str = str(BACKEND_DIR / "data" / "recsys")
+    recsys_profile: str = "dev"  # "dev" or "full"
+    recsys_seed: int = 42
+    recsys_num_threads: int = 4
+    recsys_device: str = "cpu"
+
+    @property
+    def resolved_recsys_raw_dir(self) -> Path:
+        p = Path(self.recsys_raw_dir)
+        return p if p.is_absolute() else BACKEND_DIR / p
+
+    @property
+    def resolved_recsys_data_dir(self) -> Path:
+        p = Path(self.recsys_data_dir)
+        return p if p.is_absolute() else BACKEND_DIR / p
 
 
 @lru_cache(maxsize=1)

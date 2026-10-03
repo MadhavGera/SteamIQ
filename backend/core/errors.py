@@ -147,7 +147,7 @@ async def validation_exception_handler(
     """Converts Pydantic RequestValidationError to ApiResponse envelope."""
     field_errors = {}
     for error in exc.errors():
-        loc = " → ".join(str(l) for l in error["loc"] if l != "body")
+        loc = " → ".join(str(part) for part in error["loc"] if part != "body")
         field_errors[loc] = error["msg"]
 
     return _error_response(

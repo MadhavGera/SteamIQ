@@ -9,6 +9,7 @@ Provides:
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 import sys
 import time
@@ -34,10 +35,8 @@ class BaseJob:
 
     def _setup_logging(self) -> None:
         if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
-            try:
+            with contextlib.suppress(Exception):
                 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-            except Exception:
-                pass
         if not logging.root.handlers:
             logging.basicConfig(
                 level=logging.INFO,

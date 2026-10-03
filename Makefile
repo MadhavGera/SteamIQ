@@ -1,4 +1,4 @@
-.PHONY: setup migrate migrate-create ingest seed dev health test lint build-backend build-frontend build-features train-model train
+.PHONY: setup migrate migrate-create ingest seed dev health test lint build-backend build-frontend build-features train-model train recsys-audit recsys-prepare recsys-baselines recsys-two-tower recsys-ranker recsys-verify
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 PYTHON    := python
@@ -77,6 +77,27 @@ train-model: ## Train predictive models & promote champion: make train-model TRI
 	@echo "✅  Model training and promotion complete."
 
 train: build-features train-model ## Full Phase 4 pipeline: build features and train models
+
+# ─── Recsys ───────────────────────────────────────────────────────────────────
+recsys-audit: ## Audit the raw Steam recommendation files: make recsys-audit
+	cd $(BACKEND) && $(PYTHON) -m jobs.audit_recsys_data
+
+recsys-prepare: ## Prepare raw recsys interactions and item features: make recsys-prepare
+	cd $(BACKEND) && $(PYTHON) -m jobs.prepare_recsys_data
+
+recsys-baselines: ## Train and evaluate recommender baselines: make recsys-baselines MODELS=popularity TEST=1
+	cd $(BACKEND) && $(PYTHON) -m jobs.train_recsys_baselines --models $(or $(MODELS),popularity) $(if $(filter 1 true,$(TEST)),--evaluate-test,)
+
+recsys-two-tower: ## Train the two-tower hybrid retriever: make recsys-two-tower EPOCHS=15 ARGS="--evaluate-test"
+	cd $(BACKEND) && $(PYTHON) -m jobs.train_two_tower --epochs $(or $(EPOCHS),15) $(ARGS)
+
+recsys-ranker: ## Train the stage-two Learning-to-Rank recommender: make recsys-ranker ARGS="--evaluate-test"
+	cd $(BACKEND) && $(PYTHON) -m jobs.train_ranker $(ARGS)
+
+recsys-verify: ## Verify all latest recsys model runs against saved artifacts: make recsys-verify
+	cd $(BACKEND) && $(PYTHON) -m jobs.verify_recsys
+
+
 
 # ─── Decision Intelligence (Phase 5) ──────────────────────────────────────────
 materialize-marts: ## Materialize decision marts (overview, trends, opportunity): make materialize-marts

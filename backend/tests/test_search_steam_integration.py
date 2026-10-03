@@ -1,11 +1,9 @@
-import pytest
-from httpx import Response
-from unittest.mock import patch, AsyncMock
-from httpx import AsyncClient
+from unittest.mock import AsyncMock, patch
 
-from api.schemas.games import GameSummarySchema
+import pytest
+
 from api.games import search_games
-from core.response import ApiResponse
+
 
 # A mock for MartGameOverview to return from DB
 class MockMartGame:

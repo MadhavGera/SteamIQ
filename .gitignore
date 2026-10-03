@@ -30,9 +30,13 @@ pip-log.txt
 *.pth
 *.onnx
 *.safetensors
+*.parquet
 models/checkpoints/
 ml/artifacts/
 mlruns/
+backend/mlruns/
+backend/data/
+data/
 
 # ─── Database dumps ───────────────────────────────────────────────────────────
 *.sql
