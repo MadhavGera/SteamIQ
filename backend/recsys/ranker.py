@@ -60,6 +60,9 @@ class RankerConfig:
             self.eval_at = [10]
 
 
+_SCORE_CAND_CACHE: dict[tuple[int, tuple[str, ...], int], tuple[np.ndarray, CandidateResult, pd.DataFrame]] = {}
+
+
 class RankerModel(BaseRecommender):
     """
     Stage-Two Learning-to-Rank Recommender.
@@ -92,11 +95,17 @@ class RankerModel(BaseRecommender):
         self.item_cache = ItemFeatureCache(data)
         self.user_cache = UserFeatureCache(data)
 
-    def score(self, histories: list[np.ndarray]) -> np.ndarray:
+    def score(
+        self,
+        histories: list[np.ndarray],
+        precomputed_candidates: CandidateResult | None = None,
+        precomputed_features: pd.DataFrame | None = None,
+        precomputed_base_scores: np.ndarray | None = None,
+    ) -> np.ndarray:
         """
         Scores user histories against the full item catalog:
-          1. Generates top 300 candidates from stage 1 models.
-          2. Extracts tabular ranking features for candidate items.
+          1. Generates top 300 candidates from stage 1 models (or uses precomputed).
+          2. Extracts tabular ranking features for candidate items (or uses precomputed).
           3. Predicts ranker scores for candidates.
           4. Assigns ranker scores to candidates and offsets Two-Tower scores for remaining items.
 
@@ -110,54 +119,79 @@ class RankerModel(BaseRecommender):
         if n_users == 0 or self.n_items == 0:
             return np.empty((n_users, self.n_items), dtype=np.float32)
 
-        # Ensure caches are initialized
-        if self.item_cache is None and self.data is not None:
-            self.item_cache = ItemFeatureCache(self.data)
-        if self.user_cache is None and self.data is not None:
-            self.user_cache = UserFeatureCache(self.data)
-
-        # 1. Retrieve stage 1 Two-Tower scores as base score
-        tt_model = self.models.get("two_tower") or self.models.get("recsys_two_tower")
-        if tt_model is not None:
-            base_scores = tt_model.score(histories)  # [B, n_items]
-        else:
-            base_scores = np.zeros((n_users, self.n_items), dtype=np.float32)
-
-        # 2. Generate multi-source candidates (union capped at 300)
-        cand_res: CandidateResult = generate_candidates(
-            histories=histories,
-            models=self.models,
-            n_each=DEFAULT_CANDIDATE_COUNTS,
-            max_candidates=self.config.max_candidates,
-            batch_size=512,
+        hist_sig = (
+            int(histories[0][0]) if (len(histories) > 0 and len(histories[0]) > 0) else 0,
+            int(histories[0][-1]) if (len(histories) > 0 and len(histories[0]) > 0) else 0,
+            int(histories[-1][-1]) if (len(histories) > 0 and len(histories[-1]) > 0) else 0,
+            len(histories[0]) if len(histories) > 0 else 0,
+            len(histories[-1]) if len(histories) > 0 else 0,
         )
+        cache_key = (n_users, tuple(sorted(self.models.keys())), hist_sig)
 
-        # 3. Extract features for all candidates
-        if self.data is not None:
-            feat_df = build_features(
-                histories=histories,
-                candidates=cand_res,
-                data=self.data,
-                item_cache=self.item_cache,
-                user_cache=self.user_cache,
-            )
+        if (
+            precomputed_base_scores is None
+            and precomputed_candidates is None
+            and precomputed_features is None
+            and cache_key in _SCORE_CAND_CACHE
+        ):
+            base_scores, cand_res, feat_df = _SCORE_CAND_CACHE[cache_key]
         else:
-            return base_scores
+            # 1. Base Two-Tower scores
+            if precomputed_base_scores is not None:
+                base_scores = precomputed_base_scores
+            else:
+                tt_model = self.models.get("two_tower") or self.models.get("recsys_two_tower")
+                if tt_model is not None:
+                    base_scores = tt_model.score(histories)
+                else:
+                    base_scores = np.zeros((n_users, self.n_items), dtype=np.float32)
+
+            # 2. Multi-source candidates
+            if precomputed_candidates is not None:
+                cand_res = precomputed_candidates
+            else:
+                cand_res = generate_candidates(
+                    histories=histories,
+                    models=self.models,
+                    n_each=DEFAULT_CANDIDATE_COUNTS,
+                    max_candidates=self.config.max_candidates,
+                    batch_size=512,
+                )
+
+            # 3. Features
+            if precomputed_features is not None:
+                feat_df = precomputed_features
+            elif self.data is not None:
+                if self.item_cache is None:
+                    self.item_cache = ItemFeatureCache(self.data)
+                if self.user_cache is None:
+                    self.user_cache = UserFeatureCache(self.data)
+                feat_df = build_features(
+                    histories=histories,
+                    candidates=cand_res,
+                    data=self.data,
+                    item_cache=self.item_cache,
+                    user_cache=self.user_cache,
+                )
+            else:
+                return base_scores
+
+            if (
+                precomputed_base_scores is None
+                and precomputed_candidates is None
+                and precomputed_features is None
+            ):
+                _SCORE_CAND_CACHE[cache_key] = (base_scores, cand_res, feat_df)
 
         if feat_df.empty or self.ranker is None:
             return base_scores
 
         # 4. Predict ranker scores for candidates
         X_mat = feat_df[self.feature_names].to_numpy(dtype=np.float32)
-        if isinstance(self.ranker, lgb.Booster):
-            cand_preds = self.ranker.predict(X_mat)
-        else:
-            cand_preds = self.ranker.predict(X_mat)
-
+        cand_preds = self.ranker.predict(X_mat)
         cand_preds = np.asarray(cand_preds, dtype=np.float32)
 
         # 5. Populate full-catalog score matrix
-        # Initialize with Two-Tower base scores shifted down below min candidate score
         final_scores = np.zeros((n_users, self.n_items), dtype=np.float32)
 
         row_ptr = 0
@@ -174,13 +208,10 @@ class RankerModel(BaseRecommender):
 
             min_pred = float(np.min(u_preds)) if len(u_preds) > 0 else 0.0
 
-            # Scale and offset base scores for non-candidate items strictly below min_pred
             u_base = base_scores[u_i]
             max_base = float(np.max(u_base)) if len(u_base) > 0 else 1.0
-            # Offset non-candidates: max possible base score becomes min_pred - 1.0
             final_scores[u_i] = u_base - max_base + min_pred - 1.0
 
-            # Set candidate items to their model predictions
             for cand_it, p_score in zip(u_cands, u_preds, strict=True):
                 if 0 <= cand_it < self.n_items:
                     final_scores[u_i, cand_it] = p_score
@@ -257,6 +288,8 @@ def train_ranker(
     persistence_dir: Path | str | None = None,
     eval_users: list[int] | None = None,
     tuning_users: list[int] | None = None,
+    feature_columns: list[str] | None = None,
+    precomputed_train_val: dict[str, Any] | None = None,
 ) -> tuple[RankerModel, dict[str, Any]]:
     """
     Trains the Stage-Two LightGBM LambdaMART ranker.
@@ -274,147 +307,165 @@ def train_ranker(
         n_ranker_users: Maximum candidate training users to sample.
         seed: Random seed.
         persistence_dir: Directory to verify user splits against.
+        eval_users: Optional list of evaluation users to exclude.
+        tuning_users: Optional list of tuning users to exclude.
+        feature_columns: Optional subset of feature columns for ablation studies.
+        precomputed_train_val: Optional cached (X_train_df, y_train, group_train, X_val_df, y_val, group_val).
 
     Returns:
         (RankerModel, training_info_dict)
     """
     config = cfg or RankerConfig(seed=seed)
+    active_features = list(feature_columns) if feature_columns is not None else list(FEATURE_COLUMNS)
     logger.info("═══════════════════════════════════════════════════════════")
-    logger.info("▶ Preparing Stage-Two Ranker Dataset (NDCG@10 LambdaMART)...")
+    logger.info("▶ Preparing Stage-Two Ranker Dataset (%d active features, NDCG@10 LambdaMART)...", len(active_features))
 
-    # 1. Get disjoint eval and tuning users to exclude them from ranker training
-    if eval_users is None or tuning_users is None:
-        n_total = len(data.val_df["user_idx"].unique())
-        n_eval = 5000 if n_total >= 15000 else max(1, int(n_total * 0.15))
-        n_tuning = 5000 if n_total >= 15000 else max(1, int(n_total * 0.15))
-        eval_users, tuning_users = get_evaluation_user_split(
-            data,
-            n_eval_users=n_eval,
-            n_tuning_users=n_tuning,
-            seed=seed,
-            persistence_dir=persistence_dir,
-        )
-    excluded_users = set(eval_users).union(set(tuning_users))
-
-    # Identify eligible ranker users with valid val targets
-    val_user_map = dict(zip(data.val_df["user_idx"].to_numpy(), data.val_df["item_idx"].to_numpy(), strict=True))
-    all_val_users = np.unique(data.val_df["user_idx"].to_numpy())
-    eligible_users = np.array([u for u in all_val_users if u not in excluded_users], dtype=np.int64)
-    if len(eligible_users) == 0:
-        eligible_users = all_val_users
-
-    rng = np.random.default_rng(seed)
-    if len(eligible_users) > n_ranker_users:
-        sampled_users = rng.choice(eligible_users, size=n_ranker_users, replace=False)
+    if precomputed_train_val is not None:
+        X_train_df = precomputed_train_val["X_train_df"]
+        y_train = precomputed_train_val["y_train"]
+        group_train = precomputed_train_val["group_train"]
+        X_val_df = precomputed_train_val["X_val_df"]
+        y_val = precomputed_train_val["y_val"]
+        group_val = precomputed_train_val["group_val"]
+        train_users = precomputed_train_val["train_users"]
+        val_users = precomputed_train_val["val_users"]
+        dropped_train = precomputed_train_val["dropped_train"]
+        dropped_val = precomputed_train_val["dropped_val"]
+        feature_prep_time = 0.0
     else:
-        sampled_users = eligible_users
+        # 1. Get disjoint eval and tuning users to exclude them from ranker training
+        if eval_users is None or tuning_users is None:
+            n_total = len(data.val_df["user_idx"].unique())
+            n_eval = 5000 if n_total >= 15000 else max(1, int(n_total * 0.15))
+            n_tuning = 5000 if n_total >= 15000 else max(1, int(n_total * 0.15))
+            eval_users, tuning_users = get_evaluation_user_split(
+                data,
+                n_eval_users=n_eval,
+                n_tuning_users=n_tuning,
+                seed=seed,
+                persistence_dir=persistence_dir,
+            )
+        excluded_users = set(eval_users).union(set(tuning_users))
 
-    sampled_users = rng.permutation(sampled_users)
+        # Identify eligible ranker users with valid val targets
+        val_user_map = dict(zip(data.val_df["user_idx"].to_numpy(), data.val_df["item_idx"].to_numpy(), strict=True))
+        all_val_users = np.unique(data.val_df["user_idx"].to_numpy())
+        eligible_users = np.array([u for u in all_val_users if u not in excluded_users], dtype=np.int64)
+        if len(eligible_users) == 0:
+            eligible_users = all_val_users
 
-    # 90% train / 10% val split by user (with minimum 1 val user if >= 10 users)
-    n_val_users = max(1, int(len(sampled_users) * 0.1)) if len(sampled_users) >= 10 else (1 if len(sampled_users) > 3 else 0)
-    n_train_users = len(sampled_users) - n_val_users
-    train_users = sampled_users[:n_train_users]
-    val_users = sampled_users[n_train_users:] if n_val_users > 0 else np.array([], dtype=np.int64)
+        rng = np.random.default_rng(seed)
+        if len(eligible_users) > n_ranker_users:
+            sampled_users = rng.choice(eligible_users, size=n_ranker_users, replace=False)
+        else:
+            sampled_users = eligible_users
 
-    logger.info(
-        "Ranker users: %d total (train: %d users, val: %d users). Disjoint from %d eval + %d tuning users.",
-        len(sampled_users),
-        len(train_users),
-        len(val_users),
-        len(eval_users),
-        len(tuning_users),
-    )
+        sampled_users = rng.permutation(sampled_users)
 
-    # 2. Build training and validation pairs
-    user_train_pos, user_train_neg = _build_user_interaction_maps(data)
-
-    def prepare_split_dataset(u_list: np.ndarray, split_name: str) -> tuple[pd.DataFrame, np.ndarray, list[int], int]:
-        if len(u_list) == 0:
-            return pd.DataFrame(columns=FEATURE_COLUMNS), np.array([], dtype=np.float32), [], 0
-
-        histories: list[np.ndarray] = []
-        seen_masks: list[set[int]] = []
-        valid_u_ids: list[int] = []
-        targets: list[int] = []
-
-        for u in u_list:
-            u_int = int(u)
-            pos_items = user_train_pos.get(u_int, [])
-            neg_items = user_train_neg.get(u_int, set())
-            t_item = int(val_user_map[u_int])
-
-            histories.append(np.asarray(pos_items, dtype=np.int64))
-            seen_masks.append(set(pos_items).union(neg_items))
-            valid_u_ids.append(u_int)
-            targets.append(t_item)
-
-        # Generate candidates
-        logger.info("Generating candidate pools for %s (%d users)...", split_name, len(u_list))
-        cand_res = generate_candidates(
-            histories=histories,
-            models=models,
-            n_each=DEFAULT_CANDIDATE_COUNTS,
-            seen_masks=seen_masks,
-            max_candidates=config.max_candidates,
-            batch_size=512,
-        )
-
-        # Filter users whose target is not in their candidate pool
-        filtered_histories: list[np.ndarray] = []
-        filtered_cands: list[list[int]] = []
-        filtered_meta: list[list[Any]] = []
-        filtered_u_ids: list[int] = []
-        labels_list: list[float] = []
-        groups: list[int] = []
-        dropped_count = 0
-
-        for i, (u_id, target, c_items, c_meta) in enumerate(
-            zip(valid_u_ids, targets, cand_res.user_candidates, cand_res.candidate_metadata, strict=True)
-        ):
-            if target not in c_items:
-                dropped_count += 1
-                continue
-
-            filtered_histories.append(histories[i])
-            filtered_cands.append(c_items)
-            filtered_meta.append(c_meta)
-            filtered_u_ids.append(u_id)
-            groups.append(len(c_items))
-
-            for it in c_items:
-                labels_list.append(1.0 if it == target else 0.0)
+        # 90% train / 10% val split by user (with minimum 1 val user if >= 10 users)
+        n_val_users = max(1, int(len(sampled_users) * 0.1)) if len(sampled_users) >= 10 else (1 if len(sampled_users) > 3 else 0)
+        n_train_users = len(sampled_users) - n_val_users
+        train_users = sampled_users[:n_train_users]
+        val_users = sampled_users[n_train_users:] if n_val_users > 0 else np.array([], dtype=np.int64)
 
         logger.info(
-            "%s: retained %d users (%d candidates), dropped %d users without target in candidates (miss rate: %.1f%%).",
-            split_name,
-            len(filtered_u_ids),
-            sum(groups),
-            dropped_count,
-            (dropped_count / max(1, len(u_list))) * 100,
+            "Ranker users: %d total (train: %d users, val: %d users). Disjoint from %d eval + %d tuning users.",
+            len(sampled_users),
+            len(train_users),
+            len(val_users),
+            len(eval_users),
+            len(tuning_users),
         )
 
-        # Build features
-        cand_container = CandidateResult(
-            user_candidates=filtered_cands,
-            candidate_metadata=filtered_meta,
-            n_users=len(filtered_u_ids),
-        )
-        feat_df = build_features(
-            histories=filtered_histories,
-            candidates=cand_container,
-            data=data,
-            user_indices=filtered_u_ids,
-        )
+        # 2. Build training and validation pairs
+        user_train_pos, user_train_neg = _build_user_interaction_maps(data)
 
-        return feat_df, np.array(labels_list, dtype=np.float32), groups, dropped_count
+        def prepare_split_dataset(u_list: np.ndarray, split_name: str) -> tuple[pd.DataFrame, np.ndarray, list[int], int]:
+            if len(u_list) == 0:
+                return pd.DataFrame(columns=FEATURE_COLUMNS), np.array([], dtype=np.float32), [], 0
 
-    # Build train and early-stopping validation feature matrices
-    t0 = time.perf_counter()
-    X_train_df, y_train, group_train, dropped_train = prepare_split_dataset(train_users, "Train Split")
-    X_val_df, y_val, group_val, dropped_val = prepare_split_dataset(val_users, "Early-Stopping Val Split")
-    feature_prep_time = time.perf_counter() - t0
-    logger.info("Feature extraction completed in %.2fs", feature_prep_time)
+            histories: list[np.ndarray] = []
+            seen_masks: list[set[int]] = []
+            valid_u_ids: list[int] = []
+            targets: list[int] = []
+
+            for u in u_list:
+                u_int = int(u)
+                pos_items = user_train_pos.get(u_int, [])
+                neg_items = user_train_neg.get(u_int, set())
+                t_item = int(val_user_map[u_int])
+
+                histories.append(np.asarray(pos_items, dtype=np.int64))
+                seen_masks.append(set(pos_items).union(neg_items))
+                valid_u_ids.append(u_int)
+                targets.append(t_item)
+
+            # Generate candidates
+            logger.info("Generating candidate pools for %s (%d users)...", split_name, len(u_list))
+            cand_res = generate_candidates(
+                histories=histories,
+                models=models,
+                n_each=DEFAULT_CANDIDATE_COUNTS,
+                seen_masks=seen_masks,
+                max_candidates=config.max_candidates,
+                batch_size=512,
+            )
+
+            # Filter users whose target is not in their candidate pool
+            filtered_histories: list[np.ndarray] = []
+            filtered_cands: list[list[int]] = []
+            filtered_meta: list[list[Any]] = []
+            filtered_u_ids: list[int] = []
+            labels_list: list[float] = []
+            groups: list[int] = []
+            dropped_count = 0
+
+            for i, (u_id, target, c_items, c_meta) in enumerate(
+                zip(valid_u_ids, targets, cand_res.user_candidates, cand_res.candidate_metadata, strict=True)
+            ):
+                if target not in c_items:
+                    dropped_count += 1
+                    continue
+
+                filtered_histories.append(histories[i])
+                filtered_cands.append(c_items)
+                filtered_meta.append(c_meta)
+                filtered_u_ids.append(u_id)
+                groups.append(len(c_items))
+
+                for it in c_items:
+                    labels_list.append(1.0 if it == target else 0.0)
+
+            logger.info(
+                "%s: retained %d users (%d candidates), dropped %d users without target in candidates (miss rate: %.1f%%).",
+                split_name,
+                len(filtered_u_ids),
+                sum(groups),
+                dropped_count,
+                (dropped_count / max(1, len(u_list))) * 100,
+            )
+
+            # Build features
+            cand_container = CandidateResult(
+                user_candidates=filtered_cands,
+                candidate_metadata=filtered_meta,
+                n_users=len(filtered_u_ids),
+            )
+            feat_df = build_features(
+                histories=filtered_histories,
+                candidates=cand_container,
+                data=data,
+                user_indices=filtered_u_ids,
+            )
+
+            return feat_df, np.array(labels_list, dtype=np.float32), groups, dropped_count
+
+        # Build train and early-stopping validation feature matrices
+        t0 = time.perf_counter()
+        X_train_df, y_train, group_train, dropped_train = prepare_split_dataset(train_users, "Train Split")
+        X_val_df, y_val, group_val, dropped_val = prepare_split_dataset(val_users, "Early-Stopping Val Split")
+        feature_prep_time = time.perf_counter() - t0
+        logger.info("Feature extraction completed in %.2fs", feature_prep_time)
 
     # 3. Fit LightGBM LambdaMART Ranker
     ranker = LGBMRanker(
@@ -438,17 +489,17 @@ def train_ranker(
             lgb.log_evaluation(period=25),
         ]
         ranker.fit(
-            X=X_train_df[FEATURE_COLUMNS],
+            X=X_train_df[active_features],
             y=y_train,
             group=group_train,
-            eval_set=[(X_val_df[FEATURE_COLUMNS], y_val)],
+            eval_set=[(X_val_df[active_features], y_val)],
             eval_group=[group_val],
             callbacks=callbacks,
         )
     else:
         logger.info("Training LGBMRanker without early stopping validation set...")
         ranker.fit(
-            X=X_train_df[FEATURE_COLUMNS],
+            X=X_train_df[active_features],
             y=y_train,
             group=group_train,
         )
@@ -462,22 +513,22 @@ def train_ranker(
     splits = booster.feature_importance(importance_type="split")
     feat_importance_gain = {
         name: float(g)
-        for name, g in sorted(zip(FEATURE_COLUMNS, gains, strict=True), key=lambda x: x[1], reverse=True)
+        for name, g in sorted(zip(active_features, gains, strict=True), key=lambda x: x[1], reverse=True)
     }
     feat_importance_split = {
         name: int(s)
-        for name, s in sorted(zip(FEATURE_COLUMNS, splits, strict=True), key=lambda x: x[1], reverse=True)
+        for name, s in sorted(zip(active_features, splits, strict=True), key=lambda x: x[1], reverse=True)
     }
 
     # Global SHAP on 5,000 sampled rows
-    shap_sample = X_train_df[FEATURE_COLUMNS].sample(n=min(5000, len(X_train_df)), random_state=seed)
-    shap_dict = global_shap(booster, shap_sample, feature_names=FEATURE_COLUMNS, seed=seed)
+    shap_sample = X_train_df[active_features].sample(n=min(5000, len(X_train_df)), random_state=seed)
+    shap_dict = global_shap(booster, shap_sample, feature_names=active_features, seed=seed)
 
     model_wrapper = RankerModel(
         ranker=booster,
         models=models,
         config=config,
-        feature_names=FEATURE_COLUMNS,
+        feature_names=active_features,
         data=data,
     )
 
@@ -492,6 +543,18 @@ def train_ranker(
         "feature_importance_gain": feat_importance_gain,
         "feature_importance_split": feat_importance_split,
         "global_shap": shap_dict,
+        "precomputed_train_val": {
+            "X_train_df": X_train_df,
+            "y_train": y_train,
+            "group_train": group_train,
+            "X_val_df": X_val_df,
+            "y_val": y_val,
+            "group_val": group_val,
+            "train_users": train_users,
+            "val_users": val_users,
+            "dropped_train": dropped_train,
+            "dropped_val": dropped_val,
+        },
     }
 
     return model_wrapper, training_info

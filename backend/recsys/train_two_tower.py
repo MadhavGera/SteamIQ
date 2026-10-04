@@ -253,7 +253,8 @@ def train_two_tower_model(
     else:
         tag_t = torch.zeros((n_items, 300), dtype=torch.float32)
 
-    num_arr = extract_standardized_numeric_features(data.items_df)
+    no_pop = bool(cfg.no_pop_proxies) if cfg else False
+    num_arr = extract_standardized_numeric_features(data.items_df, no_pop_proxies=no_pop)
     num_t = torch.from_numpy(num_arr)
 
     # 3. Instantiate Module & Optimizer
@@ -323,6 +324,7 @@ def train_two_tower_model(
                 text_embs=t_text,
                 tag_features=t_tags,
                 numeric_features=t_num,
+                apply_proxy_dropout=(cfg.proxy_dropout > 0 if cfg else False),
             )
 
             user_vecs = module.encode_users(

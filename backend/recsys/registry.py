@@ -265,16 +265,28 @@ async def _promote_champion_with_session(
     res = await session.execute(stmt)
     runs = res.scalars().all()
 
+    # Filter out experiment / ablation runs from champion promotion (Addendum 4)
+    non_experiment_runs = []
+    for r in runs:
+        hp = r.hyperparameters or {}
+        if hp.get("experiment") == "ablation" or hp.get("is_experiment") is True or hp.get("experiment") is not None:
+            continue
+        non_experiment_runs.append(r)
+    runs = non_experiment_runs
+
     if not runs:
-        logger.warning("No recsys model runs found for champion promotion.")
+        logger.warning("No non-experiment recsys model runs found for champion promotion.")
         return None
 
     # Filter by family if requested
     if family is not None:
         matched_runs = []
+        clean_family = family.removeprefix(RECSYS_PREFIX)
         for r in runs:
             hp = r.hyperparameters or {}
-            if hp.get("family") == family or r.model_name == f"{RECSYS_PREFIX}{family}":
+            r_fam = hp.get("family", "").removeprefix(RECSYS_PREFIX)
+            r_clean_name = r.model_name.removeprefix(RECSYS_PREFIX)
+            if r_fam == clean_family or r_clean_name == clean_family or r.model_name == family:
                 matched_runs.append(r)
         runs = matched_runs
 

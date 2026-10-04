@@ -46,7 +46,7 @@ from recsys.models.itemknn import ItemKNNRecommender
 from recsys.models.popularity import PopularityRecommender
 from recsys.models.two_tower import TwoTowerModel
 from recsys.ranker import RankerConfig, train_ranker
-from recsys.registry import log_recsys_run, promote_champion
+from recsys.registry import log_recsys_run
 
 
 def _find_latest_artifact_dir(base_dir: Path, model_name: str) -> tuple[Path, str]:
@@ -416,21 +416,15 @@ class TrainRankerJob(BaseJob):
                 session=session,
             )
 
-            if qualifies_for_champion:
-                self.logger.info("🏆 Ranker beats Two-Tower significantly on VAL NDCG@10 (95%% CI lower bound: +%.4f > 0).", val_lo_vs_tt)
-                await promote_champion(
-                    family="recsys_two_tower_ranker",
-                    metric_key="val_ndcg_at_10",
-                    session=session,
-                )
-                self.logger.info("✅ Promoted recsys_two_tower_ranker to CHAMPION stage in Model Registry.")
-            else:
-                self.logger.info(
-                    "ℹ️ Ranker VAL NDCG@10 diff vs Two-Tower: +%.4f [95%% CI: %.4f, %.4f]. Leaves at 'candidate' stage.",
-                    val_diff_vs_tt,
-                    val_lo_vs_tt,
-                    val_hi_vs_tt,
-                )
+            # Save rank arrays if available
+            if "rank" in ranker_val_res.per_user:
+                np.save(artifact_dir / "ranks_val.npy", ranker_val_res.per_user["rank"])
+            if ranker_test_res is not None and "rank" in ranker_test_res.per_user:
+                np.save(artifact_dir / "ranks_test.npy", ranker_test_res.per_user["rank"])
+
+            self.logger.info(
+                "ℹ️ Ranker logged as 'candidate' stage. Promotion is handled exclusively by 'python -m jobs.promote_recsys'."
+            )
 
         # 10. Print Comprehensive Report Tables
         if cleanup_status:

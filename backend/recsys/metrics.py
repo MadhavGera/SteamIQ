@@ -342,3 +342,154 @@ def paired_bootstrap_diff(
     lo95 = float(np.percentile(boot_diffs, 2.5))
     hi95 = float(np.percentile(boot_diffs, 97.5))
     return mean_diff, lo95, hi95
+
+
+def gini_coefficient_at_k(top_k: np.ndarray, n_items: int) -> float:
+    """
+    Computes the Gini coefficient of item exposure across all users' top-k recommendation lists.
+
+    Exposure counts f_i are the number of times item i appears across all top-k lists.
+    Gini coefficient:
+        G = (2 * sum_{i=1}^M i * f_{(i)} - (M + 1) * sum_{i=1}^M f_{(i)}) / (M * sum_{i=1}^M f_{(i)})
+    where f is sorted in ascending order and M = n_items.
+    - Returns 0.0 for perfectly uniform exposure (all items exposed equally).
+    - Returns (n_items - 1) / n_items (~1.0) if a single item receives all recommendation slots.
+
+    Args:
+        top_k: 2D array [n_users, k] of recommended item indices.
+        n_items: Total number of items in catalog.
+
+    Returns:
+        Float Gini coefficient in [0.0, 1.0].
+    """
+    if n_items <= 0 or top_k.size == 0:
+        return 0.0
+
+    flat_items = top_k.flatten()
+    valid_items = flat_items[(flat_items >= 0) & (flat_items < n_items)]
+    if len(valid_items) == 0:
+        return 0.0
+
+    counts = np.bincount(valid_items, minlength=n_items).astype(np.float64)
+    total_exposure = np.sum(counts)
+    if total_exposure == 0:
+        return 0.0
+
+    sorted_counts = np.sort(counts)
+    m = float(n_items)
+    idx = np.arange(1, n_items + 1, dtype=np.float64)
+
+    numerator = 2.0 * np.sum(idx * sorted_counts) - (m + 1.0) * total_exposure
+    denominator = m * total_exposure
+    gini = float(numerator / denominator)
+    return float(max(0.0, min(1.0, gini)))
+
+
+def mmr_rerank(
+    candidate_items: np.ndarray,
+    candidate_scores: np.ndarray,
+    item_embeddings: np.ndarray | sp.csr_matrix,
+    lambda_param: float = 0.8,
+    k: int = 10,
+) -> np.ndarray:
+    """
+    Applies Maximal Marginal Relevance (MMR) re-ranking over candidate lists per user.
+
+    MMR Selection Objective:
+        argmax_{i in C \\ S} [ lambda * norm_score(i) - (1 - lambda) * max_{j in S} CosineSim(i, j) ]
+
+    When lambda_param == 1.0, MMR produces the exact same top-k order as sorting candidate_scores descending.
+
+    Args:
+        candidate_items: 2D array [n_users, n_candidates] (or 1D [n_candidates]) of item indices.
+        candidate_scores: 2D array [n_users, n_candidates] (or 1D [n_candidates]) of base relevance scores.
+        item_embeddings: [n_items, dim] dense embedding array or sparse CSR matrix.
+        lambda_param: Float trade-off parameter in [0.0, 1.0] (default: 0.8).
+        k: Output recommendation list length (default: 10).
+
+    Returns:
+        2D int64 array [n_users, k] (or 1D [k] if 1D input) of selected item indices.
+    """
+    is_1d = candidate_items.ndim == 1
+    c_items = np.atleast_2d(candidate_items).astype(np.int64)
+    c_scores = np.atleast_2d(candidate_scores).astype(np.float32)
+
+    n_users, n_cands = c_items.shape
+    k = min(k, n_cands)
+
+    if n_users == 0 or n_cands == 0 or k <= 0:
+        empty_res = np.empty((n_users, k), dtype=np.int64)
+        return empty_res[0] if is_1d else empty_res
+
+    # Pre-extract and normalize embeddings for unique candidates
+    unique_items = np.unique(c_items)
+    valid_items = unique_items[(unique_items >= 0) & (unique_items < (item_embeddings.shape[0] if hasattr(item_embeddings, 'shape') else len(item_embeddings)))]
+
+    if sp.issparse(item_embeddings):
+        emb_dense = item_embeddings[valid_items].toarray().astype(np.float32)
+    else:
+        emb_dense = np.asarray(item_embeddings[valid_items], dtype=np.float32)
+
+    norms = np.linalg.norm(emb_dense, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    emb_norm = emb_dense / norms
+
+    item_to_norm_idx = {int(it): idx for idx, it in enumerate(valid_items)}
+    dim = emb_norm.shape[1] if len(emb_norm) > 0 else 1
+
+    results = np.empty((n_users, k), dtype=np.int64)
+
+    for u_idx in range(n_users):
+        user_cands = c_items[u_idx]
+        user_scores = c_scores[u_idx]
+
+        # Initial sort by score descending
+        initial_order = np.argsort(-user_scores)
+        sorted_cands = user_cands[initial_order]
+        sorted_scores = user_scores[initial_order]
+
+        if lambda_param >= 1.0 or k == 1:
+            results[u_idx] = sorted_cands[:k]
+            continue
+
+        # Score normalization to [0, 1]
+        s_min = float(np.min(sorted_scores))
+        s_max = float(np.max(sorted_scores))
+        if s_max > s_min:
+            norm_scores = (sorted_scores - s_min) / (s_max - s_min)
+        else:
+            norm_scores = np.ones_like(sorted_scores, dtype=np.float32)
+
+        # Get unit-norm vectors for candidate items
+        cand_vecs = np.zeros((n_cands, dim), dtype=np.float32)
+        for i_c, it in enumerate(sorted_cands):
+            if int(it) in item_to_norm_idx:
+                cand_vecs[i_c] = emb_norm[item_to_norm_idx[int(it)]]
+
+        # Precompute candidate-to-candidate cosine similarities: [n_cands, n_cands]
+        cand_sims = cand_vecs @ cand_vecs.T
+
+        selected: list[int] = [0]  # Start with the highest-scoring candidate
+        available = set(range(1, n_cands))
+
+        for _ in range(1, k):
+            if not available:
+                break
+            avail_list = list(available)
+            avail_arr = np.array(avail_list, dtype=np.int64)
+
+            # Max similarity to already selected items for each available candidate
+            sim_to_selected = np.max(cand_sims[avail_arr[:, None], selected], axis=1)
+
+            # MMR score = lambda * relevance - (1 - lambda) * max_sim
+            mmr_scores = lambda_param * norm_scores[avail_arr] - (1.0 - lambda_param) * sim_to_selected
+
+            best_idx = int(np.argmax(mmr_scores))
+            chosen = avail_list[best_idx]
+            selected.append(chosen)
+            available.remove(chosen)
+
+        results[u_idx] = sorted_cands[selected[:k]]
+
+    return results[0] if is_1d else results
+

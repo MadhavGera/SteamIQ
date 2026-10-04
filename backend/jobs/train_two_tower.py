@@ -16,11 +16,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import json
 import uuid
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from core.config import settings
@@ -49,6 +49,8 @@ class TrainTwoTowerJob(BaseJob):
         dim: int = 64,
         pool: str = "attn",
         id_dropout: float = 0.25,
+        proxy_dropout: float = 0.0,
+        no_pop_proxies: bool = False,
         use_id: bool = True,
         use_text: bool = True,
         use_tags: bool = True,
@@ -68,6 +70,8 @@ class TrainTwoTowerJob(BaseJob):
         self.dim = dim
         self.pool = pool
         self.id_dropout = id_dropout
+        self.proxy_dropout = proxy_dropout
+        self.no_pop_proxies = no_pop_proxies
         self.use_id = use_id
         self.use_text = use_text
         self.use_tags = use_tags
@@ -107,7 +111,7 @@ class TrainTwoTowerJob(BaseJob):
             n_items=data.n_items,
             text_dim=384,
             tag_dim=300,
-            numeric_dim=9,
+            numeric_dim=6 if self.no_pop_proxies else 9,
             id_dim=64,
             text_proj_dim=64,
             tag_proj_dim=32,
@@ -116,6 +120,8 @@ class TrainTwoTowerJob(BaseJob):
             output_dim=self.dim,
             pool=self.pool,
             id_dropout=self.id_dropout,
+            proxy_dropout=self.proxy_dropout,
+            no_pop_proxies=self.no_pop_proxies,
             use_id=self.use_id,
             use_text=self.use_text,
             use_tags=self.use_tags,
@@ -182,8 +188,10 @@ class TrainTwoTowerJob(BaseJob):
             artifact_dir.mkdir(parents=True, exist_ok=True)
             model.save(artifact_dir)
 
-            with open(artifact_dir / "training_curves.json", "w", encoding="utf-8") as f:
-                json.dump(training_curves, f, indent=2)
+            if "rank" in val_res.per_user:
+                np.save(artifact_dir / "ranks_val.npy", val_res.per_user["rank"])
+            if test_res is not None and "rank" in test_res.per_user:
+                np.save(artifact_dir / "ranks_test.npy", test_res.per_user["rank"])
 
             self.logger.info("Saved Two-Tower artifacts to %s", artifact_dir)
 
@@ -453,6 +461,8 @@ def main() -> None:
     parser.add_argument("--dim", type=int, default=64, help="Embedding dimension")
     parser.add_argument("--pool", type=str, default="attn", choices=["attn", "mean"], help="History pooling strategy")
     parser.add_argument("--id-dropout", type=float, default=0.25, help="Probability of dropping item ID during training")
+    parser.add_argument("--proxy-dropout", type=float, default=0.0, help="Probability of zeroing item ID and numeric features during training")
+    parser.add_argument("--no-pop-proxies", action="store_true", help="Remove user_reviews and positive_ratio from numeric branch")
     parser.add_argument("--no-id", action="store_true", help="Disable item ID branch (ablation)")
     parser.add_argument("--no-text", action="store_true", help="Disable MiniLM text branch (ablation)")
     parser.add_argument("--no-tags", action="store_true", help="Disable tag multi-hot branch (ablation)")
@@ -473,6 +483,8 @@ def main() -> None:
         dim=args.dim,
         pool=args.pool,
         id_dropout=args.id_dropout,
+        proxy_dropout=args.proxy_dropout,
+        no_pop_proxies=args.no_pop_proxies,
         use_id=not args.no_id,
         use_text=not args.no_text,
         use_tags=not args.no_tags,

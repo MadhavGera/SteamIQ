@@ -22,6 +22,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from core.config import settings
@@ -225,6 +226,10 @@ class TrainRecsysBaselinesJob(BaseJob):
             if not self.dry_run:
                 artifact_dir.mkdir(parents=True, exist_ok=True)
                 model.save(artifact_dir)
+                if "rank" in val_res.per_user:
+                    np.save(artifact_dir / "ranks_val.npy", val_res.per_user["rank"])
+                if test_res is not None and "rank" in test_res.per_user:
+                    np.save(artifact_dir / "ranks_test.npy", test_res.per_user["rank"])
                 self.logger.info("Saved model artifacts to %s", artifact_dir)
 
                 # 3. Log to MLflow & Database (stage='candidate', no promote_champion per Addendum 3)

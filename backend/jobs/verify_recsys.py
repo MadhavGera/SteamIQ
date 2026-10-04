@@ -50,7 +50,7 @@ class VerifyRecsysJob(BaseJob):
         super().__init__(dry_run=dry_run)
         self.profile = profile
         self.data_dir = data_dir
-        self.tolerance = tolerance
+        self.tolerance = tolerance if tolerance != 1e-4 else 1e-6
 
     async def _run_async(self, session: AsyncSession | None = None) -> dict[str, Any]:
         cfg: RecsysConfig = get_recsys_config(self.profile)
@@ -107,7 +107,7 @@ class VerifyRecsysJob(BaseJob):
         mismatches: list[dict[str, Any]] = []
 
         print("\n" + "=" * 130)
-        print("🔬 SteamIQ Recommender Model Artifact Verification Job")
+        print(f"🔬 SteamIQ Recommender Model Artifact Verification Job (Tolerance: {self.tolerance:.1e})")
         print("=" * 130)
 
         for m_name in model_names_order:
@@ -177,16 +177,17 @@ class VerifyRecsysJob(BaseJob):
                     seed=seed,
                 )
 
-            # Compare metrics
-            check_keys = ["val_ndcg_at_10", "val_hit_rate_at_10", "val_mrr_at_10"]
-            if test_res:
-                check_keys.extend(["test_ndcg_at_10", "test_hit_rate_at_10", "test_mrr_at_10", "test_catalog_coverage_at_10", "test_diversity_at_10"])
+            # Compare EVERY stored metric in db_metrics
+            newly_evaluated = {
+                **val_res.get_prefixed_metrics("val"),
+                **(test_res.get_prefixed_metrics("test") if test_res else {}),
+            }
 
             model_mismatches = []
-            for k in check_keys:
-                if k in db_metrics:
-                    expected_v = float(db_metrics[k])
-                    actual_v = float(val_res.metrics.get(k.replace("val_", ""), 0.0) if k.startswith("val_") else (test_res.metrics.get(k.replace("test_", ""), 0.0) if test_res else 0.0))
+            for k, expected_val in db_metrics.items():
+                if k in newly_evaluated:
+                    expected_v = float(expected_val)
+                    actual_v = float(newly_evaluated[k])
                     diff = abs(actual_v - expected_v)
                     if diff > self.tolerance:
                         model_mismatches.append({"metric": k, "expected": expected_v, "actual": actual_v, "diff": diff})
@@ -198,7 +199,7 @@ class VerifyRecsysJob(BaseJob):
             test_cov = test_res.metrics.get("catalog_coverage_at_10", 0.0) if test_res else 0.0
             test_div = test_res.metrics.get("diversity_at_10", 0.0) if test_res else 0.0
 
-            status_str = "MATCH" if not model_mismatches else f"DIFF ({len(model_mismatches)} keys)"
+            status_str = f"MATCH ({len(db_metrics)} keys)" if not model_mismatches else f"DIFF ({len(model_mismatches)} keys)"
             if model_mismatches:
                 mismatches.extend([{"model": m_name, **m} for m in model_mismatches])
 
@@ -222,14 +223,15 @@ class VerifyRecsysJob(BaseJob):
         print("=" * 130)
 
         if mismatches:
-            print("\n❌ VERIFICATION FAILED: Found metric mismatches exceeding tolerance:")
+            print(f"\n❌ VERIFICATION FAILED: Found {len(mismatches)} metric mismatches exceeding tolerance ({self.tolerance}):")
             for m in mismatches:
                 print(f"  • {m}")
             raise RuntimeError(f"Recommender artifact verification failed with {len(mismatches)} mismatches.")
         else:
-            print("\n✅ ALL ARTIFACT METRICS VERIFIED SUCCESSFULLY (Tolerance: 1e-4)!\n")
+            print(f"\n✅ ALL ARTIFACT METRICS VERIFIED SUCCESSFULLY (Tolerance: {self.tolerance:.1e})!\n")
 
         return {"verified_count": len(verification_records), "mismatches": mismatches}
+
 
     def execute(self) -> dict[str, Any]:
         """Entry point for BaseJob."""

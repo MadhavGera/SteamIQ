@@ -57,12 +57,18 @@ class TwoTowerConfig:
     output_dim: int = 64
     pool: str = "attn"  # "attn" or "mean"
     id_dropout: float = 0.25
+    proxy_dropout: float = 0.0
+    no_pop_proxies: bool = False
     use_id: bool = True
     use_text: bool = True
     use_tags: bool = True
     use_numeric: bool = True
     max_history: int = 50
     init_tau: float = 0.07
+
+    def __post_init__(self) -> None:
+        if self.no_pop_proxies and self.numeric_dim == 9:
+            self.numeric_dim = 6
 
     @property
     def raw_item_dim(self) -> int:
@@ -74,10 +80,20 @@ class TwoTowerConfig:
         )
 
 
-def extract_standardized_numeric_features(items_df: pd.DataFrame) -> np.ndarray:
+def extract_standardized_numeric_features(
+    items_df: pd.DataFrame,
+    no_pop_proxies: bool = False,
+) -> np.ndarray:
     """
-    Extracts and standardizes 9 numerical/platform features from items_df.
-    Features:
+    Extracts and standardizes numerical/platform features from items_df.
+    If no_pop_proxies is True (6 features):
+      0: log1p(price_final)
+      1: win (0/1)
+      2: mac (0/1)
+      3: linux (0/1)
+      4: steam_deck (0/1)
+      5: normalized_release_year: (year - 2015) / 10.0
+    If no_pop_proxies is False (9 features):
       0: log1p(price_final)
       1: positive_ratio / 100.0
       2: log1p(user_reviews)
@@ -89,7 +105,6 @@ def extract_standardized_numeric_features(items_df: pd.DataFrame) -> np.ndarray:
       8: normalized_release_year: (year - 2015) / 10.0
     """
     n = len(items_df)
-    features = np.zeros((n, 9), dtype=np.float32)
 
     # 0. Price
     if "price_final" in items_df.columns:
@@ -98,7 +113,32 @@ def extract_standardized_numeric_features(items_df: pd.DataFrame) -> np.ndarray:
         prices = items_df["price"].fillna(0.0).to_numpy(dtype=np.float32)
     else:
         prices = np.zeros(n, dtype=np.float32)
-    features[:, 0] = np.log1p(np.maximum(prices, 0.0))
+    price_feat = np.log1p(np.maximum(prices, 0.0))
+
+    if no_pop_proxies:
+        features = np.zeros((n, 6), dtype=np.float32)
+        features[:, 0] = price_feat
+
+        # 1-4. Platform indicators
+        for idx, col in enumerate(["win", "mac", "linux", "steam_deck"], start=1):
+            if col in items_df.columns:
+                features[:, idx] = items_df[col].fillna(0).astype(np.float32)
+            else:
+                features[:, idx] = 1.0 if col == "win" else 0.0
+
+        # 5. Release year / Age
+        if "date_release" in items_df.columns:
+            dates = pd.to_datetime(items_df["date_release"], errors="coerce")
+            years = dates.dt.year.fillna(2018).to_numpy(dtype=np.float32)
+        else:
+            years = np.full(n, 2018.0, dtype=np.float32)
+        features[:, 5] = (years - 2015.0) / 10.0
+
+        return features
+
+    # Standard 9 features
+    features = np.zeros((n, 9), dtype=np.float32)
+    features[:, 0] = price_feat
 
     # 1. Positive review ratio
     if "positive_ratio" in items_df.columns:
@@ -175,6 +215,7 @@ class ItemFeatureEncoder(nn.Module):
         tag_features: torch.Tensor | None = None,
         numeric_features: torch.Tensor | None = None,
         mask_ids: torch.Tensor | None = None,
+        apply_proxy_dropout: bool = False,
     ) -> torch.Tensor:
         """
         Args:
@@ -183,6 +224,7 @@ class ItemFeatureEncoder(nn.Module):
             tag_features: FloatTensor of tag multi-hot features [..., tag_dim]
             numeric_features: FloatTensor of numeric features [..., numeric_dim]
             mask_ids: Optional 1D LongTensor of item IDs that should use the unknown ID embedding
+            apply_proxy_dropout: If True and training, replaces ID with unknown and zeroes numeric inputs with probability proxy_dropout.
 
         Returns:
             Raw item representation tensor [..., raw_item_dim]
@@ -190,9 +232,21 @@ class ItemFeatureEncoder(nn.Module):
         device = item_ids.device
         shape = item_ids.shape
 
+        # ── 0. Proxy Dropout (combined ID + numeric zeroing) ──
+        proxy_drop_mask = None
+        if self.training and apply_proxy_dropout and self.cfg.proxy_dropout > 0:
+            proxy_drop_mask = torch.rand(shape, device=device) < self.cfg.proxy_dropout
+
         # ── 1. ID Representation with Dropout / Masking ──
         if self.cfg.use_id:
             effective_ids = torch.clamp(item_ids, 0, self.n_items)
+
+            if proxy_drop_mask is not None:
+                effective_ids = torch.where(
+                    proxy_drop_mask,
+                    torch.tensor(self.unknown_id, device=device),
+                    effective_ids,
+                )
 
             if self.training and self.cfg.id_dropout > 0:
                 drop_mask = torch.rand(shape, device=device) < self.cfg.id_dropout
@@ -227,7 +281,11 @@ class ItemFeatureEncoder(nn.Module):
 
         # ── 4. Numeric Representation ──
         if self.cfg.use_numeric and numeric_features is not None:
-            num_repr = self.numeric_linear(numeric_features)
+            if proxy_drop_mask is not None:
+                num_in = torch.where(proxy_drop_mask.unsqueeze(-1), torch.zeros_like(numeric_features), numeric_features)
+            else:
+                num_in = numeric_features
+            num_repr = self.numeric_linear(num_in)
         else:
             num_repr = torch.zeros(*shape, self.cfg.numeric_proj_dim, device=device)
 
@@ -338,6 +396,7 @@ class TwoTowerModule(nn.Module):
         tag_features: torch.Tensor | None = None,
         numeric_features: torch.Tensor | None = None,
         mask_ids: torch.Tensor | None = None,
+        apply_proxy_dropout: bool = False,
     ) -> torch.Tensor:
         raw_repr = self.feature_encoder(
             item_ids=item_ids,
@@ -345,6 +404,7 @@ class TwoTowerModule(nn.Module):
             tag_features=tag_features,
             numeric_features=numeric_features,
             mask_ids=mask_ids,
+            apply_proxy_dropout=apply_proxy_dropout,
         )
         return self.item_tower(raw_repr)
 
@@ -355,6 +415,7 @@ class TwoTowerModule(nn.Module):
         history_tags: torch.Tensor | None = None,
         history_numeric: torch.Tensor | None = None,
         mask: torch.Tensor | None = None,
+        mask_ids: torch.Tensor | None = None,
     ) -> torch.Tensor:
         if mask is None:
             mask = history_ids >= 0
@@ -365,6 +426,7 @@ class TwoTowerModule(nn.Module):
             text_embs=history_text,
             tag_features=history_tags,
             numeric_features=history_numeric,
+            mask_ids=mask_ids,
         )
         return self.user_tower(raw_repr, mask)
 
@@ -375,6 +437,7 @@ class TwoTowerModule(nn.Module):
         history_tags: torch.Tensor | None = None,
         history_numeric: torch.Tensor | None = None,
         mask: torch.Tensor | None = None,
+        mask_ids: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Alias for encode_users."""
         return self.encode_users(
@@ -383,6 +446,7 @@ class TwoTowerModule(nn.Module):
             history_tags=history_tags,
             history_numeric=history_numeric,
             mask=mask,
+            mask_ids=mask_ids,
         )
 
 
@@ -448,8 +512,9 @@ class TwoTowerModel(BaseRecommender):
         else:
             tag_t = torch.zeros((n_items, 300), dtype=torch.float32)
 
-        # 3. Numeric features [n_items, 9]
-        num_arr = extract_standardized_numeric_features(data.items_df)
+        # 3. Numeric features [n_items, 9] (or 6 if no_pop_proxies)
+        no_pop = bool(self.cfg.no_pop_proxies) if self.cfg else False
+        num_arr = extract_standardized_numeric_features(data.items_df, no_pop_proxies=no_pop)
         num_t = torch.from_numpy(num_arr)
 
         self._item_features_tensors = {
@@ -459,7 +524,11 @@ class TwoTowerModel(BaseRecommender):
             "numeric": num_t,
         }
 
-    def precompute_item_vectors(self, mask_ids: list[int] | None = None) -> np.ndarray:
+    def precompute_item_vectors(
+        self,
+        mask_ids: list[int] | None = None,
+        neutralize_proxies: list[int] | None = None,
+    ) -> np.ndarray:
         """
         Precomputes and caches L2-normalized representations for all catalog items.
         """
@@ -471,29 +540,48 @@ class TwoTowerModel(BaseRecommender):
             t_dict = self._item_features_tensors
             mask_t = torch.tensor(mask_ids, dtype=torch.long) if mask_ids else None
 
+            num_t = t_dict["numeric"]
+            if neutralize_proxies is not None and len(neutralize_proxies) > 0:
+                num_t = num_t.clone()
+                neut_idx = torch.tensor(neutralize_proxies, dtype=torch.long)
+                # Neutralize rating proxy (index 1), review count proxy (index 2), and train pop proxy (index 3)
+                num_t[neut_idx, 1] = 0.0
+                num_t[neut_idx, 2] = 0.0
+                num_t[neut_idx, 3] = 0.0
+
             item_vecs = self.module.encode_items(
                 item_ids=t_dict["all_ids"],
                 text_embs=t_dict["text"],
                 tag_features=t_dict["tags"],
-                numeric_features=t_dict["numeric"],
+                numeric_features=num_t,
                 mask_ids=mask_t,
             )
             vecs_np = item_vecs.cpu().numpy().astype(np.float32)
-            if mask_ids is None:
+            if mask_ids is None and neutralize_proxies is None:
                 self.cached_item_vecs = vecs_np
             return vecs_np
 
-    def item_vectors(self, mask_ids: list[int] | None = None) -> np.ndarray:
+    def item_vectors(
+        self,
+        mask_ids: list[int] | None = None,
+        neutralize_proxies: list[int] | None = None,
+    ) -> np.ndarray:
         """
-        Returns item representations. If mask_ids is provided, simulates cold-start items.
+        Returns item representations. If mask_ids or neutralize_proxies is provided, simulates cold-start items.
         """
-        if mask_ids is not None and len(mask_ids) > 0:
-            return self.precompute_item_vectors(mask_ids=mask_ids)
+        if (mask_ids is not None and len(mask_ids) > 0) or (neutralize_proxies is not None and len(neutralize_proxies) > 0):
+            return self.precompute_item_vectors(mask_ids=mask_ids, neutralize_proxies=neutralize_proxies)
         if self.cached_item_vecs is None:
             return self.precompute_item_vectors()
         return self.cached_item_vecs
 
-    def score(self, histories: list[np.ndarray]) -> np.ndarray:
+    def score(
+        self,
+        histories: list[np.ndarray],
+        item_vecs: np.ndarray | None = None,
+        mask_ids: list[int] | None = None,
+        neutralize_proxies: list[int] | None = None,
+    ) -> np.ndarray:
         """
         Scores all catalog items for a batch of user interaction histories.
         """
@@ -505,12 +593,15 @@ class TwoTowerModel(BaseRecommender):
             n_items = self.cfg.n_items if self.cfg else 0
             return np.empty((0, n_items), dtype=np.float32)
 
-        if self.cached_item_vecs is None:
-            self.precompute_item_vectors()
+        target_item_vecs = (
+            item_vecs
+            if item_vecs is not None
+            else self.item_vectors(mask_ids=mask_ids, neutralize_proxies=neutralize_proxies)
+        )
 
         self.module.eval()
         max_h = self.cfg.max_history if self.cfg else 50
-        n_items = len(self.cached_item_vecs) if self.cached_item_vecs is not None else (self.cfg.n_items if (self.cfg and self.cfg.n_items > 0) else 0)
+        n_items = len(target_item_vecs) if target_item_vecs is not None else (self.cfg.n_items if (self.cfg and self.cfg.n_items > 0) else 0)
 
         # Pad histories into tensor [B, max_h]
         hist_arr = np.zeros((b, max_h), dtype=np.int64)
@@ -530,7 +621,17 @@ class TwoTowerModel(BaseRecommender):
         # Lookup feature tensors for history items
         t_text = self._item_features_tensors["text"][hist_t]
         t_tags = self._item_features_tensors["tags"][hist_t]
-        t_num = self._item_features_tensors["numeric"][hist_t]
+
+        num_t_all = self._item_features_tensors["numeric"]
+        if neutralize_proxies is not None and len(neutralize_proxies) > 0:
+            num_t_all = num_t_all.clone()
+            neut_idx = torch.tensor(neutralize_proxies, dtype=torch.long)
+            num_t_all[neut_idx, 1] = 0.0
+            num_t_all[neut_idx, 2] = 0.0
+            num_t_all[neut_idx, 3] = 0.0
+
+        t_num = num_t_all[hist_t]
+        mask_ids_t = torch.tensor(mask_ids, dtype=torch.long) if mask_ids else None
 
         with torch.no_grad():
             user_vecs = self.module.encode_users(
@@ -539,10 +640,11 @@ class TwoTowerModel(BaseRecommender):
                 history_tags=t_tags,
                 history_numeric=t_num,
                 mask=mask_t,
+                mask_ids=mask_ids_t,
             ).cpu().numpy().astype(np.float32)
 
         # Dot product: [B, 64] @ [64, n_items] -> [B, n_items]
-        scores = user_vecs @ self.cached_item_vecs.T
+        scores = user_vecs @ target_item_vecs.T
         np.nan_to_num(scores, copy=False, nan=0.0)
         return scores.astype(np.float32)
 
@@ -601,14 +703,16 @@ class TwoTowerModel(BaseRecommender):
             model._item_features_tensors = torch.load(features_file, map_location="cpu", weights_only=True)
         elif data is not None:
             model._prepare_item_feature_tensors(data)
+            if model.cached_item_vecs is None:
+                model.precompute_item_vectors()
         else:
-            n = cfg.n_items
-            model._item_features_tensors = {
-                "all_ids": torch.arange(n, dtype=torch.long),
-                "text": torch.zeros((n, cfg.text_dim), dtype=torch.float32),
-                "tags": torch.zeros((n, cfg.tag_dim), dtype=torch.float32),
-                "numeric": torch.zeros((n, cfg.numeric_dim), dtype=torch.float32),
-            }
+            raise ValueError(
+                f"Cannot load TwoTowerModel from {model_dir}: 'item_features.pt' is missing and no 'data' (RecsysData) "
+                f"was provided to construct item feature tensors."
+            )
+
+        if model.cached_item_vecs is None:
+            model.precompute_item_vectors()
 
         return model
 

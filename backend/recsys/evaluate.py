@@ -244,6 +244,7 @@ def evaluate_model(
     seed: int = 42,
     n_boot: int = 1000,
     allow_small_user_set: bool = False,
+    save_ranks_dir: Path | str | None = None,
 ) -> EvaluationResult:
     """
     Evaluates a recommender model on the validation or test split.
@@ -353,71 +354,75 @@ def evaluate_model(
 
         all_scores[batch_slice] = batch_scores
 
-    # 4. Compute Ranks and Per-User Metrics
+    # 4. Compute Ranks and Top-K Recommendations
     ranks = compute_ranks(all_scores, targets_arr)
 
-    per_user: dict[str, np.ndarray] = {
-        "rank": ranks,
-        "history_length": history_lengths_arr,
-        "target_item": targets_arr,
-    }
+    max_k = max(k_list) if k_list else 20
+    top_k_indices = get_top_k_indices(all_scores, max_k)
 
-    metrics: dict[str, float] = {
-        "n_users": float(n_eval),
-    }
+    # 5. Derive all metrics, per-user arrays, and slices from ranks & top-k
+    metrics, per_user, slices = compute_metrics_from_ranks(
+        ranks=ranks,
+        top_k_indices=top_k_indices,
+        targets=targets_arr,
+        history_lengths=history_lengths_arr,
+        data=data,
+        k_list=k_list,
+        seed=seed,
+        n_boot=n_boot,
+    )
 
-    for k in k_list:
-        hr = hit_rate_at_k(ranks, k)
-        ndcg = ndcg_at_k(ranks, k)
-        mrr = mrr_at_k(ranks, k)
+    # 6. Save ranks array if save_ranks_dir is provided
+    if save_ranks_dir is not None:
+        target_save_dir = Path(save_ranks_dir)
+        target_save_dir.mkdir(parents=True, exist_ok=True)
+        np.save(target_save_dir / f"ranks_{split}.npy", ranks)
 
-        per_user[f"hit_rate_at_{k}"] = hr
-        per_user[f"ndcg_at_{k}"] = ndcg
-        per_user[f"mrr_at_{k}"] = mrr
+    logger.info(
+        "Finished evaluation for %s on %s: HR@10=%.4f (95%% CI: [%.4f, %.4f]), NDCG@10=%.4f (95%% CI: [%.4f, %.4f])",
+        model.name,
+        split,
+        metrics.get("hit_rate_at_10", 0.0),
+        metrics.get("hit_rate_at_10_lo95", 0.0),
+        metrics.get("hit_rate_at_10_hi95", 0.0),
+        metrics.get("ndcg_at_10", 0.0),
+        metrics.get("ndcg_at_10_lo95", 0.0),
+        metrics.get("ndcg_at_10_hi95", 0.0),
+    )
 
-        # Point estimates & Bootstrap 95% CIs
-        hr_m, hr_lo, hr_hi = bootstrap_ci(hr, n_boot=n_boot, seed=seed)
-        ndcg_m, ndcg_lo, ndcg_hi = bootstrap_ci(ndcg, n_boot=n_boot, seed=seed)
-        mrr_m, mrr_lo, mrr_hi = bootstrap_ci(mrr, n_boot=n_boot, seed=seed)
+    return EvaluationResult(
+        split=split,
+        n_users=n_eval,
+        metrics=metrics,
+        per_user=per_user,
+        slices=slices,
+        evaluated_user_indices=eval_users,
+    )
 
-        metrics[f"hit_rate_at_{k}"] = hr_m
-        metrics[f"hit_rate_at_{k}_lo95"] = hr_lo
-        metrics[f"hit_rate_at_{k}_hi95"] = hr_hi
 
-        metrics[f"ndcg_at_{k}"] = ndcg_m
-        metrics[f"ndcg_at_{k}_lo95"] = ndcg_lo
-        metrics[f"ndcg_at_{k}_hi95"] = ndcg_hi
-
-        metrics[f"mrr_at_{k}"] = mrr_m
-        metrics[f"mrr_at_{k}_lo95"] = mrr_lo
-        metrics[f"mrr_at_{k}_hi95"] = mrr_hi
-
-    # Candidate recall depths (e.g. recall@50, recall@100 if n_items >= depth)
-    for depth in (50, 100):
-        if data.n_items >= depth:
-            rec = hit_rate_at_k(ranks, depth)
-            rec_m, rec_lo, rec_hi = bootstrap_ci(rec, n_boot=n_boot, seed=seed)
-            metrics[f"candidate_recall_at_{depth}"] = rec_m
-            metrics[f"candidate_recall_at_{depth}_lo95"] = rec_lo
-            metrics[f"candidate_recall_at_{depth}_hi95"] = rec_hi
-
-    # 5. Catalog-level and Distributional Metrics
-    max_k = max(k_list) if k_list else 10
-    top_max_k = get_top_k_indices(all_scores, max_k)
-
-    for k in k_list:
-        top_k = top_max_k[:, :k]
-        metrics[f"catalog_coverage_at_{k}"] = catalog_coverage_at_k(top_k, data.n_items)
-        metrics[f"novelty_at_{k}"] = novelty_at_k(top_k, data.item_train_pop)
-        metrics[f"head_share_at_{k}"] = head_share_at_k(top_k, data.item_train_pop, head_fraction=0.01)
-
-        if data.item_text_emb is not None and len(data.item_text_emb) == data.n_items:
-            metrics[f"diversity_at_{k}"] = diversity_at_k(top_k, data.item_text_emb)
-
-    # 6. Sliced Evaluations
+def compute_evaluation_slices(
+    ranks: np.ndarray,
+    targets: np.ndarray,
+    history_lengths: np.ndarray,
+    data: RecsysData,
+    seed: int = 42,
+    n_boot: int = 1000,
+) -> dict[str, dict[str, float]]:
+    """
+    Computes sliced evaluation breakdowns from a 1D rank array:
+      1. Target-Item Popularity Buckets:
+         - Head: top 20% of items by training popularity
+         - Torso: next 30% of items
+         - Tail: bottom 50% of items
+         A user belongs to the bucket of their TARGET item.
+      2. History Length Buckets:
+         - hist_3_4: length in [3, 4]
+         - hist_5_9: length in [5, 9]
+         - hist_10_plus: length >= 10
+    """
     slices: dict[str, dict[str, float]] = {}
 
-    # Popularity Buckets: Head (top 20%), Torso (next 30%), Tail (last 50%)
+    # 1. Popularity Buckets
     n_items = data.n_items
     sorted_pop_items = np.argsort(-data.item_train_pop)
     head_cutoff = int(0.20 * n_items)
@@ -427,7 +432,7 @@ def evaluate_model(
     torso_set = set(sorted_pop_items[head_cutoff:torso_cutoff])
 
     pop_bucket_indices: dict[str, list[int]] = {"pop_head": [], "pop_torso": [], "pop_tail": []}
-    for idx, t in enumerate(targets_arr):
+    for idx, t in enumerate(targets):
         if t in head_set:
             pop_bucket_indices["pop_head"].append(idx)
         elif t in torso_set:
@@ -465,9 +470,9 @@ def evaluate_model(
                 "mrr_at_10": 0.0,
             }
 
-    # History Length Buckets: 3-4, 5-9, >=10
+    # 2. History Length Buckets
     hist_bucket_indices: dict[str, list[int]] = {"hist_3_4": [], "hist_5_9": [], "hist_10_plus": []}
-    for idx, length in enumerate(history_lengths_arr):
+    for idx, length in enumerate(history_lengths):
         if length <= 4:
             hist_bucket_indices["hist_3_4"].append(idx)
         elif length <= 9:
@@ -505,23 +510,88 @@ def evaluate_model(
                 "mrr_at_10": 0.0,
             }
 
-    logger.info(
-        "Finished evaluation for %s on %s: HR@10=%.4f (95%% CI: [%.4f, %.4f]), NDCG@10=%.4f (95%% CI: [%.4f, %.4f])",
-        model.name,
-        split,
-        metrics.get("hit_rate_at_10", 0.0),
-        metrics.get("hit_rate_at_10_lo95", 0.0),
-        metrics.get("hit_rate_at_10_hi95", 0.0),
-        metrics.get("ndcg_at_10", 0.0),
-        metrics.get("ndcg_at_10_lo95", 0.0),
-        metrics.get("ndcg_at_10_hi95", 0.0),
+    return slices
+
+
+def compute_metrics_from_ranks(
+    ranks: np.ndarray,
+    top_k_indices: np.ndarray | None,
+    targets: np.ndarray,
+    history_lengths: np.ndarray,
+    data: RecsysData,
+    k_list: tuple[int, ...] = (10, 20),
+    seed: int = 42,
+    n_boot: int = 1000,
+) -> tuple[dict[str, float], dict[str, np.ndarray], dict[str, dict[str, float]]]:
+    """
+    Derives all scalar metrics, per-user metric arrays, and slice tables directly from a 1D rank array
+    and top-k recommendations.
+    """
+    n_eval = len(ranks)
+    per_user: dict[str, np.ndarray] = {
+        "rank": ranks,
+        "history_length": history_lengths,
+        "target_item": targets,
+    }
+    if top_k_indices is not None:
+        per_user["top_k_indices"] = top_k_indices
+
+    metrics: dict[str, float] = {
+        "n_users": float(n_eval),
+    }
+
+    for k in k_list:
+        hr = hit_rate_at_k(ranks, k)
+        ndcg = ndcg_at_k(ranks, k)
+        mrr = mrr_at_k(ranks, k)
+
+        per_user[f"hit_rate_at_{k}"] = hr
+        per_user[f"ndcg_at_{k}"] = ndcg
+        per_user[f"mrr_at_{k}"] = mrr
+
+        hr_m, hr_lo, hr_hi = bootstrap_ci(hr, n_boot=n_boot, seed=seed)
+        ndcg_m, ndcg_lo, ndcg_hi = bootstrap_ci(ndcg, n_boot=n_boot, seed=seed)
+        mrr_m, mrr_lo, mrr_hi = bootstrap_ci(mrr, n_boot=n_boot, seed=seed)
+
+        metrics[f"hit_rate_at_{k}"] = hr_m
+        metrics[f"hit_rate_at_{k}_lo95"] = hr_lo
+        metrics[f"hit_rate_at_{k}_hi95"] = hr_hi
+
+        metrics[f"ndcg_at_{k}"] = ndcg_m
+        metrics[f"ndcg_at_{k}_lo95"] = ndcg_lo
+        metrics[f"ndcg_at_{k}_hi95"] = ndcg_hi
+
+        metrics[f"mrr_at_{k}"] = mrr_m
+        metrics[f"mrr_at_{k}_lo95"] = mrr_lo
+        metrics[f"mrr_at_{k}_hi95"] = mrr_hi
+
+    for depth in (50, 100):
+        if data.n_items >= depth:
+            rec = hit_rate_at_k(ranks, depth)
+            rec_m, rec_lo, rec_hi = bootstrap_ci(rec, n_boot=n_boot, seed=seed)
+            metrics[f"candidate_recall_at_{depth}"] = rec_m
+            metrics[f"candidate_recall_at_{depth}_lo95"] = rec_lo
+            metrics[f"candidate_recall_at_{depth}_hi95"] = rec_hi
+
+    # Top-k catalog metrics
+    if top_k_indices is not None and top_k_indices.size > 0:
+        for k in k_list:
+            if top_k_indices.shape[1] >= k:
+                sub_top_k = top_k_indices[:, :k]
+                metrics[f"catalog_coverage_at_{k}"] = catalog_coverage_at_k(sub_top_k, data.n_items)
+                metrics[f"novelty_at_{k}"] = novelty_at_k(sub_top_k, data.item_train_pop)
+                metrics[f"head_share_at_{k}"] = head_share_at_k(sub_top_k, data.item_train_pop, head_fraction=0.01)
+
+                if data.item_text_emb is not None and len(data.item_text_emb) == data.n_items:
+                    metrics[f"diversity_at_{k}"] = diversity_at_k(sub_top_k, data.item_text_emb)
+
+    slices = compute_evaluation_slices(
+        ranks=ranks,
+        targets=targets,
+        history_lengths=history_lengths,
+        data=data,
+        seed=seed,
+        n_boot=n_boot,
     )
 
-    return EvaluationResult(
-        split=split,
-        n_users=n_eval,
-        metrics=metrics,
-        per_user=per_user,
-        slices=slices,
-        evaluated_user_indices=eval_users,
-    )
+    return metrics, per_user, slices

@@ -1,4 +1,4 @@
-.PHONY: setup migrate migrate-create ingest seed dev health test lint build-backend build-frontend build-features train-model train recsys-audit recsys-prepare recsys-baselines recsys-two-tower recsys-ranker recsys-verify
+.PHONY: setup migrate migrate-create ingest seed dev health test lint build-backend build-frontend build-features train-model train recsys-audit recsys-prepare recsys-baselines recsys-two-tower recsys-ranker recsys-verify recsys-promote recsys-experiments recsys-reports
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 PYTHON    := python
@@ -96,6 +96,15 @@ recsys-ranker: ## Train the stage-two Learning-to-Rank recommender: make recsys-
 
 recsys-verify: ## Verify all latest recsys model runs against saved artifacts: make recsys-verify
 	cd $(BACKEND) && $(PYTHON) -m jobs.verify_recsys
+
+recsys-promote: ## Evaluate and promote the best recsys model to champion: make recsys-promote
+	cd $(BACKEND) && $(PYTHON) -m jobs.promote_recsys
+
+recsys-experiments: ## Run recsys ablations, cold-start study, and beyond-accuracy experiments: make recsys-experiments QUICK=1
+	cd $(BACKEND) && $(PYTHON) -m jobs.run_recsys_experiments $(if $(filter 1 true,$(QUICK)),--quick,)
+
+recsys-reports: ## Generate and synchronize all recsys evidence reports: make recsys-reports
+	cd $(BACKEND) && $(PYTHON) -m jobs.generate_reports
 
 
 
