@@ -1,4 +1,4 @@
-.PHONY: setup migrate migrate-create ingest seed dev health test lint build-backend build-frontend build-features train-model train recsys-audit recsys-prepare recsys-baselines recsys-two-tower recsys-ranker recsys-verify recsys-promote recsys-experiments recsys-reports
+.PHONY: setup migrate migrate-create ingest seed dev health test lint build-backend build-frontend build-features train-model train recsys-audit recsys-prepare recsys-baselines recsys-two-tower recsys-ranker recsys-verify recsys-promote recsys-experiments recsys-reports recsys-project recsys-serve-check recsys-all
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 PYTHON    := python
@@ -103,13 +103,28 @@ recsys-promote: ## Evaluate and promote the best recsys model to champion: make 
 recsys-experiments: ## Run recsys ablations, cold-start study, and beyond-accuracy experiments: make recsys-experiments QUICK=1
 	cd $(BACKEND) && $(PYTHON) -m jobs.run_recsys_experiments $(if $(filter 1 true,$(QUICK)),--quick,)
 
+recsys-project: ## Project item embeddings to 2D UMAP and KMeans clusters: make recsys-project
+	cd $(BACKEND) && $(PYTHON) -m jobs.project_item_embeddings
+
 recsys-reports: ## Generate and synchronize all recsys evidence reports: make recsys-reports
 	cd $(BACKEND) && $(PYTHON) -m jobs.generate_reports
+
+recsys-serve-check: ## Verify online serving parity and score consistency: make recsys-serve-check
+	cd $(BACKEND) && $(PYTHON) -m jobs.serve_check
 
 recsys-reconcile: ## Run master reconciliation, clean stack training, and evidence freeze: make recsys-reconcile
 	cd $(BACKEND) && $(PYTHON) -m jobs.run_reconciliation
 
-recsys-all: recsys-reconcile ## Run full recsys pipeline end-to-end: make recsys-all
+recsys-all: ## Run full recsys pipeline end-to-end: make recsys-all
+	cd $(BACKEND) && $(PYTHON) -m jobs.audit_recsys_data
+	cd $(BACKEND) && $(PYTHON) -m jobs.prepare_recsys_data
+	cd $(BACKEND) && $(PYTHON) -m jobs.train_recsys_baselines --models popularity --models itemknn --models als --models content --evaluate-test
+	cd $(BACKEND) && $(PYTHON) -m jobs.train_two_tower --evaluate-test
+	cd $(BACKEND) && $(PYTHON) -m jobs.train_ranker --evaluate-test
+	cd $(BACKEND) && $(PYTHON) -m jobs.run_recsys_experiments
+	cd $(BACKEND) && $(PYTHON) -m jobs.project_item_embeddings
+	cd $(BACKEND) && $(PYTHON) -m jobs.generate_reports
+	cd $(BACKEND) && $(PYTHON) -m jobs.serve_check
 
 
 

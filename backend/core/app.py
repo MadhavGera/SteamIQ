@@ -68,6 +68,7 @@ def create_app() -> FastAPI:
     from api.market import router as market_router
     from api.match import router as match_router
     from api.recommendations import router as recommendations_router
+    from api.recsys import router as recsys_router
     from api.reviews import router as reviews_router
     from api.updates import router as updates_router
 
@@ -77,6 +78,7 @@ def create_app() -> FastAPI:
     app.include_router(market_router, prefix="/api/v1")
     app.include_router(updates_router, prefix="/api/v1")
     app.include_router(recommendations_router, prefix="/api/v1")
+    app.include_router(recsys_router, prefix="/api/v1")
     app.include_router(match_router, prefix="/api/v1")
     app.include_router(ingestion_router, prefix="/api/v1/ingestion")
 

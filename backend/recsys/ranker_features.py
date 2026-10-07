@@ -183,25 +183,43 @@ class UserFeatureCache:
         self.user_log_products: dict[int, float] = {}
         self.user_log_reviews: dict[int, float] = {}
         self.user_item_hours: dict[tuple[int, int], float] = {}
+        self.median_log_products: float = 4.9836
+        self.median_log_reviews: float = 2.3026
+        self.median_log_hours: float = 3.2809
 
         if data.users_df is not None and not data.users_df.empty:
             u_df = data.users_df
+            all_prods = []
+            all_revs = []
             for r in u_df.to_dict(orient="records"):
                 u_idx = int(r.get("user_idx", -1))
                 if u_idx >= 0:
                     prods = float(r.get("products", 0.0) or 0.0)
                     revs = float(r.get("reviews", 0.0) or 0.0)
-                    self.user_log_products[u_idx] = float(np.log1p(max(0.0, prods)))
-                    self.user_log_reviews[u_idx] = float(np.log1p(max(0.0, revs)))
+                    lp = float(np.log1p(max(0.0, prods)))
+                    lr = float(np.log1p(max(0.0, revs)))
+                    self.user_log_products[u_idx] = lp
+                    self.user_log_reviews[u_idx] = lr
+                    all_prods.append(lp)
+                    all_revs.append(lr)
+            if all_prods:
+                self.median_log_products = float(np.median(all_prods))
+            if all_revs:
+                self.median_log_reviews = float(np.median(all_revs))
 
         if data.train_df is not None and not data.train_df.empty and "hours" in data.train_df.columns:
+            all_hrs = []
             for u, it, h in zip(
                 data.train_df["user_idx"].to_numpy(),
                 data.train_df["item_idx"].to_numpy(),
                 data.train_df["hours"].to_numpy(),
                 strict=True,
             ):
-                self.user_item_hours[(int(u), int(it))] = float(h or 0.0)
+                h_val = float(h or 0.0)
+                self.user_item_hours[(int(u), int(it))] = h_val
+                all_hrs.append(np.log1p(max(0.0, h_val)))
+            if all_hrs:
+                self.median_log_hours = float(np.median(all_hrs))
 
 
 def build_features(
@@ -280,19 +298,22 @@ def build_features(
             hist_embs = item_cache.text_emb_norm[valid_hist]
             last_emb = item_cache.text_emb_norm[valid_hist[-1]]
 
-            # Mean log hours
-            hours_list = [user_cache.user_item_hours.get((u_id, int(h_it)), 0.0) for h_it in valid_hist]
-            mean_log_hrs = float(np.mean([np.log1p(max(0.0, h)) for h in hours_list]))
+            # Mean log hours (uses training interactions if known user, or median for anonymous)
+            if u_id is not None and u_id in user_cache.user_log_products:
+                hours_list = [user_cache.user_item_hours.get((u_id, int(h_it)), 0.0) for h_it in valid_hist]
+                mean_log_hrs = float(np.mean([np.log1p(max(0.0, h)) for h in hours_list]))
+            else:
+                mean_log_hrs = user_cache.median_log_hours
         else:
             med_price = 0.0
             med_year = 2020.0
             user_top20_tags = set()
             hist_embs = np.empty((0, 384), dtype=np.float32)
             last_emb = np.zeros(384, dtype=np.float32)
-            mean_log_hrs = 0.0
+            mean_log_hrs = user_cache.median_log_hours
 
-        u_log_prods = user_cache.user_log_products.get(u_id, 0.0)
-        u_log_revs = user_cache.user_log_reviews.get(u_id, 0.0)
+        u_log_prods = user_cache.user_log_products.get(u_id, user_cache.median_log_products) if u_id is not None else user_cache.median_log_products
+        u_log_revs = user_cache.user_log_reviews.get(u_id, user_cache.median_log_reviews) if u_id is not None else user_cache.median_log_reviews
 
         for c_idx, cand_item in enumerate(c_items):
             c_int = int(cand_item)

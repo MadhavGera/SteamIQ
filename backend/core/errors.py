@@ -61,6 +61,17 @@ class GameNotFoundError(NotFoundError):
     code = "game_not_found"
 
 
+class ReportNotFoundError(NotFoundError):
+    """Specific: recommender evaluation or audit report not found."""
+    code = "report_not_found"
+
+
+class ModelNotReadyError(SteamIQException):
+    """Recommender model or required artifacts are not available for inference."""
+    status_code = 503
+    code = "MODEL_NOT_READY"
+
+
 class ValidationError(SteamIQException):
     """Client sent invalid input."""
     status_code = 422
