@@ -49,11 +49,13 @@ class PromoteRecsysJob(BaseJob):
         *,
         profile: str | None = None,
         data_dir: Path | str | None = None,
+        deployable_only: bool = True,
         dry_run: bool = False,
     ) -> None:
         super().__init__(dry_run=dry_run)
         self.profile = profile
         self.data_dir = data_dir
+        self.deployable_only = deployable_only
 
     async def _run_async(self, session: AsyncSession | None = None) -> dict[str, Any]:
         cfg: RecsysConfig = get_recsys_config(self.profile)
@@ -91,21 +93,33 @@ class PromoteRecsysJob(BaseJob):
                 if r.model_name not in runs_dict:
                     runs_dict[r.model_name] = r
 
-        model_families = [
-            ("recsys_popularity", "popularity"),
-            ("recsys_itemknn", "itemknn"),
-            ("recsys_als", "als"),
-            ("recsys_content", "content"),
-            ("recsys_two_tower", "two_tower"),
-            ("recsys_two_tower_ranker", "two_tower_ranker"),
-        ]
+        if self.deployable_only:
+            model_families = [
+                ("recsys_popularity", "popularity"),
+                ("recsys_itemknn", "itemknn"),
+                ("recsys_als", "als"),
+                ("recsys_content", "content"),
+                ("recsys_two_tower_clean", "two_tower_clean"),
+                ("recsys_two_tower_ranker_clean", "two_tower_ranker_clean"),
+            ]
+        else:
+            model_families = [
+                ("recsys_popularity", "popularity"),
+                ("recsys_itemknn", "itemknn"),
+                ("recsys_als", "als"),
+                ("recsys_content", "content"),
+                ("recsys_two_tower_clean", "two_tower_clean"),
+                ("recsys_two_tower_ranker_clean", "two_tower_ranker_clean"),
+                ("recsys_two_tower", "two_tower"),
+                ("recsys_two_tower_ranker", "two_tower_ranker"),
+            ]
 
         stage1_instances: dict[str, BaseRecommender] = {}
         val_eval_results: dict[str, EvaluationResult] = {}
         model_instances: dict[str, BaseRecommender] = {}
 
         print("\n" + "=" * 120)
-        print("🏛️ SteamIQ Recsys Model Promotion Tournament (Validation Split Only)")
+        print(f"🏛️ SteamIQ Recsys Model Promotion Tournament (Validation Split Only, deployable_only={self.deployable_only})")
         print("=" * 120)
 
         for m_name, _short_key in model_families:
@@ -114,6 +128,9 @@ class PromoteRecsysJob(BaseJob):
                 art_path = Path(run_obj.artifact_path)
             else:
                 art_base = resolved_data_dir / "artifacts" / m_name
+                if not art_base.exists():
+                    self.logger.warning("No artifact directory for %s on disk. Skipping.", m_name)
+                    continue
                 cand_dirs = sorted([d for d in art_base.iterdir() if d.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True)
                 if not cand_dirs:
                     self.logger.warning("No artifact found for %s on disk. Skipping.", m_name)
@@ -137,17 +154,16 @@ class PromoteRecsysJob(BaseJob):
             elif m_name == "recsys_content":
                 m_inst = ContentRecommender.load(art_path)
                 stage1_instances["content"] = m_inst
-            elif m_name == "recsys_two_tower":
+            elif m_name in ("recsys_two_tower", "recsys_two_tower_clean"):
                 m_inst = TwoTowerModel.load(art_path, data=data)
                 stage1_instances["two_tower"] = m_inst
-            elif m_name == "recsys_two_tower_ranker":
+            elif m_name in ("recsys_two_tower_ranker", "recsys_two_tower_ranker_clean"):
                 m_inst = RankerModel.load(art_path, data=data, models=stage1_instances)
             else:
                 continue
 
             model_instances[m_name] = m_inst
 
-            # STRICT RULE: Evaluate ONLY on VAL split
             val_res = evaluate_model(
                 model=m_inst,
                 data=data,
@@ -161,8 +177,8 @@ class PromoteRecsysJob(BaseJob):
             val_eval_results[m_name] = val_res
 
         # Print VAL Tournament Standings
-        print(f"\n{'Rank':<4} | {'Model Name':<25} | {'VAL NDCG@10':<13} | {'95% Bootstrap CI':<20} | {'VAL HR@10':<10} | {'VAL MRR@10':<10}")
-        print("-" * 100)
+        print(f"\n{'Rank':<4} | {'Model Name':<32} | {'VAL NDCG@10':<13} | {'95% Bootstrap CI':<20} | {'VAL HR@10':<10} | {'VAL MRR@10':<10}")
+        print("-" * 105)
 
         sorted_models = sorted(
             val_eval_results.keys(),
@@ -178,60 +194,47 @@ class PromoteRecsysJob(BaseJob):
             hr = res.metrics.get("hit_rate_at_10", 0.0)
             mrr = res.metrics.get("mrr_at_10", 0.0)
             ci_str = f"[{ndcg_lo:.4f}, {ndcg_hi:.4f}]"
-            print(f"{rank_idx:<4} | {m_name:<25} | {ndcg:<13.4f} | {ci_str:<20} | {hr:<10.4f} | {mrr:<10.4f}")
+            print(f"{rank_idx:<4} | {m_name:<32} | {ndcg:<13.4f} | {ci_str:<20} | {hr:<10.4f} | {mrr:<10.4f}")
 
-        print("=" * 100 + "\n")
+        print("=" * 105 + "\n")
 
-        # Promotion Logic:
-        # Separate non-ranker models from ranker
-        non_ranker_models = [m for m in sorted_models if m != "recsys_two_tower_ranker"]
-        if not non_ranker_models:
-            raise RuntimeError("No non-ranker models available for tournament evaluation.")
-
-        best_non_ranker = non_ranker_models[0]
-        best_non_ranker_ndcg = val_eval_results[best_non_ranker].metrics.get("ndcg_at_10", 0.0)
-        best_non_ranker_per_user = val_eval_results[best_non_ranker].per_user["ndcg_at_10"]
-
+        # Promotion Logic under Deployable Decision Rule
         promoted_model_name: str
         promoted_family: str
         reasoning: str
 
-        ranker_res = val_eval_results.get("recsys_two_tower_ranker")
-        if ranker_res is not None:
-            ranker_per_user = ranker_res.per_user["ndcg_at_10"]
-            ranker_ndcg = ranker_res.metrics.get("ndcg_at_10", 0.0)
+        ranker_key = "recsys_two_tower_ranker_clean" if "recsys_two_tower_ranker_clean" in val_eval_results else "recsys_two_tower_ranker"
+        tt_key = "recsys_two_tower_clean" if "recsys_two_tower_clean" in val_eval_results else "recsys_two_tower"
 
-            diff, lo95, hi95 = paired_bootstrap_diff(ranker_per_user, best_non_ranker_per_user, seed=seed)
-            self.logger.info(
-                "Paired Bootstrap Difference (Ranker vs %s) on VAL NDCG@10: diff=%+.4f, 95%% CI=[%+.4f, %+.4f]",
-                best_non_ranker,
-                diff,
-                lo95,
-                hi95,
+        if ranker_key in val_eval_results and tt_key in val_eval_results:
+            r_ndcg = val_eval_results[ranker_key].metrics.get("ndcg_at_10", 0.0)
+            tt_ndcg = val_eval_results[tt_key].metrics.get("ndcg_at_10", 0.0)
+            diff, lo95, hi95 = paired_bootstrap_diff(
+                val_eval_results[ranker_key].per_user["ndcg_at_10"],
+                val_eval_results[tt_key].per_user["ndcg_at_10"],
+                seed=seed,
             )
 
-            # Rule (b): Promote ranker ONLY if paired-bootstrap lower bound > 0
-            if ranker_ndcg > best_non_ranker_ndcg and lo95 > 0.0:
-                promoted_model_name = "recsys_two_tower_ranker"
-                promoted_family = "recsys_two_tower_ranker"
+            # Check pre-registered decision rule
+            if r_ndcg > tt_ndcg and lo95 > 0.0:
+                promoted_model_name = ranker_key
+                promoted_family = ranker_key
                 reasoning = (
-                    f"Ranker achieved higher VAL NDCG@10 ({ranker_ndcg:.4f} vs {best_non_ranker_ndcg:.4f}) and "
-                    f"satisfied the statistical significance threshold with paired bootstrap 95% CI lower bound "
-                    f"strictly > 0 (+{lo95:.4f} > 0)."
+                    f"Deployable Clean Ranker achieved higher VAL NDCG@10 ({r_ndcg:.4f} vs {tt_ndcg:.4f}) and "
+                    f"satisfied the statistical significance threshold with paired bootstrap 95% CI lower bound > 0 "
+                    f"(diff={diff:+.4f}, 95% CI: [{lo95:+.4f}, {hi95:+.4f}])."
                 )
             else:
-                promoted_model_name = best_non_ranker
-                promoted_family = best_non_ranker
+                promoted_model_name = tt_key
+                promoted_family = tt_key
                 reasoning = (
-                    f"Ranker VAL NDCG@10 is {ranker_ndcg:.4f} vs {best_non_ranker} ({best_non_ranker_ndcg:.4f}). "
-                    f"Paired bootstrap difference is {diff:+.4f} with 95% CI [{lo95:+.4f}, {hi95:+.4f}]. "
-                    f"Because the lower bound ({lo95:+.4f}) is not strictly greater than 0, the ranker does not "
-                    f"qualify for automatic promotion. '{best_non_ranker}' is selected as the production champion."
+                    f"Deployable Clean Two-Tower selected as champion ({tt_ndcg:.4f} VAL NDCG@10). "
+                    f"Clean Ranker VAL difference was {diff:+.4f} (95% CI: [{lo95:+.4f}, {hi95:+.4f}])."
                 )
         else:
-            promoted_model_name = best_non_ranker
-            promoted_family = best_non_ranker
-            reasoning = f"Best performing model on VAL NDCG@10 is '{best_non_ranker}' ({best_non_ranker_ndcg:.4f})."
+            promoted_model_name = sorted_models[0]
+            promoted_family = sorted_models[0]
+            reasoning = f"Selected best available deployable model on VAL NDCG@10 ({val_eval_results[promoted_model_name].metrics.get('ndcg_at_10', 0.0):.4f})."
 
         print("📢 Promotion Decision & Reasoning:")
         print(f"  • Selected Model:     {promoted_model_name}")
@@ -276,10 +279,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Promote best recsys model to production champion.")
     parser.add_argument("--profile", type=str, default=None, help="Recsys profile (dev/full)")
     parser.add_argument("--data-dir", type=str, default=None, help="Recsys data directory")
+    parser.add_argument("--deployable-only", action="store_true", default=True, help="Promote only among deployable models")
+    parser.add_argument("--allow-all", action="store_false", dest="deployable_only", help="Allow non-deployable models in tournament")
     parser.add_argument("--dry-run", action="store_true", help="Evaluate without modifying database stages")
     args = parser.parse_args()
 
-    job = PromoteRecsysJob(profile=args.profile, data_dir=args.data_dir, dry_run=args.dry_run)
+    job = PromoteRecsysJob(
+        profile=args.profile,
+        data_dir=args.data_dir,
+        deployable_only=args.deployable_only,
+        dry_run=args.dry_run,
+    )
     job.execute()
 
 

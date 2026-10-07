@@ -306,8 +306,19 @@ async def _promote_champion_with_session(
     champion = max(runs, key=score_run)
     champion_score = score_run(champion)
 
-    # Archive previous production runs for this specific model_name
-    archive_stmt = (
+    # Demote all other production recsys runs (to 'candidate' for other models, 'archived' for older runs of same model)
+    demote_other_stmt = (
+        update(ModelRun)
+        .where(
+            ModelRun.model_name != champion.model_name,
+            ModelRun.model_name.like(f"{RECSYS_PREFIX}%"),  # safety guard
+            ModelRun.stage == "production",
+        )
+        .values(stage="candidate")
+    )
+    await session.execute(demote_other_stmt)
+
+    archive_same_stmt = (
         update(ModelRun)
         .where(
             ModelRun.model_name == champion.model_name,
@@ -317,7 +328,7 @@ async def _promote_champion_with_session(
         )
         .values(stage="archived")
     )
-    await session.execute(archive_stmt)
+    await session.execute(archive_same_stmt)
 
     # Promote champion
     champion.stage = "production"

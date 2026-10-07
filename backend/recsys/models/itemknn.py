@@ -24,7 +24,7 @@ from recsys.models.base import BaseRecommender
 
 class ItemKNNRecommender(BaseRecommender):
     """
-    Item-based k-Nearest Neighbors recommender using shrink-regularized cosine similarity.
+    item-item collaborative filtering with shrinkage cosine similarity, top-k neighbors per item (k=100).
     """
 
     name: str = "recsys_itemknn"

@@ -479,6 +479,8 @@ def train_ranker(
         lambdarank_truncation_level=config.lambdarank_truncation_level,
         random_state=config.seed,
         n_jobs=config.n_jobs,
+        deterministic=True,
+        force_row_wise=True,
     )
 
     fit_start = time.perf_counter()

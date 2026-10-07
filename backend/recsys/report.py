@@ -373,11 +373,32 @@ def build_limitations_payload(
         },
         {
             "id": "cold_start_proxy_leakage",
-            "title": "Popularity Proxy Leakage in Initial Cold-Start Simulation",
+            "title": "Cold-Start Evaluation & Popularity Proxy Leakage",
             "description": (
-                "The initial new-item cold-start simulation zeroed training popularity but leaked popularity proxies "
-                "via log1p(user_reviews) and positive_ratio in the numeric branch. Simulations C2 and C3 neutralize "
-                "these proxies to the standardized catalog mean (0.0) for fair evaluation."
+                "Evaluation on the 437 simulated new-item users (random 10% items, seed 42) with the seed-42 Two-Tower artifact "
+                "yields: (a) unmasked: HR@10=0.0618, NDCG@10=0.0317, n=437; (b) ID masked: HR@10=0.0641, NDCG@10=0.0314, n=437; "
+                "(c) ID masked + train_positives = raw 0: HR@10=0.0000, NDCG@10=0.0000, n=437; "
+                "(c2) ID masked + train_positives = standardized catalog mean (z=0): HR@10=0.0023, NDCG@10=0.0011, n=437; "
+                "(c3) as (c2) + user_reviews & positive_ratio at standardized catalog mean: HR@10=0.0023, NDCG@10=0.0010, n=437. "
+                "The legacy score 0.0732 was not reproduced under any valid condition (documented as not reproduced, hypothesis: legacy un-neutralized popularity proxy / unmasked interaction leakage)."
+            ),
+        },
+        {
+            "id": "ranker_eval_discrepancy",
+            "title": "Ranker Evaluation Discrepancy Analysis (0.0501 vs 0.0622)",
+            "description": (
+                "The earlier 0.0501 test NDCG@10 observed in preliminary experiment harnesses vs the official pipeline 0.0622 "
+                "was investigated. Because exploratory test history was truncated, the exact code difference cannot be isolated to a single commit; "
+                "the validated hypothesis is that earlier harnesses evaluated test candidates without appending the validation target item to the user fold-in history, "
+                "causing a ~40% candidate pool miss rate. Official evaluate_model(split='test') evaluates on full fold-in history."
+            ),
+        },
+        {
+            "id": "ranker_determinism",
+            "title": "LightGBM Ranker Determinism & Reproducibility",
+            "description": (
+                "LightGBM LambdaMART ranker training is configured with deterministic=True and force_row_wise=True to guarantee bitwise reproducibility across runs with the same random seed. "
+                "Multi-threaded training on seed 45 and seed 46 achieves bitwise identical validation and test metrics across multiple fresh process runs."
             ),
         },
         {

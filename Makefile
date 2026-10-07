@@ -106,6 +106,11 @@ recsys-experiments: ## Run recsys ablations, cold-start study, and beyond-accura
 recsys-reports: ## Generate and synchronize all recsys evidence reports: make recsys-reports
 	cd $(BACKEND) && $(PYTHON) -m jobs.generate_reports
 
+recsys-reconcile: ## Run master reconciliation, clean stack training, and evidence freeze: make recsys-reconcile
+	cd $(BACKEND) && $(PYTHON) -m jobs.run_reconciliation
+
+recsys-all: recsys-reconcile ## Run full recsys pipeline end-to-end: make recsys-all
+
 
 
 # ─── Decision Intelligence (Phase 5) ──────────────────────────────────────────
