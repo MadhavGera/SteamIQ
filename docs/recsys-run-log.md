@@ -3,14 +3,25 @@
 > **Pipeline Execution Run Record & Audit Trail**  
 > **Profile:** `dev` (`RECSYS_PROFILE=dev`)  
 > **Dataset Version:** `c662b8232dc0`  
-> **Git Tag:** `recsys-frozen`  
-> **Git Commit:** `9e9b5b8c7d6e1661e967feb25426b0b87fa11166`  
-> **Execution Timestamp:** `2026-10-07T21:30:15Z`  
-> **Status:** ✅ **ALL STAGES PASSED**
+> **Git Tag Reference:** `recsys-frozen` (commit `427f9a6`)  
+> **Audit & Review Date:** `2026-10-08`  
+> **Status:** ✅ **VERIFIED & AUDITED**
 
 ---
 
-## 1. Environment & Package Versions
+## 1. Provenance & Execution Model
+
+To ensure reproducibility without mutating frozen benchmark results:
+1. **Frozen Benchmark Reports (2026-10-07):** The core offline metrics (Leaderboard, Modality Ablations, Ranker Feature Drops, Beyond-Accuracy Diversity, and Limitations) originate from the frozen pipeline execution on dataset `c662b8232dc0` (git tag `recsys-frozen` at `427f9a6`). The canonical JSON payloads are persisted in `backend/data/recsys/reports/` (`leaderboard.json`, `ablations.json`, `beyond_accuracy.json`, `cold_start.json`, `limitations.json`).
+2. **Real Verification Runs (2026-10-08):**
+   - **Embedding Projection (`project_item_embeddings`):** Executed to generate 2D UMAP + KMeans clusters and populate the PostgreSQL `serving_rec_item_projection` database mart.
+   - **Serving Parity & Latency SLA (`serve_check`):** Executed live via `python -m jobs.serve_check` to verify exact scoring parity ($< 10^{-5}$) across 500 users, ranker `explain=True` vs `explain=False` identical top-10 outputs, and CPU latency budgets.
+   - **Cold-Start CI Bootstrap:** Recomputed exact mean catalog ranks and 95% bootstrap confidence intervals directly from the saved item rank arrays in `cold_start.json`.
+   - **Automated Test Suite:** Executed live via `pytest tests/` (163 passed) and `ruff check`.
+
+---
+
+## 2. Environment & Package Versions
 
 | Package / Runtime | Exact Version | Platform / Architecture |
 | :--- | :--- | :--- |
@@ -26,32 +37,19 @@
 
 ---
 
-## 2. Execution Configuration & Seeds
+## 3. Pipeline Architecture & Execution Stages
 
-- **Profile:** `dev`
-- **Catalog Universe Size:** 3,000 items
-- **User Universe Sample:** 20,000 users (165,741 training interactions)
-- **Evaluation Holdout Users:** 5,000 disjoint users
-- **Hyperparameter Tuning Users:** 5,000 disjoint users
-- **Primary Random Seed:** `42`
-- **Multi-Seed Robustness Seeds:** `[42, 43, 44, 45, 46]`
-
----
-
-## 3. End-to-End Pipeline Stage Timing & Commands
-
-| Stage # | Stage Name | Exact Command | Wall-Clock Time | Status |
-| :---: | :--- | :--- | :---: | :---: |
-| **1** | **Data Audit** | `python -m jobs.audit_recsys_data` | **178.32s** | ✅ PASS |
-| **2** | **Data Preparation** | `python -m jobs.prepare_recsys_data` | **93.03s** | ✅ PASS |
-| **3** | **Baselines Training** | `python -m jobs.train_recsys_baselines --models popularity --models itemknn --models als --models content --evaluate-test` | **109.00s** | ✅ PASS |
-| **4** | **Two-Tower Neural Training** | `python -m jobs.train_two_tower --evaluate-test` | **882.46s** | ✅ PASS |
-| **5** | **Stage-Two Ranker Training** | `python -m jobs.train_ranker --evaluate-test` | **188.65s** | ✅ PASS |
-| **6** | **Scientific Experiments & Ablations** | `python -m jobs.run_recsys_experiments` | **1,298.40s** | ✅ PASS |
-| **7** | **2D Embedding Projection** | `python -m jobs.project_item_embeddings` | **26.24s** | ✅ PASS |
-| **8** | **Reports & Evidence Materialization** | `python -m jobs.generate_reports` | **3.15s** | ✅ PASS |
-| **9** | **Serving Parity & Latency Verification** | `python -m jobs.serve_check` | **218.45s** | ✅ PASS |
-| **—** | **Total Pipeline Wall-Clock Time** | `RECSYS_PROFILE=dev make recsys-all` | **2,997.70s (~49.9 min)** | ✅ PASS |
+| Stage # | Stage Name | Exact Command | Data Source / Artifact Path | Verification Status |
+| :---: | :--- | :--- | :--- | :---: |
+| **1** | **Data Audit** | `python -m jobs.audit_recsys_data` | `data/recsys/interim/audit_summary.json` | ✅ Frozen (2026-10-07) |
+| **2** | **Data Preparation** | `python -m jobs.prepare_recsys_data` | `data/recsys/processed/*.parquet` | ✅ Frozen (2026-10-07) |
+| **3** | **Baselines Training** | `python -m jobs.train_recsys_baselines` | `data/recsys/artifacts/recsys_*` | ✅ Frozen (2026-10-07) |
+| **4** | **Two-Tower Neural Training** | `python -m jobs.train_two_tower` | `data/recsys/artifacts/recsys_two_tower_clean` | ✅ Frozen (2026-10-07) |
+| **5** | **Stage-Two Ranker Training** | `python -m jobs.train_ranker` | `data/recsys/artifacts/recsys_two_tower_ranker_clean` | ✅ Frozen (2026-10-07) |
+| **6** | **Scientific Experiments** | `python -m jobs.run_recsys_experiments` | `data/recsys/reports/*.json` | ✅ Frozen (2026-10-07) |
+| **7** | **2D Embedding Projection** | `python -m jobs.project_item_embeddings` | DB table `serving_rec_item_projection` | ✅ Live Run Verified |
+| **8** | **Reports Materialization** | `python -m jobs.generate_reports` | DB table `serving_rec_reports` | ✅ Live Run Verified |
+| **9** | **Serving Parity & Latency** | `python -m jobs.serve_check` | `jobs/serve_check.py` | ✅ Live Run Verified |
 
 ---
 
@@ -78,16 +76,14 @@
 ## 5. Verification Checklist & Test Suites
 
 - **Backend PyTest Suite:**
-  - `pytest tests/ -v --tb=short`: **163 passed, 0 failed** in 109.14s.
+  - `pytest tests/ -v --tb=short`: **163 passed, 0 failed**.
 - **Backend Code Quality & Linting:**
-  - `ruff check .`: **All checks passed (0 errors)**.
+  - `ruff check .`: **All checks passed (0 errors)** on recsys code.
 - **Frontend Quality Assurance:**
-  - `next lint`: **0 errors**.
   - `scripts/check_honest_fallbacks.py`: **41 files scanned, 100% compliant** with `STEAMIQ-FE-0001`.
   - `scripts/check_no_hardcoded_metrics.py`: **43 files scanned, 0 hardcoded metric literals found**.
   - `npm run build`: **Compiled successfully, 8 static/dynamic routes generated**.
-- **Online Inference Parity & Latency SLA:**
-  - Max score disparity between offline evaluation and online `RecommenderService`: `0.00e+00` (Exact parity).
-  - P95 Two-Tower retrieval latency: `1.24 ms` (Budget: `< 1,000 ms`).
-  - P95 Two-Tower Ranker scoring latency: `3.21 ms` (Budget: `< 1,000 ms`).
-  - P95 Two-Tower Ranker TreeSHAP explanation latency: `108.17 ms` (Budget: `< 1,000 ms`).
+- **Online Inference Parity & Latency SLA (`serve_check.py`):**
+  - Offline vs Online 500-User Scoring Parity: **Exact score parity ($< 10^{-5}$) and 0 order mismatches**.
+  - Ranker Explain Parity: **`explain=True` vs `explain=False` generates identical top-10 ranked lists**.
+  - CPU Latency Budget: **P95 $< 1,000\text{ ms}$ for all models with and without SHAP explanations**.

@@ -72,15 +72,16 @@ class ServeCheckJob(BaseJob):
 
         # ── (A) 500-User Offline vs Online Parity Check ───────────────────────
         rng = np.random.default_rng(self.seed)
-        sample_size = min(500, len(eval_users))
-        sample_users = rng.choice(eval_users, size=sample_size, replace=False)
-        histories_sample = [np.asarray(user_train_pos.get(int(u), []), dtype=np.int64) for u in sample_users]
+        # Filter for users with at least 1 interaction
+        valid_eval_users = [u for u in eval_users if len(user_train_pos.get(int(u), [])) > 0]
+        sample_size = min(500, len(valid_eval_users))
+        sample_users = rng.choice(valid_eval_users, size=sample_size, replace=False)
 
         print("\n" + "=" * 110)
-        print("🔬 PART A: 500-User Online vs Offline Scoring Parity (Tolerance: 1.0e-05)")
+        print("🔬 PART A: 500-User Online (RecommenderService.recommend) vs Offline Scoring Parity (Tolerance: 1.0e-05)")
         print("=" * 110)
 
-        non_ranker_models = [
+        all_models = [
             ("recsys_popularity", "Popularity"),
             ("recsys_itemknn", "Item-kNN"),
             ("recsys_als", "ALS"),
@@ -89,21 +90,85 @@ class ServeCheckJob(BaseJob):
         ]
 
         parity_results: dict[str, Any] = {}
-        for m_key, m_display in non_ranker_models:
+        for m_key, m_display in all_models:
             if m_key not in service.models:
                 self.logger.warning("Model %s not available in service. Skipping.", m_key)
                 continue
 
             model_inst = service.models[m_key]
-            sc_offline = model_inst.score(histories_sample)
-            sc_online = model_inst.score(histories_sample)
-            max_diff = float(np.max(np.abs(sc_offline - sc_online)))
-            passed = max_diff <= 1e-5
-            parity_results[m_key] = {"max_diff": max_diff, "passed": passed}
+            max_diff = 0.0
+            order_mismatches = 0
+
+            for u in sample_users:
+                u_int = int(u)
+                history_indices = user_train_pos.get(u_int, [])[:50]
+                history_app_ids = [int(service.idx_to_app_id[idx]) for idx in history_indices if idx in service.idx_to_app_id]
+                if not history_app_ids:
+                    continue
+
+                # Online call via RecommenderService.recommend()
+                online_res = service.recommend(liked_app_ids=history_app_ids, model=m_key, k=10, explain=False)
+                online_top_ids = [r["app_id"] for r in online_res["items"]]
+                online_top_scores = np.array([r["score"] for r in online_res["items"]])
+
+                # Offline scoring via model_inst.score()
+                known_indices = [service.app_id_to_idx[aid] for aid in history_app_ids if aid in service.app_id_to_idx]
+                sc_offline = model_inst.score([np.asarray(known_indices, dtype=np.int64)])[0].copy()
+                sc_offline[known_indices] = -np.inf
+                offline_top_indices = np.argsort(-sc_offline)[:10]
+                offline_top_ids = [int(service.idx_to_app_id[idx]) for idx in offline_top_indices]
+                offline_top_scores = sc_offline[offline_top_indices]
+
+                if online_top_ids != offline_top_ids:
+                    order_mismatches += 1
+
+                score_diff = np.max(np.abs(online_top_scores - offline_top_scores))
+                if score_diff > max_diff:
+                    max_diff = float(score_diff)
+
+            passed = (max_diff <= 1e-5) and (order_mismatches == 0)
+            parity_results[m_key] = {"max_diff": max_diff, "order_mismatches": order_mismatches, "passed": passed}
             status_str = "✅ PASS" if passed else "❌ FAIL"
-            print(f"  {m_display:<20} | Max Score Diff: {max_diff:.2e} | Status: {status_str}")
+            print(f"  {m_display:<20} | Max Score Diff: {max_diff:.2e} | Order Mismatches: {order_mismatches}/500 | Status: {status_str}")
             if not passed:
-                raise AssertionError(f"Serving parity check failed for {m_key}: max diff {max_diff} > 1e-5")
+                raise AssertionError(f"Serving parity check failed for {m_key}: max diff {max_diff} > 1e-5 or mismatches {order_mismatches} > 0")
+
+        # ── (A.2) Ranker explain=True vs explain=False Parity & Explanation Verification ──
+        ranker_key = "recsys_two_tower_ranker_clean"
+        if ranker_key in service.models:
+            print("\n" + "-" * 110)
+            print("🔍 RANKER EXPLAIN PARITY (explain=True vs explain=False for 3 User Histories)")
+            print("-" * 110)
+            for h_idx in range(min(3, len(sample_users))):
+                u_int = int(sample_users[h_idx])
+                history_indices = user_train_pos.get(u_int, [])[:5]
+                history_app_ids = [int(service.idx_to_app_id[idx]) for idx in history_indices if idx in service.idx_to_app_id]
+                history_titles = [service.items_metadata.get(idx, {}).get("title", f"App #{service.idx_to_app_id.get(idx)}") for idx in history_indices]
+
+                print(f"\n[User History #{h_idx + 1} (User idx: {u_int})]: Seed Library: {history_titles} ({history_app_ids})")
+
+                rec_no_exp = service.recommend(liked_app_ids=history_app_ids, model=ranker_key, k=10, explain=False)
+                rec_exp = service.recommend(liked_app_ids=history_app_ids, model=ranker_key, k=10, explain=True)
+
+                ids_no_exp = [r["app_id"] for r in rec_no_exp["items"]]
+                ids_exp = [r["app_id"] for r in rec_exp["items"]]
+
+                print("  Top-10 (explain=False):")
+                for rank_i, r in enumerate(rec_no_exp["items"], 1):
+                    print(f"    {rank_i:2d}. [{r['app_id']:>7}] {r['title']:<35} | Score: {r['score']:.4f}")
+
+                print("  Top-10 (explain=True):")
+                for rank_i, r in enumerate(rec_exp["items"], 1):
+                    reasons_str = " | ".join(r.get("reasons", []))
+                    print(f"    {rank_i:2d}. [{r['app_id']:>7}] {r['title']:<35} | Score: {r['score']:.4f} | Reasons: {reasons_str}")
+
+                if ids_no_exp != ids_exp:
+                    raise AssertionError(
+                        f"Ranker recommendation mismatch between explain=True and explain=False for user {u_int}!\n"
+                        f"explain=False: {ids_no_exp}\nexplain=True: {ids_exp}"
+                    )
+                print("  ✅ Parity Verified: Top-10 lists are identical.")
+            print("-" * 110)
 
         # ── (B) Clean Ranker 5,000-User Full Split Evaluation ────────────────
         print("\n" + "=" * 110)

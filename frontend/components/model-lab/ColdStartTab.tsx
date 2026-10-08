@@ -5,25 +5,34 @@ import { RecsysEmptyState } from "../recsys/RecsysEmptyState";
 
 interface StudyModelRow {
   model_name?: string;
+  hits_k?: number;
+  n_users?: number;
   ndcg_at_10?: number;
   hit_rate_at_10?: number;
+  mean_rank?: number;
+  mean_rank_lo95?: number;
+  mean_rank_hi95?: number;
   n_eval_items?: number;
 }
 
 interface ColdStartStudy {
   study_type?: string;
   variant_label?: string;
+  primary_evidence?: boolean;
+  is_optimistic_proxy?: boolean;
   n_new_items?: number;
   n_eval_users?: number;
+  n_held_out_items?: number;
   limitations_note?: string;
+  note?: string;
   is_fair_simulation?: boolean;
   models?: StudyModelRow[] | Record<string, StudyModelRow>;
 }
 
 interface ColdStartPayload {
+  item_holdout_study?: ColdStartStudy;
   sparse_targets_study?: ColdStartStudy;
   simulated_new_items_study?: ColdStartStudy;
-  item_holdout_study?: ColdStartStudy;
   metadata?: Record<string, unknown>;
 }
 
@@ -42,11 +51,11 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
     );
   }
 
-  const newItemsStudy = payload.simulated_new_items_study;
-  const sparseStudy = payload.sparse_targets_study;
   const holdoutStudy = payload.item_holdout_study;
+  const sparseStudy = payload.sparse_targets_study;
+  const newItemsStudy = payload.simulated_new_items_study;
 
-  const renderStudyTable = (study?: ColdStartStudy, title?: string) => {
+  const renderStudyTable = (study?: ColdStartStudy, title?: string, subtitle?: string) => {
     if (!study || !study.models) return null;
 
     const rows: StudyModelRow[] = Array.isArray(study.models)
@@ -56,12 +65,46 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
           ...data,
         }));
 
+    const noteText = study.note ?? study.limitations_note;
+
     return (
-      <div style={{ marginBottom: "24px" }}>
+      <div style={{ marginBottom: "28px" }}>
         <div style={{ marginBottom: "8px" }}>
-          <h4 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>{title}</h4>
-          {study.variant_label && (
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{study.variant_label}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <h4 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)" }}>{title}</h4>
+            {study.primary_evidence && (
+              <span
+                style={{
+                  fontSize: "10px",
+                  padding: "2px 6px",
+                  borderRadius: "var(--radius-xs)",
+                  backgroundColor: "rgba(16, 185, 129, 0.15)",
+                  color: "var(--success)",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                }}
+              >
+                Primary Benchmark
+              </span>
+            )}
+            {study.is_optimistic_proxy && (
+              <span
+                style={{
+                  fontSize: "10px",
+                  padding: "2px 6px",
+                  borderRadius: "var(--radius-xs)",
+                  backgroundColor: "rgba(245, 158, 11, 0.15)",
+                  color: "var(--warning)",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                }}
+              >
+                Optimistic Proxy
+              </span>
+            )}
+          </div>
+          {subtitle && (
+            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>{subtitle}</p>
           )}
         </div>
 
@@ -70,36 +113,46 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
             <thead>
               <tr>
                 <th>Model</th>
+                <th>Hits / Sample</th>
                 <th>NDCG@10</th>
                 <th>HR@10</th>
-                <th>Evaluated Items / Users</th>
+                <th>Mean Rank (95% CI)</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, idx) => (
-                <tr key={idx}>
-                  <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>
-                    {/* HONEST-FALLBACK: Default model name in cold start study */}
-                    {row.model_name ?? "Model"}
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono, monospace)" }}>
-                    {row.ndcg_at_10 !== undefined ? row.ndcg_at_10.toFixed(4) : "—"}
-                  </td>
-                  <td style={{ fontFamily: "var(--font-mono, monospace)" }}>
-                    {row.hit_rate_at_10 !== undefined ? row.hit_rate_at_10.toFixed(4) : "—"}
-                  </td>
-                  <td style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                    {/* HONEST-FALLBACK: Default sample count if not specified */}
-                    {row.n_eval_items ?? study.n_new_items ?? study.n_eval_users ?? "All"}
-                  </td>
-                </tr>
-              ))}
+              {rows.map((row, idx) => {
+                const sampleCount = row.n_users ?? study.n_eval_users ?? 0;
+                const hitsStr = row.hits_k !== undefined && sampleCount > 0 ? `${row.hits_k} / ${sampleCount}` : "—";
+                const meanRankStr =
+                  row.mean_rank !== undefined && row.mean_rank_lo95 !== undefined && row.mean_rank_hi95 !== undefined
+                    ? `${row.mean_rank.toFixed(1)} [${row.mean_rank_lo95.toFixed(1)}, ${row.mean_rank_hi95.toFixed(1)}]`
+                    : row.mean_rank !== undefined
+                    ? row.mean_rank.toFixed(1)
+                    : "—";
+
+                return (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                      {/* HONEST-FALLBACK: Default model name in cold start study */}
+                      {row.model_name ?? "Model"}
+                    </td>
+                    <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{hitsStr}</td>
+                    <td style={{ fontFamily: "var(--font-mono, monospace)" }}>
+                      {row.ndcg_at_10 !== undefined ? row.ndcg_at_10.toFixed(4) : "—"}
+                    </td>
+                    <td style={{ fontFamily: "var(--font-mono, monospace)" }}>
+                      {row.hit_rate_at_10 !== undefined ? row.hit_rate_at_10.toFixed(4) : "—"}
+                    </td>
+                    <td style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "12px" }}>{meanRankStr}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         {/* Verbatim limitations caveat text */}
-        {study.limitations_note && (
+        {noteText && (
           <div
             style={{
               marginTop: "8px",
@@ -112,8 +165,10 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
               lineHeight: 1.5,
             }}
           >
-            <strong style={{ color: "var(--warning)" }}>Caveat / Protocol Note: </strong>
-            {study.limitations_note}
+            <strong style={{ color: study.primary_evidence ? "var(--success)" : "var(--warning)" }}>
+              {study.primary_evidence ? "Protocol Description: " : "Caveat / Simulation Note: "}
+            </strong>
+            {noteText}
           </div>
         )}
       </div>
@@ -124,29 +179,32 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
     <div>
       <div style={{ marginBottom: "20px" }}>
         <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
-          Cold-Start & Catalog Slice Diagnostics
+          Cold-Start & Discovery Diagnostics
         </h3>
         <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Benchmarking model performance under zero-interaction cold items, sparse user histories, and head vs tail items.
+          Benchmarking recommendations under zero-interaction catalog holdouts and inference-time masking simulations.
         </p>
       </div>
 
-      {/* 1. Simulated New Items Study */}
-      {renderStudyTable(
-        newItemsStudy,
-        "Zero-Interaction Simulated New Items Study"
-      )}
-
-      {/* 2. Sparse Targets Study */}
-      {renderStudyTable(
-        sparseStudy,
-        "Sparse Target & Short User History Slices"
-      )}
-
-      {/* 3. Item Holdout Study */}
+      {/* 1. Primary Evidence: True Item Holdout Study */}
       {renderStudyTable(
         holdoutStudy,
-        "Catalog Stratification (Head, Torso, Tail Items)"
+        "1. True Item Holdout Study (90% Catalog Retrained, N=184 Users)",
+        "300 torso/tail items completely withheld from training pairs; models retrained from scratch."
+      )}
+
+      {/* 2. Sparse Targets Subgroup Study */}
+      {renderStudyTable(
+        sparseStudy,
+        "2. Sparse Targets Subgroup Study (<= 10 Train Positives, N=553 Users)",
+        "Target item ID masked at inference on model trained with full catalog (optimistic semantic prior proxy)."
+      )}
+
+      {/* 3. Simulated New Items Study */}
+      {renderStudyTable(
+        newItemsStudy,
+        "3. Simulated 10% New Items Study (C2 Fair Simulation, N=437 Users)",
+        "Inference-time masking simulation with rating and review popularity proxies neutralized to catalog mean."
       )}
     </div>
   );

@@ -127,16 +127,33 @@ User-level paired difference tests ($\Delta = \text{NDCG}_A(u) - \text{NDCG}_B(u
 
 ## 8. Cold-Start Evaluation & Empirical Reconciliation
 
-### A. Experimental Regimes
-1. **Masked Target ID Simulation (Sparse Targets $\le 10$ train positives, $N = 553$ users):** Tests inference when the target item was present in the training universe but its ID embedding is replaced by the UNK token at test time.
-2. **Simulated New Items ($N = 437$ users, 300 items):** Random 10% catalog masked with train popularity zeroed and review proxies standardized to neutral 0.
-3. **True Item Holdout ($N = 184$ users, 300 items):** 10% torso/tail items completely excluded from training set interactions and the model retrained from scratch on 90% of the catalog.
+### A. Experimental Regimes (Lead Benchmark vs Optimistic Proxy)
+1. **True Item Holdout (Primary Benchmark — $N = 184$ users, 300 items):** 10% torso/tail items completely excluded from training set interactions and the Two-Tower retriever retrained from scratch on the remaining 90% catalog. This is the only realistic test of true cold-start items with 0 interactions.
+2. **Simulated New Items ($N = 437$ users, 300 items):** Random 10% catalog masked with train popularity zeroed and review proxies standardized to neutral 0.0.
+3. **Masked Target ID Simulation / Sparse Targets (Optimistic Proxy — $N = 553$ users):** Items present in the training universe (targets with $\le 10$ train positives) whose learned ID embedding is replaced by the UNK token at test time. This represents an optimistic upper bound because the item representation benefited from co-occurrence updates during batch training.
 
-### B. Findings & Reconciliation
-- **Masked Target ID Simulation ($N = 553$):** Two-Tower masked achieves $\text{NDCG@10} = 0.0040$ ($[0.0011, 0.0080]$) and $\text{HR@10} = 0.0108$ with a mean catalog rank of $\sim 828 / 3,000$ (substantially better than random $\sim 1,500$). This proves that pre-trained text and tag embeddings allow the item tower to act as a semantic prior for items with sparse interactions.
-- **Simulated New Items ($N = 437$):** Content cosine achieves $\text{NDCG@10} = 0.0085$ ($[0.0034, 0.0152]$) and $\text{HR@10} = 0.0206$, beating random guessing ($0.0015$). Collaborative baselines collapse to $0.0000$.
-- **True Item Holdout ($N = 184$):** When items have zero training interactions, Two-Tower achieves $\text{NDCG@10} = 0.0000$ with a mean test rank of $1,419 / 3,000$ (essentially random). This proves that content representations alone without collaborative interaction density cannot break into the top 10 next-item recommendations. Content cosine achieves $\text{NDCG@10} = 0.0078$ and $\text{HR@10} = 0.0217$.
-- **Caveat:** Offline simulation uses static metadata created during the game's lifetime; prospective live A/B evaluation is required to measure true discovery of newly released titles.
+### B. Empirical Findings & Exact Report Metrics
+- **True Item Holdout ($N = 184$ users):**
+  - `recsys_content`: $\text{NDCG@10} = 0.0078$ ($[0.0006, 0.0163]$), $\text{HR@10} = 0.0217$ ($[0.0054, 0.0435]$, $4 / 184$ hits), Mean Catalog Rank $= 1,084.6$ ($[963.7, 1,212.3]$ out of 3,000). Content-based matching (MiniLM text + tags) is the only model that reliably discovers zero-interaction titles.
+  - `recsys_two_tower_item_holdout`: $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits), Mean Catalog Rank $= 2,126.6$ ($[2,015.1, 2,238.7]$). Two-Tower retrained with zero interactions cannot overcome the popularity and collaborative priors of established items to place new items into the top 10.
+  - `random`: $\text{NDCG@10} = 0.0008$, $\text{HR@10} = 0.0054$ ($1 / 184$ hits), Mean Catalog Rank $= 1,436.5$ ($[1,317.1, 1,560.5]$).
+  - Collaborative Baselines (`recsys_popularity`, `recsys_als`, `recsys_itemknn`): $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits), Mean Catalog Rank $> 2,200$.
+
+- **Simulated New Items ($N = 437$ users):**
+  - `recsys_content`: $\text{NDCG@10} = 0.0085$ ($[0.0034, 0.0152]$), $\text{HR@10} = 0.0206$ ($9 / 437$ hits), Mean Catalog Rank $= 1,018.3$ ($[938.8, 1,098.4]$).
+  - `recsys_two_tower_simulated`: $\text{NDCG@10} = 0.0000$ ($0 / 437$ hits), Mean Catalog Rank $= 2,182.3$ ($[2,104.9, 2,261.3]$).
+  - `random`: $\text{NDCG@10} = 0.0015$, $\text{HR@10} = 0.0046$ ($2 / 437$ hits), Mean Catalog Rank $= 1,461.3$.
+
+- **Sparse Targets / Masked ID Simulation (Optimistic Proxy — $N = 553$ users):**
+  - `recsys_content`: $\text{NDCG@10} = 0.0054$ ($[0.0015, 0.0101]$), $\text{HR@10} = 0.0108$ ($6 / 553$ hits), Mean Catalog Rank $= 1,368.5$ ($[1,297.8, 1,438.4]$).
+  - `recsys_two_tower_masked`: $\text{NDCG@10} = 0.0036$ ($[0.0008, 0.0071]$), $\text{HR@10} = 0.0090$ ($5 / 553$ hits), Mean Catalog Rank $= 1,143.5$ ($[1,074.3, 1,217.0]$).
+  - `random`: $\text{NDCG@10} = 0.0012$, $\text{HR@10} = 0.0036$ ($2 / 553$ hits), Mean Catalog Rank $= 1,481.6$.
+
+### C. Scientific Reconciliation & Production Architecture Rule
+1. **Collaborative filtering models completely fail on zero-interaction items** ($\text{NDCG@10} = 0.0000$).
+2. **Pure Content Cosine (MiniLM text + tag embeddings) is the superior cold-start mechanism** ($\text{NDCG@10} = 0.0078$, mean rank $1,084.6$ vs random $1,436.5$).
+3. **ID masking is an optimistic proxy:** Masking the ID embedding yields $\text{NDCG@10} = 0.0036$, but true holdout retrained from scratch yields $0.0000$ in top-10 ranking.
+4. **Architectural Recommendation:** For new item ingestion, newly published games must be surfaced via pure content-similarity retrieval until accumulating $\ge 10$ organic user interactions.
 
 ---
 
