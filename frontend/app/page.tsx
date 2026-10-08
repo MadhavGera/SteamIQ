@@ -1,398 +1,375 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useTransition } from "react";
 import {
   api,
-  type GameSummary,
-  type GameSearchResult,
+  RecsysModelInfo,
+  RecsysCatalogItem,
+  RecsysForYouResponse,
+  RecsysHealthResponse,
 } from "@/lib/api";
+import { RecsysLibraryBuilder } from "@/components/recsys/RecsysLibraryBuilder";
+import { RecsysModelSelector } from "@/components/recsys/RecsysModelSelector";
+import { RecsysResultCard } from "@/components/recsys/RecsysResultCard";
+import { RecsysCompareView } from "@/components/recsys/RecsysCompareView";
+import { RecsysProvenanceFooter } from "@/components/recsys/RecsysProvenanceFooter";
+import { RecsysEmptyState } from "@/components/recsys/RecsysEmptyState";
 
-const FEATURED_GAMES = [
-  {
-    app_id: 367520,
-    name: "Hollow Knight",
-    genre: "Metroidvania · Action-Adventure",
-    gradient: "linear-gradient(135deg, #0f4a73, #0e212f)",
-    image: "https://cdn.cloudflare.steamstatic.com/steam/apps/367520/header.jpg",
-  },
-  {
-    app_id: 1145360,
-    name: "Hades",
-    genre: "Rogue-like · Action RPG",
-    gradient: "linear-gradient(135deg, #243745, #0e212f)",
-    image: "https://cdn.cloudflare.steamstatic.com/steam/apps/1145360/header.jpg",
-  },
-  {
-    app_id: 504230,
-    name: "Celeste",
-    genre: "Precision Platformer · Indie",
-    gradient: "linear-gradient(135deg, #93000a, #0e212f)",
-    image: "https://cdn.cloudflare.steamstatic.com/steam/apps/504230/header.jpg",
-  },
-  {
-    app_id: 413150,
-    name: "Stardew Valley",
-    genre: "Farming Sim · Cozy RPG",
-    gradient: "linear-gradient(135deg, #4c1d95, #0e212f)",
-    image: "https://cdn.cloudflare.steamstatic.com/steam/apps/413150/header.jpg",
-  },
-  {
-    app_id: 588650,
-    name: "Dead Cells",
-    genre: "Rogue-lite · Metroidvania",
-    gradient: "linear-gradient(135deg, #0f4a73, #0e212f)",
-    image: "https://cdn.cloudflare.steamstatic.com/steam/apps/588650/header.jpg",
-  },
-  {
-    app_id: 105600,
-    name: "Terraria",
-    genre: "Sandbox · Crafting · Survival",
-    gradient: "linear-gradient(135deg, #243745, #0e212f)",
-    image: "https://cdn.cloudflare.steamstatic.com/steam/apps/105600/header.jpg",
-  },
-  {
-    app_id: 646570,
-    name: "Slay the Spire",
-    genre: "Roguelike Deckbuilder · Strategy",
-    gradient: "linear-gradient(135deg, #93000a, #0e212f)",
-    image: "https://cdn.cloudflare.steamstatic.com/steam/apps/646570/header.jpg",
-  },
-  {
-    app_id: 1091500,
-    name: "Cyberpunk 2077",
-    genre: "Action RPG · Open World",
-    gradient: "linear-gradient(135deg, #4c1d95, #0e212f)",
-    image: "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg",
-  },
-];
+export default function ForYouPage() {
+  const [health, setHealth] = useState<RecsysHealthResponse | null>(null);
+  const [models, setModels] = useState<RecsysModelInfo[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [selectedGames, setSelectedGames] = useState<RecsysCatalogItem[]>([]);
+  const [isCompareMode, setIsCompareMode] = useState<boolean>(false);
+  const [recommendations, setRecommendations] = useState<RecsysForYouResponse | null>(null);
 
-const POPULAR_QUERIES = [
-  { name: "Hollow Knight", id: "367520" },
-  { name: "Hades", id: "1145360" },
-  { name: "Celeste", id: "504230" },
-  { name: "Stardew Valley", id: "413150" },
-  { name: "Dead Cells", id: "588650" },
-];
-
-export default function LandingPage() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<GameSummary[] | null>(null);
-  const [totalMatches, setTotalMatches] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoadingHealth, setIsLoadingHealth] = useState<boolean>(true);
+  const [isLoadingRecs, setIsLoadingRecs] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [ingestedGames, setIngestedGames] = useState<Record<number, GameSummary>>({});
-  
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [, startTransition] = useTransition();
 
-  // Fetch real ingested game records to replace hardcoded strings with API data
+  // 1. Initial health & models check
   useEffect(() => {
     let isMounted = true;
-    api.searchGames("", 1, 50).then((res) => {
-      if (!isMounted || !res?.games) return;
-      const map: Record<number, GameSummary> = {};
-      for (const g of res.games) {
-        map[g.app_id] = g;
+    async function init() {
+      try {
+        const [healthRes, modelsRes] = await Promise.all([
+          api.recsysHealth(),
+          api.recsysModels(),
+        ]);
+        if (isMounted) {
+          setHealth(healthRes);
+          setModels(modelsRes);
+
+          // Select champion or first ready deployable model
+          const readyDeployables = modelsRes.filter((m) => m.deployable && m.is_ready);
+          const champion = readyDeployables.find((m) => m.stage === "champion") || readyDeployables[0];
+          if (champion) {
+            setSelectedModel(champion.model_name);
+          }
+          setIsLoadingHealth(false);
+        }
+      } catch {
+        if (isMounted) {
+          setIsLoadingHealth(false);
+        }
       }
-      setIngestedGames(map);
-    }).catch(() => {
-      // Ignore initial load error if backend is cold
-    });
-    return () => { isMounted = false; };
+    }
+    init();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const doSearch = useCallback(async (q: string) => {
-    const trimmed = q.trim();
-    if (!trimmed) {
-      setResults(null);
-      setTotalMatches(null);
-      setHasSearched(false);
-      setError(null);
+  // 2. Fetch personalized recommendations whenever library or single model changes
+  useEffect(() => {
+    if (isCompareMode) return;
+    if (selectedGames.length === 0 || !selectedModel) {
+      setRecommendations(null);
       return;
     }
 
-    setLoading(true);
+    let isMounted = true;
+    setIsLoadingRecs(true);
     setError(null);
-    setHasSearched(true);
 
-    try {
-      // If query is numeric App ID, direct lookup or search
-      const res: GameSearchResult = await api.searchGames(trimmed, 1, 12);
-      setResults(res.games);
-      setTotalMatches(res.total);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Search failed";
-      setError(msg);
-      setResults([]);
-      setTotalMatches(0);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    const likedIds = selectedGames.map((g) => g.app_id);
 
-  // Debounce the query for live search
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedQuery(query);
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [query]);
+    api
+      .forYou({
+        liked_app_ids: likedIds,
+        model: selectedModel,
+        k: 10,
+        explain: true,
+      })
+      .then((res) => {
+        if (isMounted) {
+          startTransition(() => {
+            setRecommendations(res);
+            setIsLoadingRecs(false);
+          });
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : "Failed to fetch recommendations");
+          setIsLoadingRecs(false);
+        }
+      });
 
-  // Trigger search when debounced query changes
-  useEffect(() => {
-    if (debouncedQuery) {
-      doSearch(debouncedQuery);
-    }
-  }, [debouncedQuery, doSearch]);
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedGames, selectedModel, isCompareMode]);
+
+  // Loading Initial State Skeleton
+  if (isLoadingHealth) {
+    return (
+      <main className="container" style={{ paddingTop: "88px", paddingBottom: "64px" }}>
+        <div className="skeleton" style={{ height: "40px", width: "320px", marginBottom: "16px" }} />
+        <div className="skeleton" style={{ height: "20px", width: "480px", marginBottom: "32px" }} />
+        <div className="skeleton" style={{ height: "200px", width: "100%", marginBottom: "24px" }} />
+      </main>
+    );
+  }
+
+  // If recommender health reports not ready or no deployable models are available
+  const hasUsableModel = health?.is_ready && models.some((m) => m.deployable && m.is_ready);
+  if (!hasUsableModel) {
+    return (
+      <main className="container" style={{ paddingTop: "88px", paddingBottom: "64px" }}>
+        <RecsysEmptyState
+          command="make recsys-all"
+          title="Recommender Pipeline Not Materialized"
+          message="The cold-start neural recommender system requires trained model artifacts and database item vectors. Execute the pipeline command below to train all candidate models, evaluate offline benchmarks, and project item embeddings:"
+        />
+      </main>
+    );
+  }
+
+  // HONEST-FALLBACK: Read catalog universe size from health or recommendations response
+  const universeSize = health?.universe_size ?? recommendations?.universe_size ?? null;
 
   return (
-    <div className="container" style={{ paddingTop: "24px", paddingBottom: "64px" }}>
-      {/* ── Hero Section (Stitch Design) ── */}
-      <section className="hero-wrapper">
-        <h1 className="hero-title">
-          Game Intelligence, Powered by AI
-        </h1>
+    <main className="container" style={{ paddingTop: "88px", paddingBottom: "64px" }}>
+      {/* Page Hero & Mode Switch */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: "16px",
+          marginBottom: "28px",
+          borderBottom: "1px solid var(--border-subtle)",
+          paddingBottom: "20px",
+        }}
+      >
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+            <span className="badge-pill badge-pill--neutral" style={{ color: "var(--accent-primary)" }}>
+              Offline-Trained ML Core
+            </span>
+            {universeSize !== null && (
+              <span className="badge-pill badge-pill--neutral" style={{ fontFamily: "var(--font-mono, monospace)" }}>
+                Catalog: {universeSize.toLocaleString()} games
+              </span>
+            )}
+          </div>
+          <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
+            For You: Personalized Game Recommendations
+          </h1>
+          <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
+            Build your seed library to test cold-start inference across candidate recommender models with live explainability.
+          </p>
+        </div>
 
-        <p className="hero-subtitle">
-          Turn Steam reviews, player data, and market signals into explainable decisions.
-          <br />
-          Discover what gamers actually want before you write a single line of code.
-        </p>
-
-        {/* Search Bar */}
-        <form
-          className="stitch-search-container"
-          onSubmit={(e) => {
-            e.preventDefault();
-            doSearch(query);
+        {/* Mode Toggle: Single Model vs Compare */}
+        <div
+          style={{
+            display: "inline-flex",
+            backgroundColor: "var(--bg-surface-lowest)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "var(--radius-sm)",
+            padding: "3px",
           }}
         >
-          <span
-            className="material-symbols-outlined"
-            style={{ color: "var(--text-muted)", fontSize: "20px" }}
+          <button
+            type="button"
+            onClick={() => setIsCompareMode(false)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "var(--radius-sm)",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: 600,
+              cursor: "pointer",
+              backgroundColor: !isCompareMode ? "var(--accent-primary)" : "transparent",
+              color: !isCompareMode ? "var(--bg-surface-lowest)" : "var(--text-secondary)",
+              transition: "all var(--transition-fast)",
+            }}
           >
-            search
-          </span>
-          <input
-            type="text"
-            className="stitch-search-input"
-            placeholder="Search by game name or Steam App ID..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            autoFocus
-          />
-          <button type="submit" className="stitch-search-btn">
-            {loading ? "Analyzing..." : "Analyze Game"}
-            <span className="material-symbols-outlined" style={{ fontSize: "16px", fontWeight: 700 }}>
-              arrow_forward
-            </span>
+            Single Model
           </button>
-        </form>
-
-        {/* Popular Queries */}
-        <div className="popular-queries">
-          <span className="popular-queries__label">Popular Queries</span>
-          <div className="popular-queries__list">
-            {POPULAR_QUERIES.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="popular-chip"
-                onClick={() => {
-                  setQuery(item.name);
-                  doSearch(item.name);
-                }}
-              >
-                <span>{item.name}</span>
-                <span className="popular-chip__id">{item.id}</span>
-              </button>
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsCompareMode(true)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "var(--radius-sm)",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: 600,
+              cursor: "pointer",
+              backgroundColor: isCompareMode ? "var(--accent-primary)" : "transparent",
+              color: isCompareMode ? "var(--bg-surface-lowest)" : "var(--text-secondary)",
+              transition: "all var(--transition-fast)",
+            }}
+          >
+            Compare Models
+          </button>
         </div>
-      </section>
+      </div>
 
-      {/* ── Search Results View ── */}
-      {hasSearched && (
-        <section className="featured-section">
-          <div className="featured-section__header">
-            <span className="featured-section__eyebrow">Search Results</span>
-            <h2 className="featured-section__title">
-              {loading
-                ? "Analyzing Steam Database..."
-                : results && results.length > 0
-                ? `${totalMatches} ${totalMatches === 1 ? "Game" : "Games"} Found`
-                : "No Games Found"}
-            </h2>
-            <p className="featured-section__subtitle">
-              {results && results.length > 0
-                ? "Select a game to view deep sentiment, telemetry, and success prediction."
-                : `No ingested games matched "${query}".`}
-            </p>
-          </div>
+      {/* 1. Interactive Library Builder */}
+      <RecsysLibraryBuilder
+        selectedGames={selectedGames}
+        onChange={setSelectedGames}
+        universeSize={universeSize}
+      />
 
-          {/* Error Banner */}
-          {error && (
-            <div
-              className="badge-pill badge-pill--danger"
-              style={{ padding: "8px 16px", marginBottom: "16px", display: "inline-flex" }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
-                warning
-              </span>
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Loading Skeleton */}
-          {loading && (
-            <div className="featured-grid">
-              {[1, 2, 3, 4].map((n) => (
-                <div key={n} className="card" style={{ padding: "16px" }}>
-                  <div className="skeleton" style={{ height: "130px", marginBottom: "12px" }} />
-                  <div className="skeleton" style={{ height: "20px", width: "70%", marginBottom: "8px" }} />
-                  <div className="skeleton" style={{ height: "14px", width: "40%" }} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Empty State */}
-          {!loading && results && results.length === 0 && (
-            <div className="card" style={{ padding: "48px 24px", textAlign: "center", maxWidth: "600px", margin: "0 auto" }}>
-              <div
-                style={{
-                  width: "56px",
-                  height: "56px",
-                  borderRadius: "50%",
-                  backgroundColor: "var(--bg-surface-raised)",
-                  border: "1px solid var(--border-subtle)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 16px",
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: "28px", color: "var(--text-muted)" }}>
-                  search_off
+      {/* 2. Server Warnings & Unknown IDs Alert Banner */}
+      {recommendations && (recommendations.warning || (recommendations.unknown_app_ids && recommendations.unknown_app_ids.length > 0)) && (
+        <div
+          style={{
+            padding: "12px 16px",
+            backgroundColor: "var(--warning-bg)",
+            border: "1px solid rgba(199, 178, 74, 0.4)",
+            borderRadius: "var(--radius-sm)",
+            color: "var(--warning)",
+            fontSize: "13px",
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>
+            warning
+          </span>
+          <div>
+            {recommendations.warning && <div>{recommendations.warning}</div>}
+            {recommendations.unknown_app_ids && recommendations.unknown_app_ids.length > 0 && (
+              <div style={{ fontSize: "12px", marginTop: "2px" }}>
+                Unmodeled App IDs omitted from cold-start inference:{" "}
+                <span style={{ fontFamily: "var(--font-mono, monospace)" }}>
+                  {recommendations.unknown_app_ids.join(", ")}
                 </span>
               </div>
-              <h3 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "8px" }}>
-                No Games Found
-              </h3>
-              <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6", marginBottom: "20px" }}>
-                We couldn&apos;t find any games matching &ldquo;{query}&rdquo; on Steam.
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Compare View Mode */}
+      {isCompareMode ? (
+        <RecsysCompareView
+          models={models}
+          selectedGames={selectedGames}
+          defaultModelA={selectedModel}
+        />
+      ) : (
+        /* 4. Single Model View Mode */
+        <div>
+          {/* Segmented Model Selector */}
+          <RecsysModelSelector
+            models={models}
+            selectedModel={selectedModel}
+            onSelectModel={setSelectedModel}
+            disabled={isLoadingRecs}
+          />
+
+          {error && (
+            <div
+              style={{
+                padding: "16px",
+                backgroundColor: "var(--danger-bg)",
+                color: "var(--danger)",
+                borderRadius: "var(--radius-sm)",
+                marginBottom: "20px",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Loading Indicator */}
+          {isLoadingRecs && (
+            <div style={{ padding: "48px 0", textAlign: "center" }}>
+              <div className="loading-bars" style={{ margin: "0 auto 12px" }}>
+                <span />
+                <span />
+                <span />
+              </div>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+                Evaluating candidate rank scores...
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  setHasSearched(false);
+            </div>
+          )}
+
+          {/* Recommendations Grid */}
+          {!isLoadingRecs && recommendations && (
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "16px",
                 }}
-                className="btn btn--secondary"
               >
-                Clear Search
-              </button>
+                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+                  Top {recommendations.items.length} Recommendations
+                </h3>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  Ranked by {recommendations.model_name}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+                  gap: "16px",
+                }}
+              >
+                {recommendations.items.map((item) => (
+                  <RecsysResultCard
+                    key={item.app_id}
+                    item={item}
+                    modelName={recommendations.model_name}
+                  />
+                ))}
+              </div>
+
+              {/* Provenance Footer */}
+              <RecsysProvenanceFooter
+                modelName={recommendations.model_name}
+                modelRunId={recommendations.model_run_id}
+                datasetVersion={recommendations.dataset_version}
+                universeSize={recommendations.universe_size}
+                tookMs={recommendations.took_ms}
+              />
             </div>
           )}
 
-          {/* Results Grid */}
-          {!loading && results && results.length > 0 && (
-            <div className="featured-grid">
-              {results.map((g) => (
-                <Link
-                  key={g.app_id}
-                  href={`/games/${g.app_id}?tab=overview`}
-                  className="featured-card"
-                >
-                  <div className="featured-card__cover">
-                    {g.header_image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={g.header_image} alt={g.name} />
-                    ) : null}
-                    <div className="featured-card__badge" style={{ display: "flex", gap: "6px" }}>
-                      {g.is_ingested ? (
-                        <span className="badge-pill badge-pill--success" style={{ fontSize: "10px", padding: "1px 6px" }}>Indexed</span>
-                      ) : (
-                        <span className="badge-pill badge-pill--neutral" style={{ fontSize: "10px", padding: "1px 6px" }}>Unindexed</span>
-                      )}
-                      <div>
-                        <span>ID:</span>
-                        <strong>{g.app_id}</strong>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="featured-card__body">
-                    <h3 className="featured-card__title">{g.name}</h3>
-                    <p className="featured-card__meta">
-                      {[g.developer, g.genres?.[0]?.description].filter(Boolean).join(" · ") || "Steam Game"}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+          {/* Prompt when 0 games selected */}
+          {!isLoadingRecs && selectedGames.length === 0 && (
+            <div
+              className="card"
+              style={{
+                padding: "48px 24px",
+                textAlign: "center",
+                backgroundColor: "var(--bg-surface-low)",
+                border: "1px dashed var(--border-subtle)",
+              }}
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: "36px", color: "var(--text-muted)", marginBottom: "12px" }}
+              >
+                view_in_ar
+              </span>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "6px" }}>
+                Your library is empty
+              </h3>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", maxWidth: "440px", margin: "0 auto" }}>
+                Search for games you love or select one of the Sample Libraries above to generate personalized recommendations.
+              </p>
             </div>
           )}
-        </section>
+        </div>
       )}
-
-      {/* ── Featured & Ingested Games Grid (Honest Showcase with Live API Data) ── */}
-      {!hasSearched && (
-        <section className="featured-section">
-          <div className="featured-section__header">
-            <span className="featured-section__eyebrow">Curated Showcase</span>
-            <h2 className="featured-section__title">Ready to Analyze</h2>
-            <p className="featured-section__subtitle">
-              Explore decision intelligence for indexed catalog titles, or search any Steam App ID to ingest live store telemetry.
-            </p>
-          </div>
-
-          <div className="featured-grid">
-            {FEATURED_GAMES.map((g) => {
-              const live = ingestedGames[g.app_id];
-              const liveGenre = live?.genres?.[0]?.description;
-              const liveDev = live?.developer;
-
-              return (
-                <Link
-                  key={g.app_id}
-                  href={`/games/${g.app_id}?tab=overview`}
-                  className="featured-card"
-                >
-                  <div
-                    className="featured-card__cover"
-                    style={{ background: g.gradient }}
-                  >
-                    {live?.header_image || g.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={live?.header_image || g.image} alt={live?.name || g.name} />
-                    ) : null}
-                    <div className="featured-card__badge">
-                      <span>ID:</span>
-                      <strong>{g.app_id}</strong>
-                    </div>
-                  </div>
-
-                  <div className="featured-card__body">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                      <h3 className="featured-card__title">{live?.name || g.name}</h3>
-                      {live && (
-                        <span className="badge-pill badge-pill--success" style={{ fontSize: "10px", padding: "1px 6px" }}>
-                          Indexed
-                        </span>
-                      )}
-                    </div>
-                    <p className="featured-card__meta">
-                      {liveGenre
-                        ? (liveDev ? `${liveDev} · ${liveGenre}` : liveGenre)
-                        : "Catalog Showcase"}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      )}
-    </div>
+    </main>
   );
 }

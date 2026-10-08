@@ -2,18 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUserMode } from "@/lib/UserModeContext";
 import { UserModeToggle } from "@/components/UserModeToggle";
 
 export function TopNavBar() {
   const pathname = usePathname();
-  const { isDeveloper } = useUserMode();
 
-  const isSearchLanding = pathname === "/";
+  const isForYou = pathname === "/";
+  const isModelLab = pathname.startsWith("/model-lab");
+  const isEmbeddingMap = pathname.startsWith("/embedding-map");
+  const isDashboard = pathname.startsWith("/dashboard");
   const isGameIntelligence = pathname.startsWith("/games");
-  const isCompare = pathname.startsWith("/compare");
-  const isMarket = pathname.startsWith("/market");
-  const isAsk = pathname.startsWith("/ask");
 
   return (
     <nav className="stitch-nav">
@@ -26,7 +24,7 @@ export function TopNavBar() {
                 className="material-symbols-outlined"
                 style={{ fontSize: "16px", color: "var(--bg-surface-lowest)", fontVariationSettings: "'FILL' 1" }}
               >
-                speed
+                auto_awesome
               </span>
             </div>
             <span className="stitch-nav__logo-text">SteamIQ</span>
@@ -37,37 +35,39 @@ export function TopNavBar() {
         <div className="stitch-nav__links">
           <Link
             href="/"
-            className={`stitch-nav__link ${isSearchLanding ? "stitch-nav__link--active" : ""}`}
+            className={`stitch-nav__link ${isForYou ? "stitch-nav__link--active" : ""}`}
+            id="nav-for-you"
           >
-            Search/Landing
+            For You
+          </Link>
+          <Link
+            href="/model-lab"
+            className={`stitch-nav__link ${isModelLab ? "stitch-nav__link--active" : ""}`}
+            id="nav-model-lab"
+          >
+            Model Lab
+          </Link>
+          <Link
+            href="/embedding-map"
+            className={`stitch-nav__link ${isEmbeddingMap ? "stitch-nav__link--active" : ""}`}
+            id="nav-embedding-map"
+          >
+            Embedding Map
+          </Link>
+          <Link
+            href="/dashboard"
+            className={`stitch-nav__link ${isDashboard ? "stitch-nav__link--active" : ""}`}
+            id="nav-dashboard"
+          >
+            Dashboard
           </Link>
           <Link
             href={isGameIntelligence ? pathname : "/games/1145360?tab=overview"}
             className={`stitch-nav__link ${isGameIntelligence ? "stitch-nav__link--active" : ""}`}
+            id="nav-game-intelligence"
           >
             Game Intelligence
           </Link>
-          <span
-            className={`stitch-nav__link ${isCompare ? "stitch-nav__link--active" : ""}`}
-            style={{ opacity: 0.5, cursor: "not-allowed" }}
-          >
-            Compare Games
-          </span>
-          {isDeveloper && (
-            <span
-              className={`stitch-nav__link ${isMarket ? "stitch-nav__link--active" : ""}`}
-              style={{ opacity: 0.5, cursor: "not-allowed" }}
-            >
-              Market Explorer
-            </span>
-          )}
-          <span
-            className={`stitch-nav__link ${isAsk ? "stitch-nav__link--active" : ""}`}
-            style={{ opacity: 0.5, cursor: "not-allowed" }}
-          >
-            Ask SteamIQ
-            <span className="stitch-nav__badge-ai">AI</span>
-          </span>
         </div>
 
         {/* Action Controls & Mode Toggle */}

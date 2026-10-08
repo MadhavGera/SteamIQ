@@ -39,10 +39,10 @@ seed: ## Ingest a curated set of known games for local dev
 	cd $(BACKEND) && $(PYTHON) -m jobs.seed_catalog --limit 10
 	@echo "✅  Seed complete."
 
-seed-catalog: ## Ingest full 30-game benchmark catalog for Phase 3 embeddings
-	@echo ">>> Seeding full benchmark catalog (30 games)..."
+seed-catalog: ## Ingest benchmark catalog games for embedding and competitor evaluation
+	@echo ">>> Seeding benchmark catalog games..."
 	cd $(BACKEND) && $(PYTHON) -m jobs.seed_catalog --all
-	@echo "✅  Full catalog seed complete."
+	@echo "✅  Catalog seed complete."
 
 process-reviews: ## Process NLP reviews for a game: make process-reviews APPID=1145360
 	@if [ -z "$(APPID)" ]; then echo "❌  Usage: make process-reviews APPID=<steam_app_id>"; exit 1; fi

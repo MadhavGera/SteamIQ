@@ -337,6 +337,155 @@ export interface CompetitorList {
   is_processed: boolean;
 }
 
+// ─── Recommender Serving Types (Phase 6 — ADR 0005) ───────────────────────────
+
+export interface RecsysCatalogItem {
+  app_id: number;
+  item_idx: number;
+  title: string;
+  date_release: string | null;
+  price_final: number | null;
+  positive_ratio: number | null;
+  user_reviews: number | null;
+  tags: string[];
+  description_short: string | null;
+  has_description: boolean;
+  train_positives: number;
+  popularity_rank: number;
+  win: boolean;
+  mac: boolean;
+  linux: boolean;
+  steam_deck: boolean;
+  header_image_url: string;
+}
+
+export interface RecsysSearchResponse {
+  items: RecsysCatalogItem[];
+  total: number;
+  universe_size: number;
+  query: string;
+}
+
+export interface RecsysForYouRequest {
+  liked_app_ids: number[];
+  model?: string | null;
+  k?: number;
+  explain?: boolean;
+}
+
+export interface RecsysAnchorGame {
+  app_id: number;
+  title: string;
+  similarity: number;
+}
+
+export interface RecsysRecommendationItem {
+  rank: number;
+  app_id: number;
+  item_idx: number;
+  title: string;
+  header_image_url: string;
+  score: number;
+  price_final: number | null;
+  positive_ratio: number | null;
+  user_reviews: number | null;
+  tags: string[];
+  description_short: string | null;
+  popularity_rank: number;
+  win: boolean;
+  mac: boolean;
+  linux: boolean;
+  steam_deck: boolean;
+  because_you_liked: Array<{
+    app_id: number;
+    title: string;
+    similarity: number;
+  }>;
+  reasons: string[];
+}
+
+export interface RecsysForYouResponse {
+  items: RecsysRecommendationItem[];
+  total_items: number;
+  model_name: string;
+  model_run_id: string | null;
+  val_ndcg_at_10: number | null;
+  dataset_version: string;
+  universe_size: number;
+  unknown_app_ids: number[];
+  warning: string | null;
+  preview: boolean;
+  took_ms: number;
+}
+
+export interface RecsysModelInfo {
+  model_name: string;
+  display_name: string;
+  deployable: boolean;
+  stage: string;
+  model_run_id: string | null;
+  val_ndcg_at_10: number | null;
+  test_ndcg_at_10_mean: number | null;
+  test_ndcg_at_10_std: number | null;
+  test_hr_at_10_mean: number | null;
+  test_hr_at_10_std: number | null;
+  n_seeds: number;
+  is_ready: boolean;
+  is_preview: boolean;
+}
+
+export interface RecsysReport {
+  report_key: string;
+  dataset_version: string;
+  model_run_id: string | null;
+  payload: Record<string, unknown>;
+  updated_at: string | null;
+}
+
+export interface RecsysMapPoint {
+  app_id: number;
+  title: string;
+  x: number;
+  y: number;
+  cluster_id: number | null;
+  cluster_label: string | null;
+  popularity_rank: number | null;
+  header_image_url: string | null;
+  tags: string[];
+}
+
+export interface RecsysMapResponse {
+  points: RecsysMapPoint[];
+  total_points: number;
+  universe_size: number;
+}
+
+export interface RecsysNeighborItem {
+  rank: number;
+  app_id: number;
+  title: string;
+  header_image_url: string;
+  similarity: number;
+  price_final: number | null;
+  positive_ratio: number | null;
+  user_reviews: number | null;
+  tags: string[];
+  popularity_rank: number;
+}
+
+export interface RecsysNeighborsResponse {
+  query_app_id: number;
+  neighbors: RecsysNeighborItem[];
+  total: number;
+}
+
+export interface RecsysHealthResponse {
+  status: string;
+  is_ready: boolean;
+  universe_size: number;
+  loaded_models: string[];
+}
+
 // ─── API error class ──────────────────────────────────────────────────────────
 
 export class SteamIQApiError extends Error {
@@ -363,6 +512,7 @@ export class SteamIQApiError extends Error {
  */
 export function getApiBaseUrl(): string {
   if (typeof window === "undefined") {
+    // HONEST-FALLBACK: Read server-side environment variables with priority
     const url = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL;
     if (!url) {
       throw new Error(
@@ -393,6 +543,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      // HONEST-FALLBACK: Default headers passed from caller
       ...(options?.headers ?? {}),
     },
   });
@@ -401,7 +552,9 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!envelope.success || envelope.error) {
     throw new SteamIQApiError(
+      // HONEST-FALLBACK: Provide standard error code fallback if envelope is empty
       envelope.error?.code ?? "unknown_error",
+      // HONEST-FALLBACK: Default error message when not returned by server
       envelope.error?.message ?? "An unknown error occurred",
       envelope.error?.details
     );
@@ -496,6 +649,72 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(prefs),
     });
+  },
+
+  // ─── Recommender System Methods (Phase 6) ──────────────────────────────────
+
+  /**
+   * Search universe items in the recommender catalog by title substring.
+   * GET /api/v1/recsys/items/search?q={query}&limit={limit}
+   */
+  async searchRecsysItems(query = "", limit = 10): Promise<RecsysSearchResponse> {
+    const params = new URLSearchParams({
+      q: query,
+      limit: String(limit),
+    });
+    return apiFetch<RecsysSearchResponse>(`/api/v1/recsys/items/search?${params}`);
+  },
+
+  /**
+   * Personalized recommendations for user library games.
+   * POST /api/v1/recsys/for-you
+   */
+  async forYou(request: RecsysForYouRequest): Promise<RecsysForYouResponse> {
+    return apiFetch<RecsysForYouResponse>("/api/v1/recsys/for-you", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+  },
+
+  /**
+   * List available deployable recommender models and benchmark metrics.
+   * GET /api/v1/recsys/models
+   */
+  async recsysModels(): Promise<RecsysModelInfo[]> {
+    return apiFetch<RecsysModelInfo[]>("/api/v1/recsys/models");
+  },
+
+  /**
+   * Check Recommender Service readiness.
+   * GET /api/v1/recsys/health
+   */
+  async recsysHealth(): Promise<RecsysHealthResponse> {
+    return apiFetch<RecsysHealthResponse>("/api/v1/recsys/health");
+  },
+
+  /**
+   * Fetch an offline audit or evaluation report payload by key.
+   * GET /api/v1/recsys/reports/{key}
+   */
+  async recsysReport(key: string): Promise<RecsysReport> {
+    return apiFetch<RecsysReport>(`/api/v1/recsys/reports/${key}`);
+  },
+
+  /**
+   * Get 2D UMAP item map projection and semantic clusters.
+   * GET /api/v1/recsys/map
+   */
+  async recsysMap(): Promise<RecsysMapResponse> {
+    return apiFetch<RecsysMapResponse>("/api/v1/recsys/map");
+  },
+
+  /**
+   * Get cosine nearest neighbors in Two-Tower embedding space.
+   * GET /api/v1/recsys/items/{appId}/neighbors?k={k}
+   */
+  async recsysNeighbors(appId: number, k = 10): Promise<RecsysNeighborsResponse> {
+    return apiFetch<RecsysNeighborsResponse>(`/api/v1/recsys/items/${appId}/neighbors?k=${k}`);
   },
 
   /**

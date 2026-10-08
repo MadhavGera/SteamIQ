@@ -1,149 +1,190 @@
-# SteamIQ — ML Accuracy Scores, Metrics & Evaluation Guide
+# SteamIQ — Recommender Accuracy, Evaluation & Methodology Guide
 
-## Executive Summary
+## 1. Executive Summary & Evaluation Framework
 
-**Yes, SteamIQ currently tracks and enforces ML accuracy scores and evaluation metrics directly in the project.** 
+SteamIQ operates an offline-evaluated, online-serving hybrid recommender system that bridges retrieval, learning-to-rank, and explainability. To maintain scientific integrity and prevent leakage, all reported metrics adhere to strict principles:
 
-In SteamIQ, accuracy is structured as a multi-tier verification framework spanning:
-1. **Predictive ML (Success Classifier)** — 5-Fold Stratified Cross-Validation tracking **Accuracy (75.1%)**, **ROC-AUC (0.8301)**, **F1-Score (0.7798)**, and **Brier Loss (0.1648)** logged in **MLflow** and persisted in the `model_runs` table.
-2. **Automated Promotion Guardrails** — A strict promotion floor (`ROC-AUC >= 0.55`, default target `> 0.80`) ensuring candidate models are only promoted to `production` if they pass statistical validation.
-3. **Data Integrity & Anti-Leakage Guardrails** — Strict temporal cutoffs, self-inclusion filters, and label leakage unit test assertions.
-4. **NLP & Embedding Quality Checks** — Sentiment discordance checks, topic coherence, and vector similarity ranking metrics (MRR / Hit@K).
-
----
-
-## 1. What ML Accuracy Scores Exist Right Now?
-
-All predictive training runs ([`backend/jobs/train_success_model.py`](backend/jobs/train_success_model.py)) run **5-Fold Stratified Cross-Validation** comparing 4 model architectures and record granular out-of-fold (OOF) and cross-validation statistics.
-
-### Active Production Model Benchmark (`game_success_predictor`)
-
-| Metric | Current Production Value | Cross-Validation (5-Fold Mean ± Std) | Purpose & Interpretation |
-|---|---|---|---|
-| **Accuracy** | **75.10%** (`0.7510`) | `0.7510 ± 0.0850` | Overall fraction of correct hit/flop classifications. |
-| **ROC-AUC** | **0.8301** (`0.8301`) | `0.8409 ± 0.0684` | Model's ability to discriminate successful games from unsuccessful across all classification thresholds. (Industry standard for ranking/classification). |
-| **F1-Score** | **77.98%** (`0.7798`) | `0.7723 ± 0.0958` | Harmonic mean of Precision and Recall, balancing false hits vs. missed hits. |
-| **Brier Score** | **0.1648** (`0.1648`) | `0.1649 ± 0.0266` | Probability calibration error (lower is better; 0.0 is perfect calibration, 0.25 is random guessing). |
-
-### Multi-Model Baseline Progression Tracked in MLflow:
-1. **Baseline 1 — Logistic Regression** (with `StandardScaler`): Baseline linear benchmark (`ROC-AUC ~ 0.70`).
-2. **Baseline 2 — Random Forest** (`n_estimators=100`, `max_depth=6`): Non-linear tree ensemble baseline (`ROC-AUC ~ 0.80`).
-3. **Baseline 3 — XGBoost Baseline** (`n_estimators=100`, `max_depth=4`, `lr=0.08`): Gradient boosted decision trees (`ROC-AUC ~ 0.82`).
-4. **Champion Candidate — XGBoost + LightGBM Ensemble (Optuna Tuned)**: Multi-trial Bayesian hyperparameter search tuning learning rates, tree depth, leaf counts, and blend weight $\alpha$ (`ROC-AUC: 0.8301–0.8409`).
+1. **No Invented Numbers:** Every metric, confidence interval, and paired comparison originates directly from deterministic evaluation pipelines executed against the frozen dataset (`dataset_version: c662b8232dc0`).
+2. **Leave-One-Out Chronological Split:** Strict per-user temporal partitioning where the latest interaction is reserved for test and the penultimate for validation.
+3. **Train-Split Feature Isolation:** Deployable models (`recsys_two_tower_clean`, `recsys_two_tower_ranker_clean`) use only statistics computed from the train split. Reference models using all-time stats are marked as non-deployable diagnostic upper bounds.
+4. **Bootstrap Statistical Significance:** All metrics report 95% percentile confidence intervals over 1,000 bootstrap resamples on 5,000 evaluation users.
+5. **Beyond-Accuracy Audits:** Systematically measuring catalog coverage, novelty (self-information), intra-list cosine diversity, head share concentration, and Gini exposure inequality.
 
 ---
 
-## 2. Where Are Accuracy Scores Stored & Tracked?
+## 2. Dataset Topology, Filters & Splitting Protocol
 
-### A. Database Audit Table: `model_runs`
-Every training execution records full audit metadata in PostgreSQL:
-```sql
-SELECT id, model_name, stage, dataset_version, metrics, created_at 
-FROM model_runs 
-ORDER BY created_at DESC;
-```
-- **`stage`**: State lifecycle (`candidate` → `staging` → `production` → `archived`).
-- **`metrics`**: JSONB storing `roc_auc`, `accuracy`, `f1_score`, `brier_score`, and fold standard deviations.
-- **`hyperparameters`**: JSONB storing all model parameters and Optuna blend weights.
-- **`artifact_path`**: URI link to the MLflow run and SHAP explainability artifacts.
+### A. Data Source & Universe Selection
+- **Catalog Universe ($N = 3,000$ items):** Selected from the Steam catalog using interaction volume and data quality filters (requiring non-empty descriptions, valid genre/tag metadata, and pricing history).
+- **Evaluation Users ($N = 20,000$ total, $N_{\text{eval}} = 5,000$ holdout):** Filtered for interaction sequence length ($\ge 5$ positive interactions per user, $\ge 10$ interactions per item).
+- **Implicit Feedback:** Interactions are positive reviews (`voted_up == True` / `is_recommended == True`). The training set contains 165,741 positive interactions and 26,845 explicit negative interactions.
 
-### B. Prediction Traceability: `serving_predictions`
-Every row in `serving_predictions` contains:
-- `model_run_id` foreign key referencing the exact `model_runs` record that generated the score.
-- `prediction_value` (success probability 0.00–1.00).
-- `shap_feature_attributions` (JSON breakdown showing why the model predicted the score).
+### B. Per-User Chronological Split Protocol
+For each user $u$ with interaction sequence ordered by review timestamp $(e_1, e_2, \dots, e_m)$:
+- **Test Target ($e_m$):** The user's most recent interaction.
+- **Validation Target ($e_{m-1}$):** The user's penultimate interaction.
+- **Train History ($e_1, \dots, e_{m-2}$):** All earlier interactions used for model training and fold-in context.
 
-### C. MLflow Tracking: `backend/mlruns/`
-- Every run is tracked under the experiment `steamiq_success_predictor`.
-- Logs all trial metrics per fold, model artifacts, and global `champion_shap_summary.json`.
+### C. Why This Avoids Data Leakage
+- **Temporal Integrity:** Models never observe future user actions when scoring candidate items.
+- **Train-Split Item Statistics:** Feature pipelines compute item interaction frequencies, review counts, and positive ratios strictly over $\{e_1, \dots, e_{m-2}\}$, eliminating lookahead bias into the test period.
+- **Seen-Item Masking:** All items present in a user's train history are masked to $-\infty$ during evaluation and serving.
 
 ---
 
-## 3. Comprehensive Accuracy & Quality Checks We Can Do
+## 3. Mathematical Metric Definitions
 
-Here is the complete matrix of accuracy and quality verification checks categorized by subsystem:
+Evaluation is conducted over $N_{\text{eval}} = 5,000$ users. For each user $u$, the recommender produces a ranked list of items $R_u = (r_1, r_2, \dots, r_k)$ scored across the full 3,000-item catalog. Let $i_u^*$ be the true held-out target item, and $\text{rank}_u(i_u^*)$ be its 1-indexed position in $R_u$.
 
-### Suite A: Predictive ML Accuracy Checks (Classification & Calibration)
+### A. Hit Rate @ k ($\text{HR}@k$)
+Binary indicator of whether the held-out item appears in the top-$k$ recommendations:
+$$\text{HR}@k = \frac{1}{|U_{\text{eval}}|} \sum_{u \in U_{\text{eval}}} \mathbb{I}(\text{rank}_u(i_u^*) \le k)$$
 
-| Check Name | Technique | Formula / Threshold | Current Status |
-|---|---|---|---|
-| **Stratified K-Fold CV** | Out-of-fold cross validation with class-balanced splits | 5-Fold (`StratifiedKFold(n_splits=5)`) | ✅ Implemented |
-| **ROC-AUC Score** | Area under Receiver Operating Characteristic curve | Target: `> 0.80` (Floor: `0.55`) | ✅ Implemented |
-| **Precision-Recall AUC (PR-AUC)** | Area under Precision-Recall curve | Essential for imbalanced hit datasets | 🔲 Recommended |
-| **Brier Score Calibration** | Mean squared probability error | $BS = \frac{1}{N}\sum (f_t - o_t)^2 < 0.20$ | ✅ Implemented |
-| **Calibration Curve / ECE** | Expected Calibration Error across decile confidence bins | $\|acc(B_m) - conf(B_m)\| < 0.05$ | 🔲 Recommended |
-| **Confusion Matrix Audit** | False Positive Rate (FPR) vs False Negative Rate (FNR) | Cost-weighted penalty | 🔲 Recommended |
-| **SHAP Attribution Non-Degeneracy** | Verify TreeExplainer outputs non-zero, distinct contributions per game | $\sum \|\phi_i\| > 0.01$ | ✅ Implemented |
+### B. Normalized Discounted Cumulative Gain @ k ($\text{NDCG}@k$)
+Measures top-heavy ranking quality with logarithmic position discount. Because each user has exactly one held-out target item, $\text{IDCG}@k = 1.0$:
+$$\text{DCG}@k = \frac{\mathbb{I}(\text{rank}_u(i_u^*) \le k)}{\log_2(\text{rank}_u(i_u^*) + 1)}, \quad \text{NDCG}@k = \frac{\text{DCG}@k}{\text{IDCG}@k}$$
 
----
+### C. Mean Reciprocal Rank @ k ($\text{MRR}@k$)
+Reciprocal position of the target item within the top-$k$ cutoff:
+$$\text{MRR}@k = \frac{1}{|U_{\text{eval}}|} \sum_{u \in U_{\text{eval}}} \frac{\mathbb{I}(\text{rank}_u(i_u^*) \le k)}{\text{rank}_u(i_u^*)}$$
 
-## 4. Integrity & Data-Leakage Guardrails (Automated Test Suite)
-
-Accuracy scores are meaningless if data leaks into training. SteamIQ implements automated architectural tests in [`backend/tests/test_phase4_ml.py`](backend/tests/test_phase4_ml.py):
-
-| Guardrail Test | What it Enforces | File / Implementation |
-|---|---|---|
-| **`test_no_label_leakage_in_feature_matrix`** | Asserts that target columns (`positive_reviews`, `review_score`, `target_success_score`, `sentiment_score`, etc.) never enter feature matrix $X$. | [`backend/tests/test_phase4_ml.py:183`](backend/tests/test_phase4_ml.py) |
-| **`test_cutoff_date_boundary_isolation`** | Enforces temporal cutoff: reviews created after `feature_cutoff_date` are mathematically discarded to prevent lookahead bias. | [`backend/tests/test_phase4_ml.py:105`](backend/tests/test_phase4_ml.py) |
-| **`test_aggregate_features_exclude_target_game_self_inclusion`** | Asserts developer/publisher aggregates exclude the game itself (prevents circular self-validation). | [`backend/tests/test_phase4_ml.py:213`](backend/tests/test_phase4_ml.py) |
-| **`test_degenerate_label_guardrail`** | Aborts training if positive class ratio is $<10\%$ or $>90\%$ to prevent training on degenerate distributions. | [`backend/jobs/train_success_model.py:255`](backend/jobs/train_success_model.py) |
-| **`test_promotion_floor_barrier`** | Blocks candidate models from reaching `production` if `ROC-AUC < 0.55`. | [`backend/jobs/train_success_model.py:566`](backend/jobs/train_success_model.py) |
+### D. Pessimistic Tie-Breaking
+When multiple candidate items achieve identical floating-point scores $s_{u, i} = s_{u, j}$, ties are handled pessimistically to prevent inflated metric reporting:
+$$\text{rank}_u(i) = 1 + |\{j \in I \setminus \{i\} : s_{u,j} > s_{u,i}\}| + \frac{1}{2} |\{j \in I \setminus \{i\} : s_{u,j} = s_{u,i}\}|$$
+In conservative baseline scoring, tied items are assigned the worst-case rank: $\text{rank}_{\text{worst}} = 1 + |\{j : s_{u,j} \ge s_{u,i}\}|$.
 
 ---
 
-## 5. NLP & Review Intelligence Accuracy Checks (Phase 2)
+## 4. Recommender Baselines & Candidate Architectures
 
-| Check Name | Description | How to Measure | Status |
-|---|---|---|---|
-| **Sentiment vs Steam Vote Discordance** | Measures how often positive sentiment corresponds to `voted_up=True` vs `voted_up=False`. | $\text{Discordance Rate} = \frac{N(\text{PosSentiment} \land \text{ThumbDown}) + N(\text{NegSentiment} \land \text{ThumbUp})}{N_{\text{total}}} < 12\%$ | 🔲 Ready to add |
-| **Complaint Precision / Recall** | Evaluates rule-based and zero-shot regex taxonomies against gold review samples. | $F_1 = \frac{2 \cdot P \cdot R}{P + R} \ge 0.85$ | 🔲 Ready to add |
-| **Topic Coherence ($C_v$)** | Assesses semantic consistency of discovered BERTopic / TF-IDF clusters. | Normalized Pointwise Mutual Information (NPMI) | 🔲 Ready to add |
-
----
-
-## 6. Vector Similarity & Embedding Accuracy Checks (Phase 3)
-
-| Check Name | Description | How to Measure | Status |
-|---|---|---|---|
-| **Genre / Tag Jaccard Agreement** | Checks if top-5 nearest neighbors in embedding space share primary & secondary genres. | $J(A, B) = \frac{\|G_A \cap G_B\|}{\|G_A \cup G_B\|} \ge 0.60$ | 🔲 Ready to add |
-| **Mean Reciprocal Rank (MRR)** | Validates that known sequel/franchise pairs appear in top-3 recommendations (e.g. *Hollow Knight* → *Silksong* / *Ori*). | $MRR = \frac{1}{\|Q\|}\sum \frac{1}{\text{rank}_i} \ge 0.75$ | 🔲 Ready to add |
-| **Embedding Drift Check** | Measures cosine distance shift when re-embedding game catalog versions. | $\Delta \cos(\vec{v}_{t}, \vec{v}_{t+1}) < 0.05$ | 🔲 Ready to add |
+| Model Key | Method | Description & Purpose |
+| :--- | :--- | :--- |
+| `recsys_popularity` | Frequency Baseline | Ranks items by train-split positive interaction counts. Represents zero-personalization popularity bias floor. |
+| `recsys_content` | Content Cosine | Cosine similarity between mean user history vector and candidate item vectors (Sentence-Transformers `all-MiniLM-L6-v2` text + multi-hot tags). Zero collaborative feedback. |
+| `recsys_itemknn` | Shrinkage-Cosine CF | Item-item collaborative filtering with shrinkage regularizer $\alpha = 100$: $s(i,j) = \frac{r_i \cdot r_j}{\|r_i\|_2 \|r_j\|_2 + \alpha}$. |
+| `recsys_als` | Implicit Matrix Factorization | Alternating Least Squares on implicit feedback with confidence $c_{ui} = 1 + 40 \cdot r_{ui}$, 64 latent factors, 15 iterations. |
+| `recsys_two_tower_clean` | Two-Tower Neural Retriever | Deep dual-encoder mapping user history (masked mean pooling) and item features (ID + MiniLM + Tags + Price) to 64-d with BPR in-batch loss and ID dropout ($p=0.2$). |
+| `recsys_two_tower_ranker_clean` | Stage 2 LambdaMART Ranker | LightGBM gradient boosted decision trees ranking Stage-1 top-50 candidates using multi-source ranks, content cosine, item quality, and user history features. |
 
 ---
 
-## 7. How to Execute Accuracy Checks & Training Locally
+## 5. Main Recommender Leaderboard (Frozen Report)
 
-### 1. Run the Full ML Test Suite
-```bash
-# Run all Phase 4 ML integrity and accuracy unit tests
-make test
-# Or specifically:
-cd backend && pytest tests/test_phase4_ml.py -v
-```
+Evaluated over 5,000 test users with 1,000 bootstrap iterations (95% CI):
 
-### 2. Re-Train and Evaluate Models with Optuna Tuning
-```bash
-# Build tabular features from latest data
-make build-features
+### Deployable Models (Clean Train-Split Statistics)
 
-# Train baseline models + run 15 Optuna ensemble trials + evaluate promotion floor
-make train-model TRIALS=15
-```
+| Model | Split | NDCG@10 (95% CI) | HR@10 (95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Status |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **`recsys_two_tower_clean`** | **test** | **0.0516 [0.0470, 0.0567]** | **0.1028 [0.0946, 0.1110]** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
+| `recsys_two_tower_clean` | **val** | 0.0611 [0.0557, 0.0662] | 0.1190 [0.1104, 0.1280] | 0.0436 | 0.4347 | 0.7588 | Champion (Production) |
+| `recsys_two_tower_ranker_clean` | **test** | 0.0596 [0.0546, 0.0647] | 0.1092 [0.1010, 0.1178] | 0.0445 | 0.4887 | 0.7462 | Candidate |
+| `recsys_two_tower_ranker_clean` | **val** | 0.0645 [0.0591, 0.0696] | 0.1230 [0.1140, 0.1316] | 0.0467 | 0.4990 | 0.7419 | Candidate |
+| `recsys_itemknn` | **test** | 0.0445 [0.0403, 0.0494] | 0.0842 [0.0766, 0.0916] | 0.0326 | 0.6143 | 0.7255 | Candidate |
+| `recsys_als` | **test** | 0.0404 [0.0362, 0.0449] | 0.0776 [0.0704, 0.0852] | 0.0291 | 0.2480 | 0.7732 | Candidate |
+| `recsys_popularity` | **test** | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | Baseline |
+| `recsys_content` | **test** | 0.0146 [0.0120, 0.0176] | 0.0268 [0.0226, 0.0316] | 0.0110 | 0.6303 | 0.5041 | Baseline |
 
-### 3. Inspect Accuracy Metrics in DB
-```bash
-docker exec steamiq_backend python -c "
-from sqlalchemy import create_engine, text
-import json
-engine = create_engine('postgresql://steamiq:changeme@db:5432/steamiq')
-with engine.connect() as conn:
-    rows = conn.execute(text(\"\"\"
-        SELECT stage, dataset_version, metrics 
-        FROM model_runs 
-        WHERE model_name='game_success_predictor' 
-        ORDER BY created_at DESC LIMIT 5
-    \"\"\")).fetchall()
-    for r in rows:
-        print(f'Stage: {r[0]:<12} Version: {r[1]} Metrics: {json.dumps(r[2])}')
-"
-```
+### Diagnostic Reference Models (Non-Deployable Upper Bounds)
+
+| Model | Split | NDCG@10 (95% CI) | HR@10 (95% CI) | Role |
+| :--- | :---: | :---: | :---: | :--- |
+| `recsys_two_tower_ranker` | **test** | 0.0584 [0.0530, 0.0634] | 0.1072 [0.0990, 0.1156] | Reference (uses all-time item stats, not deployable) |
+| `recsys_two_tower` | **test** | 0.0539 [0.0490, 0.0589] | 0.1024 [0.0946, 0.1108] | Reference (uses all-time item stats, not deployable) |
+
+---
+
+## 6. Sliced Bootstrap Tests & Multi-Seed Paired Comparisons
+
+### A. Paired Differences Across Popularity Slices
+User-level paired difference tests ($\Delta = \text{NDCG}_A(u) - \text{NDCG}_B(u)$) on the test split:
+- **Clean Two-Tower vs Item-kNN:** $\Delta = +0.0071$ ($[+0.0024, +0.0118]$, $p < 0.05$, Two-Tower is significantly better).
+- **Clean Two-Tower vs ALS:** $\Delta = +0.0112$ ($[+0.0062, +0.0163]$, $p < 0.05$, Two-Tower is significantly better).
+- **Clean Two-Tower vs Popularity:** $\Delta = +0.0364$ ($[+0.0316, +0.0415]$, $p < 0.05$, Two-Tower is significantly better).
+
+### B. Clean Ranker vs Clean Two-Tower Trade-Off
+- **Head Items ($N = 2,989$ users):** Two-Tower clean outperforms Ranker clean ($\Delta = -0.0111$, $p < 0.05$).
+- **Torso Items ($N = 1,015$ users):** Ranker clean and Two-Tower clean are statistically comparable ($\Delta = +0.0061$, $[-0.0010, +0.0133]$, not significant).
+- **Tail Items ($N = 996$ users):** Ranker clean outperforms Two-Tower clean ($\Delta = +0.0069$, $[+0.0028, +0.0116]$, $p < 0.05$).
+- **Multi-Seed Stability:** Across multi-seed evaluation, `recsys_two_tower_clean` achieves $0.0541 \pm 0.0007$ (3 seeds) vs `recsys_two_tower_ranker_clean` $0.0500 \pm 0.0022$ (5 seeds). Two-Tower is promoted as the deployable production champion.
+
+---
+
+## 7. Two-Tower & Ranker Ablation Studies
+
+### A. Two-Tower Modality Ablations (Test NDCG@10)
+- **Full Two-Tower (ID + Text + Tags + Numeric):** $0.0548 \pm 0.0007$
+- **Without MiniLM Text Projection (`--no-text`):** $0.0482 \pm 0.0009$ ($\Delta = -0.0070$, $p < 0.05$, statistically significant drop proving text utility).
+- **Without ID Dropout (`--id-dropout 0.0`):** $0.0507$ ($\Delta = -0.0032$, $p < 0.05$, confirms ID dropout forces content branch generalization).
+- **Without Item ID (`--no-id`):** $0.0530 \pm 0.0004$ ($\Delta = -0.0003$, not significant, demonstrating strong content-only performance).
+
+### B. Ranker Feature Group Drops
+- **Drop Retrieval Source Scores:** $\text{NDCG@10} = 0.0387$ ($\Delta = -0.0220$, $p < 0.05$, largest driver).
+- **Drop Item Quality Features:** $\text{NDCG@10} = 0.0526$ ($\Delta = -0.0081$, $p < 0.05$).
+- **Drop Content Similarity:** $\text{NDCG@10} = 0.0571$ ($\Delta = -0.0035$).
+
+---
+
+## 8. Cold-Start Evaluation & Empirical Reconciliation
+
+### A. Experimental Regimes
+1. **Masked Target ID Simulation (Sparse Targets $\le 10$ train positives, $N = 553$ users):** Tests inference when the target item was present in the training universe but its ID embedding is replaced by the UNK token at test time.
+2. **Simulated New Items ($N = 437$ users, 300 items):** Random 10% catalog masked with train popularity zeroed and review proxies standardized to neutral 0.
+3. **True Item Holdout ($N = 184$ users, 300 items):** 10% torso/tail items completely excluded from training set interactions and the model retrained from scratch on 90% of the catalog.
+
+### B. Findings & Reconciliation
+- **Masked Target ID Simulation ($N = 553$):** Two-Tower masked achieves $\text{NDCG@10} = 0.0040$ ($[0.0011, 0.0080]$) and $\text{HR@10} = 0.0108$ with a mean catalog rank of $\sim 828 / 3,000$ (substantially better than random $\sim 1,500$). This proves that pre-trained text and tag embeddings allow the item tower to act as a semantic prior for items with sparse interactions.
+- **Simulated New Items ($N = 437$):** Content cosine achieves $\text{NDCG@10} = 0.0085$ ($[0.0034, 0.0152]$) and $\text{HR@10} = 0.0206$, beating random guessing ($0.0015$). Collaborative baselines collapse to $0.0000$.
+- **True Item Holdout ($N = 184$):** When items have zero training interactions, Two-Tower achieves $\text{NDCG@10} = 0.0000$ with a mean test rank of $1,419 / 3,000$ (essentially random). This proves that content representations alone without collaborative interaction density cannot break into the top 10 next-item recommendations. Content cosine achieves $\text{NDCG@10} = 0.0078$ and $\text{HR@10} = 0.0217$.
+- **Caveat:** Offline simulation uses static metadata created during the game's lifetime; prospective live A/B evaluation is required to measure true discovery of newly released titles.
+
+---
+
+## 9. Beyond-Accuracy Metrics & MMR Re-Ranking
+
+| Metric | Formula / Meaning | Best Model | Value | Popularity Baseline |
+| :--- | :--- | :--- | :---: | :---: |
+| **Catalog Coverage@10** | Fraction of 3,000 items recommended | `recsys_content` | **63.03%** | 0.70% |
+| **Novelty@10** | Mean self-information $-\log_2 P(i)$ | `recsys_content` | **11.75 bits** | 7.63 bits |
+| **Diversity@10** | Intra-list pairwise cosine distance | `recsys_als` | **0.7732** | 0.6948 |
+| **Head Share@10** | Share of recommendations in top 20% pop | `recsys_content` | **6.57%** | 100.0% |
+| **Gini Inequality** | Lorenz concentration across catalog | `recsys_content` | **0.8665** | 0.9965 |
+
+### Maximal Marginal Relevance (MMR) Diversity Frontier
+Applying MMR diversification ($\text{MMR}(u, i) = \lambda \cdot s_{ui} - (1-\lambda) \max_{j \in S} \text{Sim}(i, j)$) over Stage-1 candidates:
+- **$\lambda = 1.0$ (Pure Accuracy):** $\text{NDCG@10} = 0.0573$, $\text{Diversity} = 0.7564$
+- **$\lambda = 0.8$:** $\text{NDCG@10} = 0.0568$, $\text{Diversity} = 0.7762$ ($\Delta \text{NDCG} = -0.0004$)
+- **$\lambda = 0.6$:** $\text{NDCG@10} = 0.0556$, $\text{Diversity} = 0.8030$ ($\Delta \text{NDCG} = -0.0017$)
+
+---
+
+## 10. Engineering Limitations (Verbatim Audit Manifest)
+
+1. **Implicit Feedback from Reviews Only:** Interactions derive from reviews (`is_recommended`); lacks non-purchaser negative impressions.
+2. **Popularity and Selection Bias:** Highly reviewed titles receive disproportionate interactions.
+3. **Per-User Temporal Split Protocol:** Evaluates next-item prediction per user sequence rather than a single global calendar cutoff.
+4. **Item Universe Selection from Full Period:** 3,000 items chosen based on aggregate period counts to stabilize metadata.
+5. **Single Held-Out Item Target:** Exactly one target per user in test and val.
+6. **Offline Metrics vs Online Performance:** High offline NDCG reflects historical review retrieval, not guaranteed purchase conversion.
+7. **Simulated Cold-Start Evaluation:** Item content embeddings are pre-trained on catalog text.
+8. **Dev-Profile Scale Constraints:** Dev profile operates on 5,000 evaluation users and 3,000 items.
+9. **Temporal Test Shift:** Test metrics are lower than validation across all models due to natural temporal drift.
+10. **All-Time Item Statistics & Temporal Cutoff:** All-time review counts can include post-cutoff data in reference models.
+11. **Popularity Proxy Leakage in Initial Simulation:** Neutralized in clean pipelines by standardizing numeric features to 0.0.
+12. **Multiple Comparisons CI:** Pairwise bootstrap CIs are nominal 95% and not Bonferroni-adjusted.
+13. **Single-Seed Ablation Interpretability:** Multi-seed evaluation is necessary to verify marginal feature changes.
+14. **Catalog Coverage Definition (Masked vs Unmasked):** Official coverage (0.4383 test for Two-Tower clean) is strictly evaluated after masking seen items.
+
+---
+
+## 11. Legacy Success Predictor (Phase 4 — Archived Baseline)
+
+> **Archival Notice:** The predictive classification model (`game_success_predictor` in `backend/jobs/train_success_model.py`) is preserved as a legacy component for tabular game-level classification.
+
+### Legacy Benchmark Summary
+- **Model:** 5-Fold Stratified Cross-Validation Optuna-tuned XGBoost + LightGBM ensemble.
+- **Metrics:** Accuracy 75.10%, ROC-AUC 0.8301, F1-Score 77.98%, Brier Score 0.1648.
+- **Known Limitations of Legacy Predictor:**
+  1. Composite heuristic label ($\text{Positive Reviews} \ge 1,000 \land \text{Review Score} \ge 75\%$).
+  2. Small catalog size ($N < 500$ games).
+  3. Evaluated via cross-validation without a true future out-of-time holdout set.
