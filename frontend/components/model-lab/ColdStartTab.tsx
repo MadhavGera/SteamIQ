@@ -67,6 +67,22 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
 
     const noteText = study.note ?? study.limitations_note;
 
+    const formatModelName = (name?: string) => {
+      if (!name) return "Model";
+      if (name === "two_tower_masked_train_pos_raw_0") return "Two-Tower (Masked + Train Pop Raw 0)";
+      if (name === "two_tower_masked_standardized_z0") return "Two-Tower (Masked + Standardized z=0)";
+      if (name === "two_tower_unmasked") return "Two-Tower (Unmasked Holdout)";
+      if (name.includes("two_tower_masked")) return "Two-Tower Masked [Reference: All-Time Stats]";
+      if (name === "two_tower_intact") return "Two-Tower Intact (Reference)";
+      if (name === "two_tower") return "Two-Tower (Holdout Retrained)";
+      if (name === "content") return "Content Cosine";
+      if (name === "popularity") return "Popularity";
+      if (name === "als") return "ALS";
+      if (name === "itemknn") return "Item-kNN";
+      if (name === "random") return "Random";
+      return name;
+    };
+
     return (
       <div style={{ marginBottom: "28px" }}>
         <div style={{ marginBottom: "8px" }}>
@@ -134,7 +150,7 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
                   <tr key={idx}>
                     <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>
                       {/* HONEST-FALLBACK: Default model name in cold start study */}
-                      {row.model_name ?? "Model"}
+                      {formatModelName(row.model_name)}
                     </td>
                     <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{hitsStr}</td>
                     <td style={{ fontFamily: "var(--font-mono, monospace)" }}>
@@ -184,6 +200,20 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
         <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
           Benchmarking recommendations under zero-interaction catalog holdouts and inference-time masking simulations.
         </p>
+        <div
+          style={{
+            marginTop: "12px",
+            padding: "10px 14px",
+            backgroundColor: "rgba(99, 102, 241, 0.08)",
+            border: "1px solid rgba(99, 102, 241, 0.25)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "12px",
+            color: "var(--text-primary)",
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>Empirical Finding:</strong> Content-only recommender beats random discovery on zero-interaction holdouts, whereas two-tower dual encoders score unseen items at or below random once item IDs and popularity proxies are neutralized.
+        </div>
       </div>
 
       {/* 1. Primary Evidence: True Item Holdout Study */}

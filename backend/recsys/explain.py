@@ -23,26 +23,10 @@ from recsys.data import RecsysData
 logger = logging.getLogger("steamiq.recsys.explain")
 
 FEATURE_TEMPLATES: dict[str, str] = {
-    # Two-Tower candidate source features
-    "tt_score": "Recommended by player collaborative filtering signals",
-    "tt_rank": "Top rank in collaborative retrieval candidates",
-    "in_tt": "High collaborative retrieval affinity",
-    # Item-kNN candidate source features
-    "itemknn_score": "Frequently played by players with similar taste",
-    "itemknn_rank": "Top rank among games frequently co-played with your library",
-    "in_itemknn": "Frequently co-played with titles in your library",
-    # ALS candidate source features
-    "als_score": "Strong match across latent player interaction patterns",
-    "als_rank": "Top rank in latent player preference candidates",
-    "in_als": "Identified by player latent interaction matrix",
-    # Content candidate source features
-    "content_score": "Thematically aligned with your library's store descriptions",
-    "content_rank": "Top rank in thematic content candidates",
-    "in_content": "Identified through store description and theme analysis",
     # Item features
     "log_train_pop": "One of the most popular titles on Steam",
-    "popularity_rank_pct": "Top trending title across player libraries",
-    "age_years": "Release era aligns with your library favorites",
+    "popularity_rank_pct": "Top trending title across Steam libraries",
+    "age_years": "Release era aligns with games you liked/reviewed",
     "positive_ratio": "Overwhelmingly positive reviews from the community",
     "log_user_reviews": "Highly reviewed and popular community favorite",
     "price_final": "Matches your preferred game pricing tier",
@@ -53,18 +37,18 @@ FEATURE_TEMPLATES: dict[str, str] = {
     "steam_deck": "Verified for great playability on Steam Deck",
     "has_description": "Rich store content and player documentation",
     # User-item features
-    "price_gap": "Priced close to what you usually play",
-    "abs_price_gap": "Priced similarly to titles in your library",
-    "tag_jaccard": "Shares tags with games in your library",
-    "content_max_cos": "Very similar themes and description to your top games",
-    "content_mean_cos": "Strong thematic match with your overall library",
-    "cos_to_last_item": "Similar in style to your most recently played game",
-    "release_year_gap": "Released in a similar era to games in your collection",
+    "price_gap": "Priced close to games you usually like/review",
+    "abs_price_gap": "Priced similarly to titles you liked/reviewed",
+    "tag_jaccard": "Shares tags with games you liked/reviewed",
+    "content_max_cos": "Very similar themes and description to games you liked/reviewed",
+    "content_mean_cos": "Strong thematic match with games you liked/reviewed",
+    "cos_to_last_item": "Similar in style to games you recently liked/reviewed",
+    "release_year_gap": "Released in a similar era to games you liked/reviewed",
     # User features
-    "history_len": "Curated based on your extensive gaming history",
-    "log_products": "Tailored for your extensive gaming collection",
+    "history_len": "Curated based on titles you liked/reviewed",
+    "log_products": "Tailored based on games you liked/reviewed",
     "log_reviews": "Matches your active community feedback profile",
-    "mean_log_hours": "Matches the playtime depth of your favorite titles",
+    "mean_log_hours": "Matches the depth of games you liked/reviewed",
 }
 
 

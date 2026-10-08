@@ -184,7 +184,7 @@ class RunReconciliationJob(BaseJob):
         r42_test_ndcg = full_ranker_test_res[42].metrics.get("ndcg_at_10", 0.0)
         r42_test_hr = full_ranker_test_res[42].metrics.get("hit_rate_at_10", 0.0)
 
-        print(f"\n  Seed 42 Ranker Reproduction: Test NDCG@10 = {r42_test_ndcg:.4f} (official 0.0573), Test HR@10 = {r42_test_hr:.4f} (official 0.1054)")
+        print(f"\n  Seed 42 Ranker Reproduction: Test NDCG@10 = {r42_test_ndcg:.4f}, Test HR@10 = {r42_test_hr:.4f}")
         assert r42_test_ndcg > 0.05, f"Seed 42 Test NDCG should be > 0.05: {r42_test_ndcg}"
         assert r42_test_hr > 0.09, f"Seed 42 Test HR should be > 0.09: {r42_test_hr}"
         assert r42_test_cov > 0.40, f"Seed 42 Test Coverage should be > 0.40: {r42_test_cov}"
@@ -199,14 +199,14 @@ class RunReconciliationJob(BaseJob):
         print("-" * 95)
 
         # Line-by-line explanation of test NDCG discrepancy in earlier harnesses
-        print("\n[A.2 Line-by-Line Discrepancy Analysis]")
-        print("  Cause of earlier 0.0501 test NDCG in experiment harness vs 0.0622 in original pipeline:")
+        print("\n[A.2 Line-by-Line Discrepancy Analysis (Hypothesis)]")
+        print("  Hypothesis for discrepancy in earlier experiment harness vs official pipeline:")
         print("  1. In earlier buggy harnesses, user histories on the test split were passed as user_train_pos[u] instead of")
         print("     (user_train_pos[u] + [val_item]). This caused a temporal truncation where test fold-in history was 1 item short.")
         print("  2. The candidate generation step in the earlier harness scored candidates against pre-validation history, causing")
-        print("     a ~40% candidate miss rate on test targets.")
+        print("     a candidate miss rate on test targets.")
         print("  3. When evaluate_model(split='test') is called, evaluate.py correctly appends val_item to test history, reproducing")
-        print("     the exact official NDCG@10 of 0.0573 (seed 42) and 0.0622 ± 0.0026 (5-seed mean).")
+        print("     the official pipeline evaluation.")
 
         # A.3: 5 Nested Masking Conditions on 437 "New Item" Users (random 10% items, seed 42)
         print("\n" + "-" * 120)
@@ -294,7 +294,7 @@ class RunReconciliationJob(BaseJob):
         print("-" * 115)
         print(f"{'(a) No masking (reference intact Two-Tower)':<65} | {hr_a:.4f}     | {nd_a:.4f}     | Intact baseline")
         print(f"{'(b) Target ID embedding masked only':<65} | {hr_b:.4f}     | {nd_b:.4f}     | Masked ID token")
-        print(f"{'(c) (b) + train popularity zeroed in TARGET items':<65} | {hr_c:.4f}     | {nd_c:.4f}     | Reproduces earlier 0.0732 (C1 un-neutralized proxy leakage)")
+        print(f"{'(c) (b) + train popularity zeroed in TARGET items':<65} | {hr_c:.4f}     | {nd_c:.4f}     | Hypothesis: un-neutralized proxy leakage")
         print(f"{'(d) (c) + user_reviews & positive_ratio neutralized (TARGET)':<65} | {hr_d:.4f}     | {nd_d:.4f}     | Pure collaborative cold start collapse")
         print(f"{'(e) (d) + proxies neutralized globally (ALL items)':<65} | {hr_e:.4f}     | {nd_e:.4f}     | Uniform content-only catalog distribution")
 

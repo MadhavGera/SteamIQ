@@ -378,8 +378,11 @@ def test_global_shap_and_explanation_templates():
     assert len(shap_dict) == len(FEATURE_COLUMNS)
     for col in FEATURE_COLUMNS:
         assert col in shap_dict
-        # Verify human-readable template exists for every feature
-        assert col in FEATURE_TEMPLATES
+        if col.startswith("in_") or col.endswith("_rank") or col.endswith("_score") or col.endswith("_in_cands"):
+            # Source rank/score/indicator features are excluded from explanation templates
+            assert col not in FEATURE_TEMPLATES
+        else:
+            assert col in FEATURE_TEMPLATES
 
     # Test single recommendation explanation synthesis
     sample_shap = {col: 0.1 if col == "tag_jaccard" else 0.0 for col in FEATURE_COLUMNS}

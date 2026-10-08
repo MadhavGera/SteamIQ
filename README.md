@@ -92,18 +92,18 @@ All figures below are generated directly from the frozen evaluation reports ([`b
 
 The deployable champion is **`recsys_two_tower_clean`**. It relies strictly on train-split item statistics and generalizable modalities.
 
-| Model | Architecture / Method | Split | NDCG@10 (95% CI) | HR@10 (95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Stage |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`recsys_two_tower_clean`** | Two-Tower (MiniLM + Tags + BPR) | **test** | **0.0516 [0.0470, 0.0567]** | **0.1028 [0.0946, 0.1110]** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
-| `recsys_two_tower_clean` | Two-Tower (MiniLM + Tags + BPR) | **val** | 0.0611 [0.0557, 0.0662] | 0.1190 [0.1104, 0.1280] | 0.0436 | 0.4347 | 0.7588 | Champion (Production) |
-| `recsys_two_tower_ranker_clean` | Stage 2 LambdaMART Ranker | **test** | 0.0596 [0.0546, 0.0647] | 0.1092 [0.1010, 0.1178] | 0.0445 | 0.4887 | 0.7462 | Candidate |
-| `recsys_two_tower_ranker_clean` | Stage 2 LambdaMART Ranker | **val** | 0.0645 [0.0591, 0.0696] | 0.1230 [0.1140, 0.1316] | 0.0467 | 0.4990 | 0.7419 | Candidate |
-| `recsys_itemknn` | Shrinkage-Cosine Item-Item CF | **test** | 0.0445 [0.0403, 0.0494] | 0.0842 [0.0766, 0.0916] | 0.0326 | 0.6143 | 0.7255 | Candidate |
-| `recsys_als` | Implicit ALS Matrix Factorization | **test** | 0.0404 [0.0362, 0.0449] | 0.0776 [0.0704, 0.0852] | 0.0291 | 0.2480 | 0.7732 | Candidate |
-| `recsys_popularity` | Train-Interaction Frequency | **test** | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | Baseline |
-| `recsys_content` | Text & Tag Cosine Similarity | **test** | 0.0146 [0.0120, 0.0176] | 0.0268 [0.0226, 0.0316] | 0.0110 | 0.6303 | 0.5041 | Baseline |
+| Model | Split | Seeds | NDCG@10 (mean ± std / 95% CI) | HR@10 (mean ± std / 95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Stage |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **`recsys_two_tower_clean`** | **test** | 3 | **0.0541 ± 0.0018** | **0.1039 ± 0.0022** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
+| `recsys_two_tower_clean` | **val** | 3 | 0.0621 ± 0.0005 | 0.1206 ± 0.0020 | 0.0436 | 0.4347 | 0.7588 | Champion (Production) |
+| `recsys_two_tower_ranker_clean` | **test** | 5 | 0.0558 ± 0.0022 | 0.1062 ± 0.0035 | 0.0445 | 0.4887 | 0.7462 | Candidate |
+| `recsys_two_tower_ranker_clean` | **val** | 5 | 0.0616 ± 0.0021 | 0.1200 ± 0.0032 | 0.0467 | 0.4990 | 0.7419 | Candidate |
+| `recsys_itemknn` | **test** | 1 | 0.0445 [0.0403, 0.0494] | 0.0842 [0.0766, 0.0916] | 0.0326 | 0.6143 | 0.7255 | Candidate |
+| `recsys_als` | **test** | 1 | 0.0404 [0.0362, 0.0449] | 0.0776 [0.0704, 0.0852] | 0.0291 | 0.2480 | 0.7732 | Candidate |
+| `recsys_popularity` | **test** | 1 | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | Baseline |
+| `recsys_content` | **test** | 1 | 0.0146 [0.0120, 0.0176] | 0.0268 [0.0226, 0.0316] | 0.0110 | 0.6303 | 0.5041 | Baseline |
 
-> **Note on the Clean Ranker vs Two-Tower Comparison:** In multi-seed evaluation, `recsys_two_tower_clean` achieves $0.0541 \pm 0.0007$ test NDCG@10 (3 seeds) while `recsys_two_tower_ranker_clean` achieves $0.0500 \pm 0.0022$ (5 seeds). Sliced paired bootstrap tests reveal that while Two-Tower dominates on head items ($\Delta = +0.0111$, $p < 0.05$), the ranker significantly outperforms Two-Tower on catalog tail items ($\Delta = +0.0069$, $p < 0.05$). Under the pre-registered promotion protocol, Two-Tower clean is retained as the production champion due to higher overall accuracy and latency efficiency ($<3\text{ ms}$ vs $\sim 15\text{ ms}$).
+> **Note on the Clean Ranker vs Two-Tower Comparison:** In multi-seed evaluation, `recsys_two_tower_clean` achieves $0.0541 \pm 0.0018$ test NDCG@10 (3 seeds) while `recsys_two_tower_ranker_clean` achieves $0.0558 \pm 0.0022$ (5 seeds). Under the pre-registered tournament rule, the ranker must win tuning-set val NDCG@10 by more than its standard deviation ($\sigma_r = 0.0021$); with tuning val NDCG@10 of $0.0616 \pm 0.0021$ vs Two-Tower $0.0621 \pm 0.0005$ ($\Delta = -0.0005$), the threshold is not met and `recsys_two_tower_clean` is promoted as the production champion.
 
 ### 2. Diagnostic Reference Models (Non-Deployable Upper Bounds)
 
@@ -122,9 +122,9 @@ SteamIQ handles catalog cold start by projecting item textual descriptions (Sent
 
 ### Cold-Start Simulation & Holdout Results
 
-- **Masked Target ID Simulation (Sparse Targets $\le 10$ train positives, $N = 553$ users):** Masking the target item ID embedding at inference yields $\text{NDCG@10} = 0.0040$ ($[0.0011, 0.0080]$) and $\text{HR@10} = 0.0108$ ($[0.0036, 0.0217]$) with a mean catalog rank of $\sim 828 / 3,000$ (substantially better than random guessing $\sim 1,500$), demonstrating that semantic embeddings provide viable discovery priors for games with limited interaction history.
-- **Simulated New Items (10% catalog masked with neutralized proxies, $N = 437$ users):** Content cosine retrieves relevant items with $\text{NDCG@10} = 0.0085$ ($[0.0034, 0.0152]$) and $\text{HR@10} = 0.0206$ ($[0.0092, 0.0366]$), beating pure random guessing ($\text{NDCG@10} = 0.0015$). Pure collaborative filtering (ALS, Item-kNN, Popularity) collapses to $0.0000$.
-- **True Item Holdout (10% Torso/Tail retrained from scratch on 90% catalog, $N = 184$ users):** When items have zero training interactions, Two-Tower achieves $\text{NDCG@10} = 0.0000$ with a mean test rank of $1,419 / 3,000$ (essentially random), proving that content representations alone cannot reliably break into the top 10 without collaborative density. Pure Content Cosine remains functional with $\text{NDCG@10} = 0.0078$ and $\text{HR@10} = 0.0217$.
+- **True Item Holdout (Primary Benchmark — 10% Torso/Tail retrained from scratch on 90% catalog, $N = 184$ users):** Content Cosine leads cold-start discovery with $\text{NDCG@10} = 0.0078$ ($[0.0006, 0.0163]$), $\text{HR@10} = 0.0217$ ($4 / 184$ hits), and a mean catalog rank of $1,084.6$ ($[963.7, 1,212.3]$ out of 3,000). Two-Tower retrained with zero interactions achieves $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits) with a mean rank of $2,126.6$ ($[2,015.1, 2,238.7]$), showing collaborative priors dominate when interactions are absent.
+- **Simulated New Items (10% catalog masked with neutralized proxies, $N = 437$ users):** Content cosine retrieves relevant items with $\text{NDCG@10} = 0.0085$ ($[0.0034, 0.0152]$) and $\text{HR@10} = 0.0206$ ($9 / 437$ hits, mean rank $1,018.3$), beating pure random guessing ($\text{NDCG@10} = 0.0015$). Pure collaborative filtering (ALS, Item-kNN, Popularity) collapses to $0.0000$.
+- **Masked Target ID Simulation / Sparse Targets (Optimistic Proxy — Sparse Targets $\le 10$ train positives, $N = 553$ users):** Two-Tower masked ID achieves $\text{NDCG@10} = 0.0036$ ($[0.0008, 0.0071]$) and $\text{HR@10} = 0.0090$ ($5 / 553$ hits) with mean catalog rank $1,143.5$ ($[1,074.3, 1,217.0]$), while Content achieves $\text{NDCG@10} = 0.0054$ (mean rank $1,368.5$).
 - **Honest Limitations Note:** We do **not** claim to have "solved" cold start. Offline simulations zero out interaction IDs but still rely on static descriptions and tags curated over the game's lifecycle. True cold-start evaluation requires prospective live A/B traffic logging.
 
 ---

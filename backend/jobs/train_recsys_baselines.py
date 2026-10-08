@@ -373,8 +373,8 @@ class TrainRecsysBaselinesJob(BaseJob):
                 name = rec["model_name"]
                 if rec["model_key"] == "popularity":
                     print(
-                        f"{name:<18} | {'val':<5} | {'0.0000 [baseline]':<30} | "
-                        f"{'0.0000 [baseline]':<30} | {'Baseline':<10}"
+                        f"{name:<18} | {'val':<5} | {'[baseline reference]':<30} | "
+                        f"{'[baseline reference]':<30} | {'Baseline':<10}"
                     )
                     continue
 

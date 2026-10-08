@@ -181,94 +181,108 @@ class RecommenderService:
             self.item_cache = ItemFeatureCache(self.data)
             self.user_cache = UserFeatureCache(self.data)
 
-            # 2. Load latest model artifacts
+            # 2. Load latest model artifacts resolved via model_runs
             artifacts_base = self.data_dir / "artifacts"
             stage1_instances: dict[str, BaseRecommender] = {}
 
-            # Helper to find latest artifact directory
-            def find_latest_artifact_dir(model_name: str) -> Path | None:
+            db_runs_map: dict[str, Any] = {}
+            try:
+                from recsys.registry import get_latest_recsys_runs_sync
+                latest_db_runs = get_latest_recsys_runs_sync(dataset_version=self.data.dataset_version if self.data else None)
+                for r in latest_db_runs:
+                    db_runs_map[r.model_name] = r
+            except Exception as e:
+                logger.debug("Database model_runs lookup fallback: %s", e)
+
+            def resolve_model_artifact(model_name: str) -> tuple[Path | None, dict[str, Any]]:
+                if model_name in db_runs_map:
+                    run_obj = db_runs_map[model_name]
+                    p = Path(run_obj.artifact_path)
+                    if p.exists():
+                        m = run_obj.metrics or {}
+                        val_n = m.get("val_metrics", {}).get("ndcg_at_10") if isinstance(m.get("val_metrics"), dict) else m.get("val_ndcg_at_10", 0.0)
+                        test_n = m.get("test_metrics", {}).get("ndcg_at_10") if isinstance(m.get("test_metrics"), dict) else m.get("test_ndcg_at_10", 0.0)
+                        return p, {
+                            "artifact_path": str(p),
+                            "model_run_id": str(run_obj.id),
+                            "stage": run_obj.stage,
+                            "val_ndcg_at_10": float(val_n) if val_n is not None else 0.0,
+                            "test_ndcg_at_10": float(test_n) if test_n is not None else 0.0,
+                        }
+                # Fallback to filesystem if not in db
                 art_dir = artifacts_base / model_name
-                if not art_dir.exists():
-                    return None
-                cand_dirs = sorted(
-                    [d for d in art_dir.iterdir() if d.is_dir()],
-                    key=lambda x: x.stat().st_mtime,
-                    reverse=True,
-                )
-                return cand_dirs[0] if cand_dirs else None
+                if art_dir.exists():
+                    cand_dirs = sorted([d for d in art_dir.iterdir() if d.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True)
+                    if cand_dirs:
+                        return cand_dirs[0], {"artifact_path": str(cand_dirs[0]), "stage": "candidate"}
+                return None, {}
 
             # Load stage 1 models
             # (a) Popularity
-            pop_dir = find_latest_artifact_dir("recsys_popularity")
+            pop_dir, pop_meta = resolve_model_artifact("recsys_popularity")
             if pop_dir and pop_dir.exists():
                 try:
                     self.models["recsys_popularity"] = PopularityRecommender.load(pop_dir)
-                    self.model_runs_meta["recsys_popularity"] = {"artifact_path": str(pop_dir), "stage": "candidate"}
+                    self.model_runs_meta["recsys_popularity"] = pop_meta
                 except Exception as e:
                     logger.warning("Could not load Popularity model: %s", e)
 
             # (b) Item-kNN
-            knn_dir = find_latest_artifact_dir("recsys_itemknn")
+            knn_dir, knn_meta = resolve_model_artifact("recsys_itemknn")
             if knn_dir and knn_dir.exists():
                 try:
                     m = ItemKNNRecommender.load(knn_dir)
                     self.models["recsys_itemknn"] = m
                     stage1_instances["itemknn"] = m
-                    self.model_runs_meta["recsys_itemknn"] = {"artifact_path": str(knn_dir), "stage": "candidate"}
+                    self.model_runs_meta["recsys_itemknn"] = knn_meta
                 except Exception as e:
                     logger.warning("Could not load Item-kNN model: %s", e)
 
             # (c) ALS
-            als_dir = find_latest_artifact_dir("recsys_als")
+            als_dir, als_meta = resolve_model_artifact("recsys_als")
             if als_dir and als_dir.exists():
                 try:
                     m = ALSRecommender.load(als_dir)
                     self.models["recsys_als"] = m
                     stage1_instances["als"] = m
-                    self.model_runs_meta["recsys_als"] = {"artifact_path": str(als_dir), "stage": "candidate"}
+                    self.model_runs_meta["recsys_als"] = als_meta
                 except Exception as e:
                     logger.warning("Could not load ALS model: %s", e)
 
             # (d) Content
-            cnt_dir = find_latest_artifact_dir("recsys_content")
+            cnt_dir, cnt_meta = resolve_model_artifact("recsys_content")
             if cnt_dir and cnt_dir.exists():
                 try:
                     m = ContentRecommender.load(cnt_dir)
                     self.models["recsys_content"] = m
                     stage1_instances["content"] = m
-                    self.model_runs_meta["recsys_content"] = {"artifact_path": str(cnt_dir), "stage": "candidate"}
+                    self.model_runs_meta["recsys_content"] = cnt_meta
                 except Exception as e:
                     logger.warning("Could not load Content model: %s", e)
 
             # (e) Clean Two-Tower
-            tt_dir = find_latest_artifact_dir("recsys_two_tower_clean") or find_latest_artifact_dir("recsys_two_tower")
+            tt_dir, tt_meta = resolve_model_artifact("recsys_two_tower_clean")
+            if not tt_dir:
+                tt_dir, tt_meta = resolve_model_artifact("recsys_two_tower")
             if tt_dir and tt_dir.exists():
                 try:
                     m = TwoTowerModel.load(tt_dir, data=self.data)
                     self.models["recsys_two_tower_clean"] = m
                     stage1_instances["two_tower"] = m
                     self.tt_item_vectors = m.precompute_item_vectors()
-                    self.model_runs_meta["recsys_two_tower_clean"] = {
-                        "artifact_path": str(tt_dir),
-                        "stage": "production",
-                        "val_ndcg_at_10": 0.0611,
-                        "test_ndcg_at_10": 0.0516,
-                    }
+                    self.model_runs_meta["recsys_two_tower_clean"] = tt_meta
                 except Exception as e:
                     logger.warning("Could not load Two-Tower model: %s", e)
 
             # (f) Clean Ranker
-            ranker_dir = find_latest_artifact_dir("recsys_two_tower_ranker_clean") or find_latest_artifact_dir("recsys_two_tower_ranker")
+            ranker_dir, ranker_meta = resolve_model_artifact("recsys_two_tower_ranker_clean")
+            if not ranker_dir:
+                ranker_dir, ranker_meta = resolve_model_artifact("recsys_two_tower_ranker")
             if ranker_dir and ranker_dir.exists() and "two_tower" in stage1_instances:
                 try:
                     m = RankerModel.load(ranker_dir, data=self.data, models=stage1_instances)
                     self.models["recsys_two_tower_ranker_clean"] = m
-                    self.model_runs_meta["recsys_two_tower_ranker_clean"] = {
-                        "artifact_path": str(ranker_dir),
-                        "stage": "candidate",
-                        "val_ndcg_at_10": 0.0645,
-                        "test_ndcg_at_10": 0.0596,
-                    }
+                    self.model_runs_meta["recsys_two_tower_ranker_clean"] = ranker_meta
                 except Exception as e:
                     logger.warning("Could not load Ranker model: %s", e)
 
@@ -421,13 +435,13 @@ class RecommenderService:
                 if canonical_model == "recsys_two_tower_ranker_clean":
                     # SHAP reasons + vector cosine anchors
                     shap_list = ranker_shap_map.get(i_int, [])
-                    pos_features = sorted([f for f in shap_list if f[1] > 0], key=lambda x: x[1], reverse=True)
+                    pos_features = sorted([f for f in shap_list if f[1] > 0 and f[0] in FEATURE_TEMPLATES], key=lambda x: x[1], reverse=True)
                     for feat_name, _ in pos_features[:3]:
-                        t_str = FEATURE_TEMPLATES.get(feat_name, f"Strong match on {feat_name}")
+                        t_str = FEATURE_TEMPLATES[feat_name]
                         if t_str not in reasons:
                             reasons.append(t_str)
                     if not reasons:
-                        reasons.append("Top multi-source collaborative match for your gaming profile")
+                        reasons.append("High semantic and tag similarity with games you liked/reviewed")
 
                     # Cosine anchors
                     because_you_liked = self._compute_cosine_anchors(i_int, foldin_history, top_n=2)
@@ -607,27 +621,39 @@ class RecommenderService:
             is_champ = fam == DEFAULT_MODEL_NAME
             stage = "production" if is_champ else meta.get("stage", "candidate")
 
-            # Reference multi-seed metrics
-            metrics_table = {
-                "recsys_popularity": {"test_ndcg_at_10": 0.0151, "test_hr_at_10": 0.0326, "seeds": 1},
-                "recsys_content": {"test_ndcg_at_10": 0.0146, "test_hr_at_10": 0.0268, "seeds": 1},
-                "recsys_itemknn": {"test_ndcg_at_10": 0.0445, "test_hr_at_10": 0.0842, "seeds": 1},
-                "recsys_als": {"test_ndcg_at_10": 0.0404, "test_hr_at_10": 0.0776, "seeds": 1},
-                "recsys_two_tower_clean": {"test_ndcg_at_10": 0.0516, "test_hr_at_10": 0.1028, "seeds": 3},
-                "recsys_two_tower_ranker_clean": {"test_ndcg_at_10": 0.0596, "test_hr_at_10": 0.1092, "seeds": 5},
-            }
-            m_stat = metrics_table.get(fam, {})
+        leaderboard_path = self.data_dir / "reports" / "leaderboard.json"
+        lb_models_map: dict[str, Any] = {}
+        if leaderboard_path.exists():
+            try:
+                import json
+                with open(leaderboard_path, encoding="utf-8") as f:
+                    lb_data = json.load(f)
+                    for m in lb_data.get("models", []):
+                        lb_models_map[m.get("model_name", "")] = m
+            except Exception as e:
+                logger.debug("Could not read leaderboard.json: %s", e)
+
+        info_list: list[dict[str, Any]] = []
+        for fam in DEPLOYABLE_MODELS:
+            is_ready = fam in self.models
+            meta = self.model_runs_meta.get(fam, {})
+            is_champ = fam == DEFAULT_MODEL_NAME
+            stage = "production" if is_champ else meta.get("stage", "candidate")
+
+            lb_entry = lb_models_map.get(fam, {})
+            test_m = lb_entry.get("test_metrics", {})
+            val_m = lb_entry.get("val_metrics", {})
 
             info_list.append({
                 "model_name": fam,
                 "display_name": fam.replace("recsys_", "").replace("_clean", "").replace("_", " ").title(),
                 "deployable": True,
                 "stage": stage,
-                "model_run_id": meta.get("model_run_id"),
-                "val_ndcg_at_10": meta.get("val_ndcg_at_10", 0.0),
-                "test_ndcg_at_10_mean": m_stat.get("test_ndcg_at_10", 0.0),
-                "test_hr_at_10_mean": m_stat.get("test_hr_at_10", 0.0),
-                "n_seeds": m_stat.get("seeds", 1),
+                "model_run_id": meta.get("model_run_id") or lb_entry.get("model_run_id"),
+                "val_ndcg_at_10": meta.get("val_ndcg_at_10") or val_m.get("ndcg_at_10", 0.0),
+                "test_ndcg_at_10_mean": meta.get("test_ndcg_at_10") or test_m.get("ndcg_at_10", 0.0),
+                "test_hr_at_10_mean": test_m.get("hit_rate_at_10", 0.0),
+                "n_seeds": lb_entry.get("n_seeds", 1),
                 "is_ready": is_ready,
                 "is_preview": self.ranker_is_preview if "ranker" in fam else False,
             })

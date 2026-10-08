@@ -6,9 +6,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
+from jobs.generate_cold_start_report import summarize_model_ranks
 from recsys.report import (
     _clean_for_json,
     build_leaderboard_payload,
@@ -143,3 +145,65 @@ def test_save_report_json_and_markdown(tmp_path: Path) -> None:
     md = generate_leaderboard_markdown(payload)
     assert "# 🏆 SteamIQ Recommender System Evaluation & Evidence Report" in md
     assert "recsys_popularity" in md
+
+
+def test_cold_start_report_schema_validation() -> None:
+    """Cold-start report payload validates against ColdStartPayload schema with reference labels."""
+    ranks = np.array([1, 5, 12, 100, 2500, 3000], dtype=np.int64)
+    summary = summarize_model_ranks(ranks, n_users=6, seed=42)
+    assert summary["hits_k"] == 2
+    assert summary["n_users"] == 6
+    assert 0.0 <= summary["hit_rate_at_10"] <= 1.0
+    assert 0.0 <= summary["ndcg_at_10"] <= 1.0
+    assert summary["mean_rank"] > 0
+    assert summary["median_rank"] > 0
+
+    cold_start_payload = {
+        "metadata": {
+            "report_key": "cold_start",
+            "dataset_version": "test_v1",
+            "n_eval_users": 6,
+            "seed": 42,
+            "generated_at": "2026-10-08T20:00:00+00:00",
+        },
+        "item_holdout_study": {
+            "study_type": "item_holdout",
+            "primary_evidence": True,
+            "title": "True Item Holdout",
+            "n_eval_users": 6,
+            "n_held_out_items": 300,
+            "models": {
+                "random": summary,
+                "content": summary,
+                "two_tower": summary,
+            },
+        },
+        "sparse_targets_study": {
+            "study_type": "sparse_targets",
+            "primary_evidence": False,
+            "title": "Sparse Targets Subgroup Study",
+            "is_optimistic_proxy": True,
+            "n_eval_users": 6,
+            "max_train_positives": 10,
+            "models": {
+                "two_tower_masked (reference: all-time stats)": summary,
+            },
+        },
+        "simulated_new_items_study": {
+            "study_type": "simulated_new_items",
+            "variant": "c2",
+            "variant_label": "C2: Fair Simulation",
+            "primary_evidence": False,
+            "is_optimistic_proxy": True,
+            "n_eval_users": 6,
+            "n_new_items": 300,
+            "fraction_masked": 0.10,
+            "models": {
+                "two_tower_masked (reference: all-time stats)": summary,
+            },
+        },
+    }
+    validated = validate_report_payload("cold_start", cold_start_payload)
+    assert validated.metadata.report_key == "cold_start"
+    assert validated.item_holdout_study["primary_evidence"] is True
+

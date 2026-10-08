@@ -108,6 +108,7 @@ recsys-project: ## Project item embeddings to 2D UMAP and KMeans clusters: make 
 
 recsys-reports: ## Generate and synchronize all recsys evidence reports: make recsys-reports
 	cd $(BACKEND) && $(PYTHON) -m jobs.generate_reports
+	cd $(BACKEND) && $(PYTHON) -m jobs.generate_cold_start_report
 
 recsys-serve-check: ## Verify online serving parity and score consistency: make recsys-serve-check
 	cd $(BACKEND) && $(PYTHON) -m jobs.serve_check

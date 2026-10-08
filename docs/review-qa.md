@@ -41,9 +41,14 @@ This document contains 25 essential questions and answers prepared for the techn
 ---
 
 ### Q7: How is item cold start evaluated, and what do the true holdout vs masking studies prove?
-**Answer:** Cold-start items lack interaction histories. SteamIQ distinguishes between primary prospective evidence and optimistic proxy simulations:
-1. **Primary Benchmark: True Item Holdout ($N = 184$ users, 300 items withheld):** 10% torso/tail items are completely excluded from training set interactions and models retrained from scratch on 90% of the catalog. Two-Tower achieves $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits) with a mean catalog rank of $2,126.6$ ($[2,015.1, 2,238.7]$), proving that content representations alone without collaborative interaction density cannot break into the top 10. Pure Content Cosine achieves $\text{NDCG@10} = 0.0078$ ($4 / 184$ hits) with a mean rank of $1,084.6$.
-2. **Optimistic Proxy Simulation: Masked Target ID ($N = 553$ users, target $\le 10$ train positives):** When target item ID is masked at inference on a model trained with the full catalog (using ID dropout $p=0.25$), Two-Tower achieves $\text{NDCG@10} = 0.0036$ ($5 / 553$ hits) with a mean catalog rank of $1,143.5$ ($[1,074.3, 1,217.0]$), showing that pre-trained text and tag embeddings provide a viable semantic prior.  
+**Answer:** Cold-start items lack interaction histories. SteamIQ evaluates true prospective discovery across four holdout conditions on 184 holdout users (300 withheld items):
+1. **Primary Benchmark (True Item Holdout, $N = 184$ users):** Content-only recommender beats random (mean rank $1,084.6$ vs random $1,543.9$; $\text{NDCG@10} = 0.0078$, $4/184$ hits). In contrast, the Two-Tower dual encoder scores unseen items at or below random (mean rank $2,126.6$ vs random $1,543.9$; $\text{NDCG@10} = 0.0000$, $0/184$ hits) once popularity proxies and item IDs are neutralized.
+2. **Four Holdout Conditions on Two-Tower ($N = 184$ users):**
+   - (a) Unmasked (cheating on ID): mean rank $820.2$, $\text{NDCG@10} = 0.0054$.
+   - (b) ID Masked only (popularity proxy intact): mean rank $781.2$, $\text{NDCG@10} = 0.0034$.
+   - (c) ID Masked + train positives raw 0: mean rank $2,162.4$, $\text{NDCG@10} = 0.0000$.
+   - (c2) Standardized catalog mean ($z=0$): mean rank $2,126.6$, $\text{NDCG@10} = 0.0000$.
+3. **Conclusion:** Content representations alone provide valid semantic discovery that beats random, but Two-Tower models require collaborative interaction density and cannot effectively score unseen items in true zero-interaction cold start without popularity proxies.  
 **Evidence:** [`backend/data/recsys/reports/cold_start.json`](backend/data/recsys/reports/cold_start.json), [`docs/ml-accuracy-and-evaluation-guide.md`](docs/ml-accuracy-and-evaluation-guide.md).
 
 ---
@@ -85,19 +90,19 @@ This document contains 25 essential questions and answers prepared for the techn
 ---
 
 ### Q14: What is the pre-registered model promotion rule, and why is `recsys_two_tower_clean` the champion?
-**Answer:** Under the pre-registered tournament rule, the Clean Ranker must win over Clean Two-Tower on tuning-set validation NDCG@10 by more than its standard deviation: $\Delta_{\text{tuning}} > \max(\sigma_{\text{ranker}}, \sigma_{\text{two\_tower}})$. In multi-seed tuning evaluation, the Clean Ranker achieved $0.0621 \pm 0.0022$ vs Clean Two-Tower $0.0615 \pm 0.0007$ ($\Delta = +0.0006$, threshold $= 0.0022$). Because the difference did not exceed the decision threshold, `recsys_two_tower_clean` won the tournament and was promoted to `production`.  
+**Answer:** Under the pre-registered tournament rule, the Clean Ranker must win over Clean Two-Tower on tuning-set validation NDCG@10 by more than the ranker's standard deviation: $\Delta_{\text{tuning}} > \sigma_{\text{ranker}} = 0.0021$. On the tuning validation set, the Clean Ranker achieves $0.0616 \pm 0.0021$ vs Clean Two-Tower $0.0621 \pm 0.0005$. The required margin is $> 0.0021$, but the observed difference is $\Delta = -0.0005$. Because the difference is negative and does not exceed the decision threshold, the ranker is not promoted, and `recsys_two_tower_clean` is promoted to `production` as the champion.  
 **Evidence:** [`backend/jobs/promote_recsys.py`](backend/jobs/promote_recsys.py), [`backend/recsys/registry.py`](backend/recsys/registry.py), [`backend/data/recsys/reports/leaderboard.md`](backend/data/recsys/reports/leaderboard.md).
 
 ---
 
 ### Q15: What causes metric variance across multi-seed training runs?
-**Answer:** When evaluating PyTorch Two-Tower and LightGBM across multiple random seeds (`[42, 43, 44, 45, 46]`), minor metric variance occurs due to stochastic in-batch negative sampling, mini-batch shuffling order, and gradient descent trajectories. Reporting multi-seed mean $\pm$ standard deviation ($0.0541 \pm 0.0007$ over 3 seeds for Two-Tower clean, $0.0500 \pm 0.0022$ over 5 seeds for Ranker clean) ensures we report true expected performance rather than an overfitted single lucky seed.  
+**Answer:** When evaluating PyTorch Two-Tower and LightGBM across multiple random seeds (`[42, 43, 44, 45, 46]`), minor metric variance occurs due to stochastic in-batch negative sampling, mini-batch shuffling order, and gradient descent trajectories. Reporting multi-seed mean $\pm$ standard deviation ($0.0541 \pm 0.0018$ over 3 seeds for Two-Tower clean, $0.0558 \pm 0.0022$ over 5 seeds for Ranker clean) ensures we report true expected performance rather than an overfitted single lucky seed.  
 **Evidence:** [`backend/data/recsys/reports/leaderboard.md`](backend/data/recsys/reports/leaderboard.md), [`backend/recsys/evaluate.py`](backend/recsys/evaluate.py).
 
 ---
 
 ### Q16: What is the Stage-2 Ranker candidate training miss rate and serving architecture?
-**Answer:** During Stage-2 LambdaMART training, candidates are pooled from Stage-1 retrievers up to $k=300$. For $\sim 39\%$ of training instances, the user's ground-truth target item falls outside the top-300 Stage-1 candidate pool, placing an upper ceiling on ranker training recall. In online serving, `RecommenderService` retrieves Top-50 candidates from Two-Tower and applies LightGBM re-ranking. Models operating under online serving approximations expose `is_preview: true` with a UI badge and tooltip explaining that serving-path retrieval differs from offline full-catalog test numbers.  
+**Answer:** During Stage-2 LambdaMART training, candidates are pooled from Stage-1 retrievers up to $k=300$. For $\sim 39\%$ of training instances, the user's ground-truth target item falls outside the top-300 Stage-1 candidate pool, placing an upper ceiling on ranker training recall. In online serving, `RecommenderService` generates candidate pools and applies LightGBM re-ranking over user fold-in histories.  
 **Evidence:** [`backend/jobs/train_ranker.py`](backend/jobs/train_ranker.py), [`backend/api/recsys.py`](backend/api/recsys.py), [`frontend/components/recsys/RecsysModelSelector.tsx`](frontend/components/recsys/RecsysModelSelector.tsx).
 
 ---

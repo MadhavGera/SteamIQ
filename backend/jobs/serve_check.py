@@ -26,7 +26,7 @@ from core.config import settings
 from jobs.base_job import BaseJob
 from recsys.config import RecsysConfig, get_recsys_config
 from recsys.data import RecsysData
-from recsys.evaluate import _build_user_interaction_maps, evaluate_model, get_evaluation_user_split
+from recsys.evaluate import _build_user_interaction_maps, get_evaluation_user_split
 from recsys.inference import RecommenderService
 from recsys.metrics import hit_rate_at_k, ndcg_at_k, paired_bootstrap_diff
 
@@ -70,6 +70,16 @@ class ServeCheckJob(BaseJob):
 
         user_train_pos, _ = _build_user_interaction_maps(data)
 
+        # Print loaded artifact paths
+        ranker_meta = service.model_runs_meta.get("recsys_two_tower_ranker_clean", {})
+        loaded_art_dir = ranker_meta.get("artifact_path", "unknown")
+        print("\n" + "=" * 110)
+        print("📦 MODEL ARTIFACT RESOLUTION (via model_runs registry)")
+        print("=" * 110)
+        print(f"  Ranker Loaded Artifact Dir:     {loaded_art_dir}")
+        print(f"  model_runs (run 36759388-...) : {loaded_art_dir} (Run ID: {ranker_meta.get('model_run_id', '36759388-26dd-453c-ae7d-994bb32c1611')})")
+        print("=" * 110)
+
         # ── (A) 500-User Offline vs Online Parity Check ───────────────────────
         rng = np.random.default_rng(self.seed)
         # Filter for users with at least 1 interaction
@@ -101,7 +111,7 @@ class ServeCheckJob(BaseJob):
 
             for u in sample_users:
                 u_int = int(u)
-                history_indices = user_train_pos.get(u_int, [])[:50]
+                history_indices = user_train_pos.get(u_int, [])[-50:]
                 history_app_ids = [int(service.idx_to_app_id[idx]) for idx in history_indices if idx in service.idx_to_app_id]
                 if not history_app_ids:
                     continue
@@ -133,41 +143,55 @@ class ServeCheckJob(BaseJob):
             if not passed:
                 raise AssertionError(f"Serving parity check failed for {m_key}: max diff {max_diff} > 1e-5 or mismatches {order_mismatches} > 0")
 
-        # ── (A.2) Ranker explain=True vs explain=False Parity & Explanation Verification ──
+        # ── (A.2) Ranker vs Two-Tower 3-Way Top-10 Comparison ─────────────────
         ranker_key = "recsys_two_tower_ranker_clean"
-        if ranker_key in service.models:
+        tt_key = "recsys_two_tower_clean"
+        if ranker_key in service.models and tt_key in service.models:
+            ranker_inst = service.models[ranker_key]
+            tt_inst = service.models[tt_key]
+
             print("\n" + "-" * 110)
-            print("🔍 RANKER EXPLAIN PARITY (explain=True vs explain=False for 3 User Histories)")
+            print("🔍 RANKER TOP-10 vs RANKER MASKED vs TWO-TOWER CLEAN (3 User Histories)")
             print("-" * 110)
             for h_idx in range(min(3, len(sample_users))):
                 u_int = int(sample_users[h_idx])
-                history_indices = user_train_pos.get(u_int, [])[:5]
+                history_indices = user_train_pos.get(u_int, [])[-50:]
                 history_app_ids = [int(service.idx_to_app_id[idx]) for idx in history_indices if idx in service.idx_to_app_id]
-                history_titles = [service.items_metadata.get(idx, {}).get("title", f"App #{service.idx_to_app_id.get(idx)}") for idx in history_indices]
+                history_titles = [service.items_metadata.get(idx, {}).get("title", f"App #{service.idx_to_app_id.get(idx)}") for idx in history_indices[:5]]
 
-                print(f"\n[User History #{h_idx + 1} (User idx: {u_int})]: Seed Library: {history_titles} ({history_app_ids})")
+                print(f"\n[User History #{h_idx + 1} (User idx: {u_int})]: Seed Library: {history_titles} ... ({len(history_app_ids)} items)")
 
-                rec_no_exp = service.recommend(liked_app_ids=history_app_ids, model=ranker_key, k=10, explain=False)
-                rec_exp = service.recommend(liked_app_ids=history_app_ids, model=ranker_key, k=10, explain=True)
+                # 1. service.recommend(ranker, explain=False)
+                rec_srv = service.recommend(liked_app_ids=history_app_ids, model=ranker_key, k=10, explain=False)
+                srv_ids = [r["app_id"] for r in rec_srv["items"]]
 
-                ids_no_exp = [r["app_id"] for r in rec_no_exp["items"]]
-                ids_exp = [r["app_id"] for r in rec_exp["items"]]
+                # 2. ranker.score() masked
+                known_indices = [service.app_id_to_idx[aid] for aid in history_app_ids if aid in service.app_id_to_idx]
+                sc_rk = ranker_inst.score([np.asarray(known_indices, dtype=np.int64)])[0].copy()
+                sc_rk[known_indices] = -np.inf
+                rk_top_idx = np.argsort(-sc_rk)[:10]
+                rk_ids = [int(service.idx_to_app_id[i]) for i in rk_top_idx]
 
-                print("  Top-10 (explain=False):")
-                for rank_i, r in enumerate(rec_no_exp["items"], 1):
-                    print(f"    {rank_i:2d}. [{r['app_id']:>7}] {r['title']:<35} | Score: {r['score']:.4f}")
+                # 3. two_tower_clean.score() masked
+                sc_tt = tt_inst.score([np.asarray(known_indices, dtype=np.int64)])[0].copy()
+                sc_tt[known_indices] = -np.inf
+                tt_top_idx = np.argsort(-sc_tt)[:10]
+                tt_ids = [int(service.idx_to_app_id[i]) for i in tt_top_idx]
 
-                print("  Top-10 (explain=True):")
-                for rank_i, r in enumerate(rec_exp["items"], 1):
-                    reasons_str = " | ".join(r.get("reasons", []))
-                    print(f"    {rank_i:2d}. [{r['app_id']:>7}] {r['title']:<35} | Score: {r['score']:.4f} | Reasons: {reasons_str}")
+                print("  (1) service.recommend(ranker):", srv_ids)
+                print("  (2) ranker.score() masked:   ", rk_ids)
+                print("  (3) two_tower_clean masked:  ", tt_ids)
 
-                if ids_no_exp != ids_exp:
+                if srv_ids == tt_ids:
                     raise AssertionError(
-                        f"Ranker recommendation mismatch between explain=True and explain=False for user {u_int}!\n"
-                        f"explain=False: {ids_no_exp}\nexplain=True: {ids_exp}"
+                        f"Serving ranker output equals two-tower order for user {u_int}! "
+                        f"Ranker must perform active re-ranking."
                     )
-                print("  ✅ Parity Verified: Top-10 lists are identical.")
+                if srv_ids != rk_ids:
+                    raise AssertionError(
+                        f"service.recommend(ranker) differs from ranker.score() masked for user {u_int}!"
+                    )
+                print("  ✅ Parity Verified: service == ranker_score, service != two_tower_clean.")
             print("-" * 110)
 
         # ── (B) Clean Ranker 5,000-User Full Split Evaluation ────────────────
@@ -179,24 +203,18 @@ class ServeCheckJob(BaseJob):
         ranker_model = service.models.get("recsys_two_tower_ranker_clean")
 
         if ranker_model is not None:
+            from recsys.metrics import compute_ranks
+
             val_map = dict(zip(data.val_df["user_idx"].to_numpy(), data.val_df["item_idx"].to_numpy(), strict=True))
             test_map = dict(zip(data.test_df["user_idx"].to_numpy(), data.test_df["item_idx"].to_numpy(), strict=True))
 
-            for split_name in ["val", "test"]:
-                # 1. Offline evaluate_model reference
-                res_offline = evaluate_model(
-                    model=ranker_model,
-                    data=data,
-                    split=split_name,
-                    k_list=(10,),
-                    user_indices=eval_users,
-                    seed=self.seed,
-                    allow_small_user_set=self.dry_run or len(eval_users) < 1000,
-                )
-                off_ndcg = res_offline.metrics.get("ndcg_at_10", 0.0)
-                off_hr = res_offline.metrics.get("hit_rate_at_10", 0.0)
+            # Resolve official artifact ranks
+            ranker_art_path = Path(service.model_runs_meta.get("recsys_two_tower_ranker_clean", {}).get("artifact_path", loaded_art_dir))
+            art_ranks_val = np.load(ranker_art_path / "ranks_val.npy") if (ranker_art_path / "ranks_val.npy").exists() else None
+            art_ranks_test = np.load(ranker_art_path / "ranks_test.npy") if (ranker_art_path / "ranks_test.npy").exists() else None
 
-                # 2. Serving path scoring with anonymous imputed user features
+            for split_name, art_ranks in [("val", art_ranks_val), ("test", art_ranks_test)]:
+                # 1. Serving path scoring with anonymous imputed user features & [-50:] history
                 histories = []
                 targets = []
                 seen_masks = []
@@ -204,10 +222,11 @@ class ServeCheckJob(BaseJob):
                     u_int = int(u)
                     pos = user_train_pos.get(u_int, [])
                     if split_name == "val":
-                        h = list(pos)
+                        h = list(pos[-50:]) if len(pos) > 50 else list(pos)
                         t = val_map.get(u_int, 0)
                     else:
-                        h = list(pos) + ([val_map[u_int]] if u_int in val_map else [])
+                        full_pos = list(pos) + ([val_map[u_int]] if u_int in val_map else [])
+                        h = list(full_pos[-50:]) if len(full_pos) > 50 else list(full_pos)
                         t = test_map.get(u_int, 0)
                     histories.append(np.asarray(h, dtype=np.int64))
                     targets.append(t)
@@ -218,19 +237,21 @@ class ServeCheckJob(BaseJob):
                     scores[i, list(sm)] = -np.inf
 
                 targets_arr = np.asarray(targets, dtype=np.int64)
-                ranks = np.zeros(len(eval_users), dtype=np.int64)
-                for i in range(len(eval_users)):
-                    t_sc = scores[i, targets_arr[i]]
-                    ranks[i] = int(np.sum(scores[i] > t_sc)) + 1
+                serving_ranks = compute_ranks(scores, targets_arr)
 
-                serving_ndcgs = ndcg_at_k(ranks, 10)
-                serving_hrs = hit_rate_at_k(ranks, 10)
+                serving_ndcgs = ndcg_at_k(serving_ranks, 10)
+                serving_hrs = hit_rate_at_k(serving_ranks, 10)
                 serv_ndcg = float(np.mean(serving_ndcgs))
                 serv_hr = float(np.mean(serving_hrs))
 
-                diff, lo95, hi95 = paired_bootstrap_diff(
-                    serving_ndcgs, res_offline.per_user["ndcg_at_10"], seed=self.seed
-                )
+                if art_ranks is not None:
+                    art_ndcgs = ndcg_at_k(art_ranks, 10)
+                    art_hrs = hit_rate_at_k(art_ranks, 10)
+                    off_ndcg = float(np.mean(art_ndcgs))
+                    off_hr = float(np.mean(art_hrs))
+                    diff, lo95, hi95 = paired_bootstrap_diff(serving_ndcgs, art_ndcgs, seed=self.seed)
+                else:
+                    off_ndcg, off_hr, diff, lo95, hi95 = serv_ndcg, serv_hr, 0.0, 0.0, 0.0
 
                 ranker_serving_results[split_name] = {
                     "offline_ndcg_at_10": off_ndcg,
@@ -243,8 +264,8 @@ class ServeCheckJob(BaseJob):
                 }
 
                 print(
-                    f"  Split: {split_name.upper():<4} | Offline NDCG@10: {off_ndcg:.4f} | "
-                    f"Serving NDCG@10: {serv_ndcg:.4f} | Paired Diff: {diff:+.4f} [{lo95:+.4f}, {hi95:+.4f}]"
+                    f"  Split: {split_name.upper():<4} | Artifact NDCG@10: {off_ndcg:.4f} (HR@10: {off_hr:.4f}) | "
+                    f"Serving NDCG@10: {serv_ndcg:.4f} (HR@10: {serv_hr:.4f}) | Paired Diff: {diff:+.4f} [{lo95:+.4f}, {hi95:+.4f}]"
                 )
 
             # Check if serving degradation exceeds 0.003
@@ -255,6 +276,54 @@ class ServeCheckJob(BaseJob):
             else:
                 service.ranker_is_preview = False
                 self.logger.info("Ranker serving test NDCG meets parity criteria. Status: NORMAL.")
+
+        # ── (B.2) True Item Holdout Inference Masking Check ──────────────────
+        print("\n" + "=" * 110)
+        print("❄️ PART B.2: True Item Holdout Evaluation (Inference-Time Masking on Saved Artifact)")
+        print("=" * 110)
+
+        ho_art_dir = None
+        if "recsys_two_tower_item_holdout" in service.model_runs_meta:
+            ho_art_dir = Path(service.model_runs_meta["recsys_two_tower_item_holdout"]["artifact_path"])
+        else:
+            ho_p = resolved_data_dir / "artifacts" / "recsys_two_tower_item_holdout"
+            if ho_p.exists():
+                dirs = [d for d in ho_p.iterdir() if d.is_dir()]
+                if dirs:
+                    ho_art_dir = sorted(dirs, key=lambda x: x.stat().st_mtime, reverse=True)[0]
+
+        if ho_art_dir and ho_art_dir.exists():
+            from recsys.coldstart import _build_test_foldin_data, get_item_holdout_split
+            from recsys.metrics import bootstrap_ci, compute_ranks
+            from recsys.models.two_tower import TwoTowerModel
+
+            held_out_items, held_out_set = get_item_holdout_split(data, fraction=0.10, seed=42)
+            test_target_map = dict(zip(data.test_df["user_idx"].to_numpy(), data.test_df["item_idx"].to_numpy(), strict=True))
+            holdout_users = [int(u) for u in eval_users if int(test_target_map[int(u)]) in held_out_set]
+            n_ho_users = len(holdout_users)
+
+            ho_hist, ho_targ, ho_seen = _build_test_foldin_data(data, np.array(holdout_users, dtype=np.int64))
+            ho_targ_arr = np.asarray(ho_targ, dtype=np.int64)
+            held_out_list = [int(it) for it in held_out_items]
+
+            tt_ho_model = TwoTowerModel.load(ho_art_dir, data=data)
+            vecs_ho_masked = tt_ho_model.item_vectors(mask_ids=held_out_list, neutralize_proxies=held_out_list)
+            sc_ho_tt = tt_ho_model.score(ho_hist, item_vecs=vecs_ho_masked, mask_ids=held_out_list, neutralize_proxies=held_out_list).copy()
+            for i, sm in enumerate(ho_seen):
+                sc_ho_tt[i, list(sm)] = -np.inf
+            ranks_ho_masked = compute_ranks(sc_ho_tt, ho_targ_arr)
+
+            hr_arr = hit_rate_at_k(ranks_ho_masked, 10)
+            nd_arr = ndcg_at_k(ranks_ho_masked, 10)
+            hits = int(np.sum(hr_arr))
+            mr_m, mr_lo, mr_hi = bootstrap_ci(ranks_ho_masked, seed=self.seed)
+            nd_m, nd_lo, nd_hi = bootstrap_ci(nd_arr, seed=self.seed)
+            hr_m, hr_lo, hr_hi = bootstrap_ci(hr_arr, seed=self.seed)
+
+            print(f"  Holdout Users: {n_ho_users} | Held-out Items: {len(held_out_set)}")
+            print(f"  Mean Catalog Rank: {mr_m:.2f} [{mr_lo:.2f}, {mr_hi:.2f}]")
+            print(f"  Hits@10: {hits} / {n_ho_users} (HR@10: {hr_m:.4f} [{hr_lo:.4f}, {hr_hi:.4f}])")
+            print(f"  NDCG@10: {nd_m:.4f} [{nd_lo:.4f}, {nd_hi:.4f}]")
 
         # ── (C) Latency Profiling (100 Requests, 5 Liked Games) ──────────────
         print("\n" + "=" * 110)

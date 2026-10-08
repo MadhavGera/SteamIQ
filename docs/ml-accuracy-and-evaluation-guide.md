@@ -74,16 +74,16 @@ Evaluated over 5,000 test users with 1,000 bootstrap iterations (95% CI):
 
 ### Deployable Models (Clean Train-Split Statistics)
 
-| Model | Split | NDCG@10 (95% CI) | HR@10 (95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Status |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`recsys_two_tower_clean`** | **test** | **0.0516 [0.0470, 0.0567]** | **0.1028 [0.0946, 0.1110]** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
-| `recsys_two_tower_clean` | **val** | 0.0611 [0.0557, 0.0662] | 0.1190 [0.1104, 0.1280] | 0.0436 | 0.4347 | 0.7588 | Champion (Production) |
-| `recsys_two_tower_ranker_clean` | **test** | 0.0596 [0.0546, 0.0647] | 0.1092 [0.1010, 0.1178] | 0.0445 | 0.4887 | 0.7462 | Candidate |
-| `recsys_two_tower_ranker_clean` | **val** | 0.0645 [0.0591, 0.0696] | 0.1230 [0.1140, 0.1316] | 0.0467 | 0.4990 | 0.7419 | Candidate |
-| `recsys_itemknn` | **test** | 0.0445 [0.0403, 0.0494] | 0.0842 [0.0766, 0.0916] | 0.0326 | 0.6143 | 0.7255 | Candidate |
-| `recsys_als` | **test** | 0.0404 [0.0362, 0.0449] | 0.0776 [0.0704, 0.0852] | 0.0291 | 0.2480 | 0.7732 | Candidate |
-| `recsys_popularity` | **test** | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | Baseline |
-| `recsys_content` | **test** | 0.0146 [0.0120, 0.0176] | 0.0268 [0.0226, 0.0316] | 0.0110 | 0.6303 | 0.5041 | Baseline |
+| Model | Split | Seeds | NDCG@10 (mean ± std / 95% CI) | HR@10 (mean ± std / 95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Stage |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **`recsys_two_tower_clean`** | **test** | 3 | **0.0541 ± 0.0018** | **0.1039 ± 0.0022** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
+| `recsys_two_tower_clean` | **val** | 3 | 0.0621 ± 0.0005 | 0.1206 ± 0.0020 | 0.0436 | 0.4347 | 0.7588 | Champion (Production) |
+| `recsys_two_tower_ranker_clean` | **test** | 5 | 0.0558 ± 0.0022 | 0.1062 ± 0.0035 | 0.0445 | 0.4887 | 0.7462 | Candidate |
+| `recsys_two_tower_ranker_clean` | **val** | 5 | 0.0616 ± 0.0021 | 0.1200 ± 0.0032 | 0.0467 | 0.4990 | 0.7419 | Candidate |
+| `recsys_itemknn` | **test** | 1 | 0.0445 [0.0403, 0.0494] | 0.0842 [0.0766, 0.0916] | 0.0326 | 0.6143 | 0.7255 | Candidate |
+| `recsys_als` | **test** | 1 | 0.0404 [0.0362, 0.0449] | 0.0776 [0.0704, 0.0852] | 0.0291 | 0.2480 | 0.7732 | Candidate |
+| `recsys_popularity` | **test** | 1 | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | Baseline |
+| `recsys_content` | **test** | 1 | 0.0146 [0.0120, 0.0176] | 0.0268 [0.0226, 0.0316] | 0.0110 | 0.6303 | 0.5041 | Baseline |
 
 ### Diagnostic Reference Models (Non-Deployable Upper Bounds)
 
@@ -102,11 +102,10 @@ User-level paired difference tests ($\Delta = \text{NDCG}_A(u) - \text{NDCG}_B(u
 - **Clean Two-Tower vs ALS:** $\Delta = +0.0112$ ($[+0.0062, +0.0163]$, $p < 0.05$, Two-Tower is significantly better).
 - **Clean Two-Tower vs Popularity:** $\Delta = +0.0364$ ($[+0.0316, +0.0415]$, $p < 0.05$, Two-Tower is significantly better).
 
-### B. Clean Ranker vs Clean Two-Tower Trade-Off
-- **Head Items ($N = 2,989$ users):** Two-Tower clean outperforms Ranker clean ($\Delta = -0.0111$, $p < 0.05$).
-- **Torso Items ($N = 1,015$ users):** Ranker clean and Two-Tower clean are statistically comparable ($\Delta = +0.0061$, $[-0.0010, +0.0133]$, not significant).
-- **Tail Items ($N = 996$ users):** Ranker clean outperforms Two-Tower clean ($\Delta = +0.0069$, $[+0.0028, +0.0116]$, $p < 0.05$).
-- **Multi-Seed Stability:** Across multi-seed evaluation, `recsys_two_tower_clean` achieves $0.0541 \pm 0.0007$ (3 seeds) vs `recsys_two_tower_ranker_clean` $0.0500 \pm 0.0022$ (5 seeds). Two-Tower is promoted as the deployable production champion.
+### B. Clean Ranker vs Clean Two-Tower Promotion Decision
+- **Multi-Seed Test Stability:** Across multi-seed evaluation, `recsys_two_tower_clean` achieves $0.0541 \pm 0.0018$ (3 seeds) vs `recsys_two_tower_ranker_clean` $0.0558 \pm 0.0022$ (5 seeds).
+- **Pre-Registered Promotion Tournament Rule:** The candidate ranker must beat Two-Tower on tuning-set validation NDCG@10 by more than the ranker standard deviation ($\Delta_{\text{tuning}} > \sigma_r = 0.0021$).
+- **Tournament Evaluation Result:** On the disjoint tuning validation set, Clean Ranker achieves $0.0616 \pm 0.0021$ vs Clean Two-Tower $0.0621 \pm 0.0005$ ($\Delta = -0.0005$). Because the margin is negative and does not exceed $+0.0021$, the ranker is not promoted, and `recsys_two_tower_clean` is promoted as the production champion.
 
 ---
 
@@ -133,11 +132,15 @@ User-level paired difference tests ($\Delta = \text{NDCG}_A(u) - \text{NDCG}_B(u
 3. **Masked Target ID Simulation / Sparse Targets (Optimistic Proxy — $N = 553$ users):** Items present in the training universe (targets with $\le 10$ train positives) whose learned ID embedding is replaced by the UNK token at test time. This represents an optimistic upper bound because the item representation benefited from co-occurrence updates during batch training.
 
 ### B. Empirical Findings & Exact Report Metrics
-- **True Item Holdout ($N = 184$ users):**
-  - `recsys_content`: $\text{NDCG@10} = 0.0078$ ($[0.0006, 0.0163]$), $\text{HR@10} = 0.0217$ ($[0.0054, 0.0435]$, $4 / 184$ hits), Mean Catalog Rank $= 1,084.6$ ($[963.7, 1,212.3]$ out of 3,000). Content-based matching (MiniLM text + tags) is the only model that reliably discovers zero-interaction titles.
-  - `recsys_two_tower_item_holdout`: $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits), Mean Catalog Rank $= 2,126.6$ ($[2,015.1, 2,238.7]$). Two-Tower retrained with zero interactions cannot overcome the popularity and collaborative priors of established items to place new items into the top 10.
-  - `random`: $\text{NDCG@10} = 0.0008$, $\text{HR@10} = 0.0054$ ($1 / 184$ hits), Mean Catalog Rank $= 1,436.5$ ($[1,317.1, 1,560.5]$).
-  - Collaborative Baselines (`recsys_popularity`, `recsys_als`, `recsys_itemknn`): $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits), Mean Catalog Rank $> 2,200$.
+- **True Item Holdout ($N = 184$ users, 300 withheld items):**
+  - `recsys_content`: $\text{NDCG@10} = 0.0078$ ($[0.0016, 0.0155]$), $\text{HR@10} = 0.0217$ ($[0.0054, 0.0435]$, $4 / 184$ hits), Mean Catalog Rank $= 1,084.6$ ($[963.7, 1,212.3]$ out of 3,000). **Content-only recommender beats random (mean rank $1,084.6$ vs random $1,543.9$).**
+  - `random`: $\text{NDCG@10} = 0.0000$, $\text{HR@10} = 0.0000$ ($0 / 184$ hits), Mean Catalog Rank $= 1,543.9$ ($[1,421.4, 1,663.9]$).
+  - `recsys_two_tower_item_holdout`: **The two-tower dual encoder scores unseen items at or below random (mean rank $2,126.6$ vs random $1,543.9$; $\text{NDCG@10} = 0.0000$)** once popularity proxies and ID embeddings are neutralized:
+    - **(a) Unmasked:** Mean rank $= 820.2$ ($[713.8, 936.8]$), $\text{NDCG@10} = 0.0054$ ($1 / 184$ hits) — leaks item ID embeddings.
+    - **(b) Masked:** Mean rank $= 781.2$ ($[673.8, 893.3]$), $\text{NDCG@10} = 0.0034$ ($1 / 184$ hits) — ID masked, but popularity proxies remain active.
+    - **(c) Masked + Train Positives Raw 0:** Mean rank $= 2,162.4$ ($[2,050.6, 2,275.5]$), $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits) — true cold start with raw zero counts.
+    - **(c2) Standardized Mean ($z=0$):** Mean rank $= 2,126.6$ ($[2,015.1, 2,238.7]$), $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits) — true cold start with normalized neutral proxies.
+  - Collaborative Baselines (`recsys_popularity`, `recsys_als`, `recsys_itemknn`): $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits), Mean Catalog Rank $= 3,000.0$.
 
 - **Simulated New Items ($N = 437$ users):**
   - `recsys_content`: $\text{NDCG@10} = 0.0085$ ($[0.0034, 0.0152]$), $\text{HR@10} = 0.0206$ ($9 / 437$ hits), Mean Catalog Rank $= 1,018.3$ ($[938.8, 1,098.4]$).
@@ -150,10 +153,10 @@ User-level paired difference tests ($\Delta = \text{NDCG}_A(u) - \text{NDCG}_B(u
   - `random`: $\text{NDCG@10} = 0.0012$, $\text{HR@10} = 0.0036$ ($2 / 553$ hits), Mean Catalog Rank $= 1,481.6$.
 
 ### C. Scientific Reconciliation & Production Architecture Rule
-1. **Collaborative filtering models completely fail on zero-interaction items** ($\text{NDCG@10} = 0.0000$).
-2. **Pure Content Cosine (MiniLM text + tag embeddings) is the superior cold-start mechanism** ($\text{NDCG@10} = 0.0078$, mean rank $1,084.6$ vs random $1,436.5$).
-3. **ID masking is an optimistic proxy:** Masking the ID embedding yields $\text{NDCG@10} = 0.0036$, but true holdout retrained from scratch yields $0.0000$ in top-10 ranking.
-4. **Architectural Recommendation:** For new item ingestion, newly published games must be surfaced via pure content-similarity retrieval until accumulating $\ge 10$ organic user interactions.
+1. **Content-only beats random** ($\text{NDCG@10} = 0.0078$, mean rank $1,084.6$ vs random $1,543.9$). Pure Content Cosine (MiniLM text + tag embeddings) is the superior cold-start mechanism for newly published titles.
+2. **The two-tower scores unseen items at or below random** ($\text{NDCG@10} = 0.0000$, mean rank $2,126.6$ vs random $1,543.9$). Collaborative filtering and dual encoders require interaction co-occurrence density and cannot overcome popularity priors on zero-interaction titles.
+3. **ID masking is an optimistic proxy:** Masking the ID embedding yields $\text{NDCG@10} = 0.0036$ when popularity proxies are active, but neutralizing proxies collapses retrieval to $\text{NDCG@10} = 0.0000$.
+4. **Architectural Recommendation:** Newly published games must be surfaced via pure content-similarity retrieval until accumulating $\ge 10$ organic user interactions.
 
 ---
 
