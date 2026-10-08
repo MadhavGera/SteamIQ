@@ -133,13 +133,14 @@ User-level paired difference tests ($\Delta = \text{NDCG}_A(u) - \text{NDCG}_B(u
 
 ### B. Empirical Findings & Exact Report Metrics
 - **True Item Holdout ($N = 184$ users, 300 withheld items):**
-  - `recsys_content`: $\text{NDCG@10} = 0.0078$ ($[0.0016, 0.0155]$), $\text{HR@10} = 0.0217$ ($[0.0054, 0.0435]$, $4 / 184$ hits), Mean Catalog Rank $= 1,084.6$ ($[963.7, 1,212.3]$ out of 3,000). **Content-only recommender beats random (mean rank $1,084.6$ vs random $1,543.9$).**
-  - `random`: $\text{NDCG@10} = 0.0000$, $\text{HR@10} = 0.0000$ ($0 / 184$ hits), Mean Catalog Rank $= 1,543.9$ ($[1,421.4, 1,663.9]$).
-  - `recsys_two_tower_item_holdout`: **The two-tower dual encoder scores unseen items at or below random (mean rank $2,126.6$ vs random $1,543.9$; $\text{NDCG@10} = 0.0000$)** once popularity proxies and ID embeddings are neutralized:
-    - **(a) Unmasked:** Mean rank $= 820.2$ ($[713.8, 936.8]$), $\text{NDCG@10} = 0.0054$ ($1 / 184$ hits) — leaks item ID embeddings.
-    - **(b) Masked:** Mean rank $= 781.2$ ($[673.8, 893.3]$), $\text{NDCG@10} = 0.0034$ ($1 / 184$ hits) — ID masked, but popularity proxies remain active.
-    - **(c) Masked + Train Positives Raw 0:** Mean rank $= 2,162.4$ ($[2,050.6, 2,275.5]$), $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits) — true cold start with raw zero counts.
-    - **(c2) Standardized Mean ($z=0$):** Mean rank $= 2,126.6$ ($[2,015.1, 2,238.7]$), $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits) — true cold start with normalized neutral proxies.
+  - `recsys_content`: $\text{NDCG@10} = 0.0078$ ($[0.0016, 0.0155]$), $\text{HR@10} = 0.0217$ ($[0.0054, 0.0435]$, $4 / 184$ hits), Mean Catalog Rank $= 1,084.6$ ($[963.7, 1,212.3]$ out of 3,000). **Content-only recommender beats random (mean rank $1,084.6$ vs random $1,544.0$).**
+  - `random` (Analytic): $\text{NDCG@10} = 0.0000$, $\text{HR@10} = 0.0000$ ($0 / 184$ hits), Mean Catalog Rank $= 1,544.0$ ($N/2$).
+  - `recsys_two_tower_item_holdout`: **The two-tower dual encoder scores unseen items at or below random (mean rank $2,126.6$ vs random $1,544.0$; $\text{NDCG@10} = 0.0000$)** once popularity proxies and ID embeddings are neutralized:
+    - **(a) Unmasked:** Mean rank $= 820.2$ ($[724.4, 917.9]$), $\text{NDCG@10} = 0.0054$ ($1 / 184$ hits) — leaks item ID and popularity proxies.
+    - **(b) Masked:** Mean rank $= 781.2$ ($[682.8, 873.4]$), $\text{NDCG@10} = 0.0034$ ($1 / 184$ hits) — ID masked, but popularity proxies leak volume.
+    - **(c) Masked + Train Positives Raw 0:** Mean rank $= 2,162.4$ ($[2,063.4, 2,264.4]$), $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits) — raw zero count causes extreme negative z-score ($z \approx -0.4$).
+    - **(c2) Standardized Mean ($z=0$ on Train Positives):** Mean rank $= 2,007.5$ ($[1,895.2, 2,120.3]$), $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits) — train positives neutral, review proxies intact.
+    - **(c3) All Proxies Neutralized ($z=0$ on rating, reviews, train positives):** Mean rank $= 2,126.6$ ($[2,015.1, 2,238.7]$), $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits) — honest zero-interaction cold start.
   - Collaborative Baselines (`recsys_popularity`, `recsys_als`, `recsys_itemknn`): $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits), Mean Catalog Rank $= 3,000.0$.
 
 - **Simulated New Items ($N = 437$ users):**
@@ -153,9 +154,9 @@ User-level paired difference tests ($\Delta = \text{NDCG}_A(u) - \text{NDCG}_B(u
   - `random`: $\text{NDCG@10} = 0.0012$, $\text{HR@10} = 0.0036$ ($2 / 553$ hits), Mean Catalog Rank $= 1,481.6$.
 
 ### C. Scientific Reconciliation & Production Architecture Rule
-1. **Content-only beats random** ($\text{NDCG@10} = 0.0078$, mean rank $1,084.6$ vs random $1,543.9$). Pure Content Cosine (MiniLM text + tag embeddings) is the superior cold-start mechanism for newly published titles.
-2. **The two-tower scores unseen items at or below random** ($\text{NDCG@10} = 0.0000$, mean rank $2,126.6$ vs random $1,543.9$). Collaborative filtering and dual encoders require interaction co-occurrence density and cannot overcome popularity priors on zero-interaction titles.
-3. **ID masking is an optimistic proxy:** Masking the ID embedding yields $\text{NDCG@10} = 0.0036$ when popularity proxies are active, but neutralizing proxies collapses retrieval to $\text{NDCG@10} = 0.0000$.
+1. **Content-only beats random** ($\text{NDCG@10} = 0.0078$, mean rank $1,084.6$ vs random $1,544.0$). Pure Content Cosine (MiniLM text + tag embeddings) is the superior cold-start mechanism for newly published titles.
+2. **Conditions (a) and (b) leak popularity:** Masking only item IDs preserves numerical interaction proxies that artificially boost retrieval.
+3. **The two-tower scores unseen items at or below random** ($\text{NDCG@10} = 0.0000$, mean rank $2,126.6$ vs random $1,544.0$). Collaborative filtering and dual encoders require interaction co-occurrence density and cannot overcome popularity priors on zero-interaction titles.
 4. **Architectural Recommendation:** Newly published games must be surfaced via pure content-similarity retrieval until accumulating $\ge 10$ organic user interactions.
 
 ---

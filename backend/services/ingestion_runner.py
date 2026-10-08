@@ -1,9 +1,8 @@
 import asyncio
+from datetime import datetime, timedelta
 import logging
 import os
-from datetime import datetime, timedelta
 from typing import Any
-
 from redis import Redis
 from rq import Queue, SimpleWorker, Worker
 from rq.job import Job
@@ -13,13 +12,14 @@ from sqlalchemy import select
 from core.config import settings
 from db.base import AsyncSessionLocal
 from db.models import IngestionJob
-from jobs.generate_recommendations import GenerateRecommendationsJob
+
 from jobs.ingest_games import IngestGamesJob
+from jobs.process_reviews import ProcessReviewsJob
+from jobs.process_embeddings import ProcessEmbeddingsJob
 from jobs.materialize_marts import MaterializeMartsJob
 from jobs.materialize_match_profiles import MaterializeMatchProfilesJob
 from jobs.materialize_update_impact import MaterializeUpdateImpactJob
-from jobs.process_embeddings import ProcessEmbeddingsJob
-from jobs.process_reviews import ProcessReviewsJob
+from jobs.generate_recommendations import GenerateRecommendationsJob
 
 logger = logging.getLogger(__name__)
 

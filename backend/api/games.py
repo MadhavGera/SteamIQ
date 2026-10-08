@@ -11,11 +11,11 @@ ADR 0001, Decision 2 (Golden Rule):
 """
 from __future__ import annotations
 
-import logging
 import time
+import logging
+import httpx
 from typing import Annotated, Any
 
-import httpx
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession

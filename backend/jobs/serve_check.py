@@ -178,9 +178,23 @@ class ServeCheckJob(BaseJob):
                 tt_top_idx = np.argsort(-sc_tt)[:10]
                 tt_ids = [int(service.idx_to_app_id[i]) for i in tt_top_idx]
 
-                print("  (1) service.recommend(ranker):", srv_ids)
-                print("  (2) ranker.score() masked:   ", rk_ids)
-                print("  (3) two_tower_clean masked:  ", tt_ids)
+                def _fmt_list(ids: list[int]) -> list[str]:
+                    res = []
+                    for aid in ids:
+                        idx = service.app_id_to_idx.get(aid, -1)
+                        t = service.items_metadata.get(idx, {}).get("title", f"App #{aid}") if idx >= 0 else f"App #{aid}"
+                        res.append(f"'{t}' (AppID: {aid})")
+                    return res
+
+                print("  (1) service.recommend(ranker):")
+                for item_str in _fmt_list(srv_ids):
+                    print(f"      - {item_str}")
+                print("  (2) ranker.score() masked:")
+                for item_str in _fmt_list(rk_ids):
+                    print(f"      - {item_str}")
+                print("  (3) two_tower_clean masked:")
+                for item_str in _fmt_list(tt_ids):
+                    print(f"      - {item_str}")
 
                 if srv_ids == tt_ids:
                     raise AssertionError(
@@ -276,54 +290,6 @@ class ServeCheckJob(BaseJob):
             else:
                 service.ranker_is_preview = False
                 self.logger.info("Ranker serving test NDCG meets parity criteria. Status: NORMAL.")
-
-        # ── (B.2) True Item Holdout Inference Masking Check ──────────────────
-        print("\n" + "=" * 110)
-        print("❄️ PART B.2: True Item Holdout Evaluation (Inference-Time Masking on Saved Artifact)")
-        print("=" * 110)
-
-        ho_art_dir = None
-        if "recsys_two_tower_item_holdout" in service.model_runs_meta:
-            ho_art_dir = Path(service.model_runs_meta["recsys_two_tower_item_holdout"]["artifact_path"])
-        else:
-            ho_p = resolved_data_dir / "artifacts" / "recsys_two_tower_item_holdout"
-            if ho_p.exists():
-                dirs = [d for d in ho_p.iterdir() if d.is_dir()]
-                if dirs:
-                    ho_art_dir = sorted(dirs, key=lambda x: x.stat().st_mtime, reverse=True)[0]
-
-        if ho_art_dir and ho_art_dir.exists():
-            from recsys.coldstart import _build_test_foldin_data, get_item_holdout_split
-            from recsys.metrics import bootstrap_ci, compute_ranks
-            from recsys.models.two_tower import TwoTowerModel
-
-            held_out_items, held_out_set = get_item_holdout_split(data, fraction=0.10, seed=42)
-            test_target_map = dict(zip(data.test_df["user_idx"].to_numpy(), data.test_df["item_idx"].to_numpy(), strict=True))
-            holdout_users = [int(u) for u in eval_users if int(test_target_map[int(u)]) in held_out_set]
-            n_ho_users = len(holdout_users)
-
-            ho_hist, ho_targ, ho_seen = _build_test_foldin_data(data, np.array(holdout_users, dtype=np.int64))
-            ho_targ_arr = np.asarray(ho_targ, dtype=np.int64)
-            held_out_list = [int(it) for it in held_out_items]
-
-            tt_ho_model = TwoTowerModel.load(ho_art_dir, data=data)
-            vecs_ho_masked = tt_ho_model.item_vectors(mask_ids=held_out_list, neutralize_proxies=held_out_list)
-            sc_ho_tt = tt_ho_model.score(ho_hist, item_vecs=vecs_ho_masked, mask_ids=held_out_list, neutralize_proxies=held_out_list).copy()
-            for i, sm in enumerate(ho_seen):
-                sc_ho_tt[i, list(sm)] = -np.inf
-            ranks_ho_masked = compute_ranks(sc_ho_tt, ho_targ_arr)
-
-            hr_arr = hit_rate_at_k(ranks_ho_masked, 10)
-            nd_arr = ndcg_at_k(ranks_ho_masked, 10)
-            hits = int(np.sum(hr_arr))
-            mr_m, mr_lo, mr_hi = bootstrap_ci(ranks_ho_masked, seed=self.seed)
-            nd_m, nd_lo, nd_hi = bootstrap_ci(nd_arr, seed=self.seed)
-            hr_m, hr_lo, hr_hi = bootstrap_ci(hr_arr, seed=self.seed)
-
-            print(f"  Holdout Users: {n_ho_users} | Held-out Items: {len(held_out_set)}")
-            print(f"  Mean Catalog Rank: {mr_m:.2f} [{mr_lo:.2f}, {mr_hi:.2f}]")
-            print(f"  Hits@10: {hits} / {n_ho_users} (HR@10: {hr_m:.4f} [{hr_lo:.4f}, {hr_hi:.4f}])")
-            print(f"  NDCG@10: {nd_m:.4f} [{nd_lo:.4f}, {nd_hi:.4f}]")
 
         # ── (C) Latency Profiling (100 Requests, 5 Liked Games) ──────────────
         print("\n" + "=" * 110)

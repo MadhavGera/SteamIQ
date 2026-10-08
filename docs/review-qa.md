@@ -41,14 +41,15 @@ This document contains 25 essential questions and answers prepared for the techn
 ---
 
 ### Q7: How is item cold start evaluated, and what do the true holdout vs masking studies prove?
-**Answer:** Cold-start items lack interaction histories. SteamIQ evaluates true prospective discovery across four holdout conditions on 184 holdout users (300 withheld items):
-1. **Primary Benchmark (True Item Holdout, $N = 184$ users):** Content-only recommender beats random (mean rank $1,084.6$ vs random $1,543.9$; $\text{NDCG@10} = 0.0078$, $4/184$ hits). In contrast, the Two-Tower dual encoder scores unseen items at or below random (mean rank $2,126.6$ vs random $1,543.9$; $\text{NDCG@10} = 0.0000$, $0/184$ hits) once popularity proxies and item IDs are neutralized.
-2. **Four Holdout Conditions on Two-Tower ($N = 184$ users):**
-   - (a) Unmasked (cheating on ID): mean rank $820.2$, $\text{NDCG@10} = 0.0054$.
-   - (b) ID Masked only (popularity proxy intact): mean rank $781.2$, $\text{NDCG@10} = 0.0034$.
-   - (c) ID Masked + train positives raw 0: mean rank $2,162.4$, $\text{NDCG@10} = 0.0000$.
-   - (c2) Standardized catalog mean ($z=0$): mean rank $2,126.6$, $\text{NDCG@10} = 0.0000$.
-3. **Conclusion:** Content representations alone provide valid semantic discovery that beats random, but Two-Tower models require collaborative interaction density and cannot effectively score unseen items in true zero-interaction cold start without popularity proxies.  
+**Answer:** Cold-start items lack interaction histories. SteamIQ evaluates true prospective discovery across five holdout conditions on 184 holdout users (300 withheld items):
+1. **Primary Benchmark (True Item Holdout, $N = 184$ users):** Content-only recommender beats random (mean rank $1,084.6$ vs analytic random $1,544.0$; $\text{NDCG@10} = 0.0078$, $4/184$ hits, $\text{HR@10} = 0.0217$). In contrast, the Two-Tower dual encoder scores unseen items at or below random (mean rank $2,126.6$ vs random $1,544.0$; $\text{NDCG@10} = 0.0000$, $0/184$ hits) once popularity proxies and item IDs are neutralized.
+2. **Five Holdout Conditions on Two-Tower ($N = 184$ users):**
+   - **(a) Unmasked (cheating on ID & popularity):** mean rank $820.2$, $\text{NDCG@10} = 0.0054$ ($1/184$ hits) — leaks learned item ID embeddings and training interaction volume.
+   - **(b) ID Masked only (popularity proxy leaked):** mean rank $781.2$, $\text{NDCG@10} = 0.0034$ ($1/184$ hits) — item ID masked to UNK, but numerical training popularity proxies leak volume.
+   - **(c) ID Masked + train positives raw 0:** mean rank $2,162.4$, $\text{NDCG@10} = 0.0000$ ($0/184$ hits) — raw 0 count causes extreme negative z-score ($z \approx -0.4$).
+   - **(c2) Standardized catalog mean ($z=0$ on train positives):** mean rank $2,007.5$, $\text{NDCG@10} = 0.0000$ ($0/184$ hits) — train positives neutral, review proxies intact.
+   - **(c3) All Proxies Neutralized ($z=0$ on rating, reviews, train positives):** mean rank $2,126.6$, $\text{NDCG@10} = 0.0000$ ($0/184$ hits) — true honest zero-interaction cold start.
+3. **Conclusion & Honest Finding:** Conditions (a) and (b) leak popularity proxies. Content representations alone provide valid semantic discovery that beats random, while Two-Tower models require collaborative interaction density and score unseen items at or below random in true zero-interaction cold start.  
 **Evidence:** [`backend/data/recsys/reports/cold_start.json`](backend/data/recsys/reports/cold_start.json), [`docs/ml-accuracy-and-evaluation-guide.md`](docs/ml-accuracy-and-evaluation-guide.md).
 
 ---

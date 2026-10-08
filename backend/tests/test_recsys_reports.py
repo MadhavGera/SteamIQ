@@ -207,3 +207,39 @@ def test_cold_start_report_schema_validation() -> None:
     assert validated.metadata.report_key == "cold_start"
     assert validated.item_holdout_study["primary_evidence"] is True
 
+
+def test_cold_start_all_holdout_conditions_present_in_payload() -> None:
+    """
+    Verifies that all 5 holdout conditions ((a), (b), (c), (c2), (c3)),
+    plus random and content, are present in the cold_start.json report payload.
+    """
+    report_file = Path("data/recsys/reports/cold_start.json")
+    if not report_file.exists():
+        # Fallback path if run from repo root
+        report_file = Path("backend/data/recsys/reports/cold_start.json")
+
+    assert report_file.exists(), f"cold_start.json not found at {report_file}"
+    with open(report_file, encoding="utf-8") as f:
+        payload = json.load(f)
+
+    validated = validate_report_payload("cold_start", payload)
+    assert validated.metadata.report_key == "cold_start"
+
+    holdout_models = validated.item_holdout_study.get("models", {})
+    expected_conditions = [
+        "random",
+        "content",
+        "two_tower_unmasked",
+        "two_tower_masked",
+        "two_tower_masked_train_pos_raw_0",
+        "two_tower_masked_standardized_z0",
+        "two_tower_masked_all_proxies_neutralized",
+    ]
+    for cond in expected_conditions:
+        assert cond in holdout_models, f"Cold start condition '{cond}' missing from item_holdout_study models!"
+        model_stats = holdout_models[cond]
+        assert "mean_rank" in model_stats
+        assert "hit_rate_at_10" in model_stats
+        assert "ndcg_at_10" in model_stats
+
+

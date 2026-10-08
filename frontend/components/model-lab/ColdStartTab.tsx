@@ -69,17 +69,19 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
 
     const formatModelName = (name?: string) => {
       if (!name) return "Model";
-      if (name === "two_tower_masked_train_pos_raw_0") return "Two-Tower (Masked + Train Pop Raw 0)";
-      if (name === "two_tower_masked_standardized_z0") return "Two-Tower (Masked + Standardized z=0)";
-      if (name === "two_tower_unmasked") return "Two-Tower (Unmasked Holdout)";
+      if (name === "two_tower_masked_all_proxies_neutralized") return "Two-Tower (All Proxies Neutralized z=0)";
+      if (name === "two_tower_masked_standardized_z0") return "Two-Tower (Train Pop z=0, Reviews Intact)";
+      if (name === "two_tower_masked_train_pos_raw_0") return "Two-Tower (Train Pop Raw 0)";
+      if (name === "two_tower_masked") return "Two-Tower (ID Masked, Popularity Leaked)";
+      if (name === "two_tower_unmasked") return "Two-Tower (Unmasked, ID & Popularity Leaked)";
       if (name.includes("two_tower_masked")) return "Two-Tower Masked [Reference: All-Time Stats]";
       if (name === "two_tower_intact") return "Two-Tower Intact (Reference)";
-      if (name === "two_tower") return "Two-Tower (Holdout Retrained)";
+      if (name === "two_tower") return "Two-Tower (Holdout Neutralized)";
       if (name === "content") return "Content Cosine";
       if (name === "popularity") return "Popularity";
       if (name === "als") return "ALS";
       if (name === "itemknn") return "Item-kNN";
-      if (name === "random") return "Random";
+      if (name === "random") return "Random (Analytic)";
       return name;
     };
 
@@ -212,7 +214,7 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
             lineHeight: 1.5,
           }}
         >
-          <strong>Empirical Finding:</strong> Content-only recommender beats random discovery on zero-interaction holdouts, whereas two-tower dual encoders score unseen items at or below random once item IDs and popularity proxies are neutralized.
+          <strong>Empirical Finding:</strong> Conditions (a) and (b) leak popularity proxies. Under honest zero-interaction holdout evaluation, content-only recommender beats random discovery (mean rank 1,084.6 vs random 1,544.0), whereas two-tower dual encoders score unseen items at or below random (mean rank 2,126.6 vs random 1,544.0) once popularity proxies are neutralized.
         </div>
       </div>
 

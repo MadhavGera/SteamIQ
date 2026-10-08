@@ -532,3 +532,39 @@ def test_ranker_job_never_calls_fit_on_stage1_models(monkeypatch, tmp_path: Path
     assert "val_metrics" in result
     assert "ndcg_at_10" in result["val_metrics"]
 
+
+def test_excluded_source_features_never_appear_in_reasons() -> None:
+    """
+    Verifies that multi-source retrieval features (ranks, scores, cand flags)
+    are strictly excluded from human-facing explanation reasons.
+    """
+    from recsys.explain import FEATURE_TEMPLATES, explain_recommendation
+    from recsys.ranker_features import FEATURE_COLUMNS
+
+    source_features = [
+        col for col in FEATURE_COLUMNS
+        if col.startswith("in_") or col.endswith("_rank") or col.endswith("_score") or col.endswith("_in_cands")
+    ]
+    assert len(source_features) >= 12
+
+    # None of these source features may be in FEATURE_TEMPLATES
+    for feat in source_features:
+        assert feat not in FEATURE_TEMPLATES, f"Source feature {feat} must not be in FEATURE_TEMPLATES"
+
+    data = _create_synthetic_ranker_data(n_users=10, n_items=15, seed=42)
+
+    # SHAP row where only source features have high positive contribution
+    shap_row = {feat: 2.5 for feat in source_features}
+    explanation = explain_recommendation(
+        item_idx=2,
+        user_history=[0, 1],
+        shap_row=shap_row,
+        data=data,
+    )
+    assert "reasons" in explanation
+    for reason in explanation["reasons"]:
+        for feat in source_features:
+            assert feat not in reason, f"Source feature '{feat}' leaked into explanation reason: '{reason}'"
+            assert f"signal from {feat}" not in reason
+
+

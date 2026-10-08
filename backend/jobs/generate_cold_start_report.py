@@ -149,7 +149,6 @@ class GenerateColdStartReportJob(BaseJob):
 
         # Random baseline on holdout
         rng = np.random.default_rng(self.seed)
-        ho_rk_rnd = rng.integers(1, data.n_items + 1, size=n_ho_users)
 
         # Content on holdout
         sc_ho_cnt = content_model.score(ho_hist).copy()
@@ -202,23 +201,62 @@ class GenerateColdStartReportJob(BaseJob):
             sc_c[i, list(sm)] = -np.inf
         ho_rk_c = compute_ranks(sc_c, ho_targ_arr)
 
-        # Condition (c2): Standardized mean (z=0)
-        vecs_c2 = tt_ho_model.item_vectors(mask_ids=held_out_list, neutralize_proxies=held_out_list)
-        sc_c2 = tt_ho_model.score(
-            ho_hist, item_vecs=vecs_c2, mask_ids=held_out_list, neutralize_proxies=held_out_list
-        ).copy()
+        # Condition (c2): Standardized mean (train_positives z=0, reviews and rating intact)
+        import torch
+        t_dict = tt_ho_model._item_features_tensors
+        num_t_c2 = t_dict["numeric"].clone()
+        neut_idx = torch.tensor(held_out_list, dtype=torch.long)
+        num_t_c2[neut_idx, 3] = 0.0  # train_positives standardized mean z=0
+        item_vecs_c2 = tt_ho_model.module.encode_items(
+            item_ids=t_dict["all_ids"],
+            text_embs=t_dict["text"],
+            tag_features=t_dict["tags"],
+            numeric_features=num_t_c2,
+            mask_ids=torch.tensor(held_out_list, dtype=torch.long),
+        ).detach().cpu().numpy()
+        sc_c2 = tt_ho_model.score(ho_hist, item_vecs=item_vecs_c2, mask_ids=held_out_list).copy()
         for i, sm in enumerate(ho_seen):
             sc_c2[i, list(sm)] = -np.inf
         ho_rk_c2 = compute_ranks(sc_c2, ho_targ_arr)
 
+        # Condition (c3): All Proxies Neutralized (train_positives, user_reviews, positive_ratio all z=0)
+        vecs_c3 = tt_ho_model.item_vectors(mask_ids=held_out_list, neutralize_proxies=held_out_list)
+        sc_c3 = tt_ho_model.score(
+            ho_hist, item_vecs=vecs_c3, mask_ids=held_out_list, neutralize_proxies=held_out_list
+        ).copy()
+        for i, sm in enumerate(ho_seen):
+            sc_c3[i, list(sm)] = -np.inf
+        ho_rk_c3 = compute_ranks(sc_c3, ho_targ_arr)
+
+        # Analytic Random Baseline (mean rank = N / 2)
+        analytic_mean_rank = float(data.n_items / 2.0)
+        random_summary = {
+            "hits_k": 0,
+            "n_users": n_ho_users,
+            "hit_rate_at_10": 0.0,
+            "hit_rate_at_10_lo95": 0.0,
+            "hit_rate_at_10_hi95": 0.0,
+            "ndcg_at_10": 0.0,
+            "ndcg_at_10_lo95": 0.0,
+            "ndcg_at_10_hi95": 0.0,
+            "mrr_at_10": 0.0,
+            "mrr_at_10_lo95": 0.0,
+            "mrr_at_10_hi95": 0.0,
+            "mean_rank": analytic_mean_rank,
+            "mean_rank_lo95": analytic_mean_rank,
+            "mean_rank_hi95": analytic_mean_rank,
+            "median_rank": analytic_mean_rank,
+        }
+
         item_holdout_models = {
-            "random": summarize_model_ranks(ho_rk_rnd, n_ho_users, seed=self.seed),
+            "random": random_summary,
             "content": summarize_model_ranks(ho_rk_cnt, n_ho_users, seed=self.seed),
             "two_tower_unmasked": summarize_model_ranks(ho_rk_a, n_ho_users, seed=self.seed),
             "two_tower_masked": summarize_model_ranks(ho_rk_b, n_ho_users, seed=self.seed),
             "two_tower_masked_train_pos_raw_0": summarize_model_ranks(ho_rk_c, n_ho_users, seed=self.seed),
             "two_tower_masked_standardized_z0": summarize_model_ranks(ho_rk_c2, n_ho_users, seed=self.seed),
-            "two_tower": summarize_model_ranks(ho_rk_c2, n_ho_users, seed=self.seed),
+            "two_tower_masked_all_proxies_neutralized": summarize_model_ranks(ho_rk_c3, n_ho_users, seed=self.seed),
+            "two_tower": summarize_model_ranks(ho_rk_c3, n_ho_users, seed=self.seed),
         }
 
         # ──────────────────────────────────────────────────────────────────────

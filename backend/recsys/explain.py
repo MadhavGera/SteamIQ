@@ -207,7 +207,9 @@ def explain_recommendation(
     seen_templates: set[str] = set()
 
     for feat, _val in pos_shap:
-        template = FEATURE_TEMPLATES.get(feat, f"Strong signal from {feat}")
+        if feat not in FEATURE_TEMPLATES:
+            continue
+        template = FEATURE_TEMPLATES[feat]
         if template not in seen_templates:
             seen_templates.add(template)
             reasons.append(template)
