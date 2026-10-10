@@ -25,8 +25,6 @@ logger = logging.getLogger("steamiq.recsys.explain")
 FEATURE_TEMPLATES: dict[str, str] = {
     # Item features
     "age_years": "Release era aligns with games you liked/reviewed",
-    "positive_ratio": "Overwhelmingly positive reviews from the community",
-    "log_user_reviews": "Highly reviewed and popular community favorite",
     "price_final": "Matches your preferred game pricing tier",
     "discount": "Currently on discount in the Steam store",
     # User-item features
@@ -46,8 +44,6 @@ FEATURE_CONCEPTS: dict[str, str] = {
     "price_gap": "price",
     "abs_price_gap": "price",
     "discount": "discount",
-    "positive_ratio": "reviews",
-    "log_user_reviews": "reviews",
     "tag_jaccard": "tags",
     "content_max_cos": "content",
     "content_mean_cos": "content",

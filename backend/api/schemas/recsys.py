@@ -138,6 +138,8 @@ class RecsysModelInfoSchema(BaseModel):
     n_seeds: int = Field(default=1, description="Number of evaluation seeds")
     is_ready: bool = Field(default=True, description="Whether the model artifact is loaded in memory")
     is_preview: bool = Field(default=False, description="Preview status flag")
+    leak_free: bool = Field(default=False, description="Whether training interactions and retrieval are leak-free")
+    clean: bool = Field(default=False, description="Whether the model uses clean stage-1 retrieval")
 
 
 class RecsysReportSchema(BaseModel):

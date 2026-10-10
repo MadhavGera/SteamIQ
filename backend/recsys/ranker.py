@@ -56,6 +56,7 @@ class RankerConfig:
     n_jobs: int = 4
     max_candidates: int = 300
     source_run_ids: dict[str, str] | None = None
+    train_stats_only: bool = False
 
     def __post_init__(self) -> None:
         if self.eval_at is None:
@@ -100,21 +101,25 @@ class RankerModel(BaseRecommender):
         config: RankerConfig | None = None,
         feature_names: list[str] | None = None,
         data: RecsysData | None = None,
+        item_cache: ItemFeatureCache | None = None,
+        user_cache: UserFeatureCache | None = None,
     ) -> None:
         self.ranker = ranker
         self.models = models or {}
         self.config = config or RankerConfig()
         self.feature_names = feature_names or list(FEATURE_COLUMNS)
         self.data = data
-        self.item_cache: ItemFeatureCache | None = ItemFeatureCache(data) if data else None
-        self.user_cache: UserFeatureCache | None = UserFeatureCache(data) if data else None
+        train_stats = getattr(self.config, "train_stats_only", False)
+        self.item_cache: ItemFeatureCache | None = item_cache or (ItemFeatureCache(data, train_stats_only=train_stats) if data else None)
+        self.user_cache: UserFeatureCache | None = user_cache or (UserFeatureCache(data) if data else None)
         self.n_items = data.n_items if data else 0
 
     def fit(self, data: RecsysData) -> None:
         """Required by BaseRecommender interface. Use train_ranker for full training."""
         self.data = data
         self.n_items = data.n_items
-        self.item_cache = ItemFeatureCache(data)
+        train_stats = getattr(self.config, "train_stats_only", False)
+        self.item_cache = ItemFeatureCache(data, train_stats_only=train_stats)
         self.user_cache = UserFeatureCache(data)
 
     def score(
@@ -409,6 +414,10 @@ def train_ranker(
         # 2. Build training and validation pairs
         user_train_pos, user_train_neg = _build_user_interaction_maps(data)
 
+        train_stats = getattr(config, "train_stats_only", False)
+        item_cache = ItemFeatureCache(data, train_stats_only=train_stats)
+        user_cache = UserFeatureCache(data)
+
         def prepare_split_dataset(u_list: np.ndarray, split_name: str) -> tuple[pd.DataFrame, np.ndarray, list[int], int]:
             if len(u_list) == 0:
                 return pd.DataFrame(columns=FEATURE_COLUMNS), np.array([], dtype=np.float32), [], 0
@@ -485,6 +494,8 @@ def train_ranker(
                 candidates=cand_container,
                 data=data,
                 user_indices=filtered_u_ids,
+                item_cache=item_cache,
+                user_cache=user_cache,
             )
 
             return feat_df, np.array(labels_list, dtype=np.float32), groups, dropped_count
@@ -561,6 +572,8 @@ def train_ranker(
         config=config,
         feature_names=active_features,
         data=data,
+        item_cache=item_cache,
+        user_cache=user_cache,
     )
 
     training_info = {

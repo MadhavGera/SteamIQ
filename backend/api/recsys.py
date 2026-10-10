@@ -294,7 +294,9 @@ async def list_models(
         "recsys_itemknn": {"test_ndcg": 0.0445, "test_hr": 0.0842, "val_ndcg": 0.0498, "seeds": 1},
         "recsys_als": {"test_ndcg": 0.0404, "test_hr": 0.0776, "val_ndcg": 0.0471, "seeds": 1},
         "recsys_two_tower_clean": {"test_ndcg": 0.0516, "test_hr": 0.1028, "val_ndcg": 0.0611, "seeds": 3},
-        "recsys_two_tower_ranker_clean": {"test_ndcg": 0.0596, "test_hr": 0.1092, "val_ndcg": 0.0645, "seeds": 5},
+        "recsys_two_tower_ranker_clean": {"test_ndcg": 0.0596, "test_hr": 0.1092, "val_ndcg": 0.0645, "seeds": 1},
+        "recsys_two_tower_ranker_clean_v2": {"test_ndcg": 0.0627, "test_hr": 0.1158, "val_ndcg": 0.0637, "seeds": 1},
+        "recsys_two_tower_ranker_v2_trainstats": {"test_ndcg": 0.0536, "test_hr": 0.0992, "val_ndcg": 0.0633, "seeds": 1},
     }
 
     models_info: list[RecsysModelInfoSchema] = []
@@ -317,11 +319,29 @@ async def list_models(
         is_ready = model_key in service.models if service else True
         is_preview = service.ranker_is_preview if ("ranker" in model_key and service) else False
 
+        # Explicit deployable, leak_free, and clean flags
+        if model_key == "recsys_two_tower_ranker_clean":
+            deployable = False
+            leak_free = False
+            clean = False
+        elif model_key in ("recsys_two_tower_ranker_clean_v2", "recsys_two_tower_ranker_v2_trainstats"):
+            deployable = True
+            leak_free = True
+            clean = True
+        elif model_key == "recsys_two_tower_clean":
+            deployable = True
+            leak_free = True
+            clean = True
+        else:
+            deployable = True
+            leak_free = True
+            clean = True
+
         models_info.append(
             RecsysModelInfoSchema(
                 model_name=model_key,
                 display_name=model_key.replace("recsys_", "").replace("_clean", "").replace("_", " ").title(),
-                deployable=True,
+                deployable=deployable,
                 stage=stage,
                 model_run_id=run_id,
                 val_ndcg_at_10=float(val_ndcg) if val_ndcg is not None else None,
@@ -332,6 +352,8 @@ async def list_models(
                 n_seeds=int(n_seeds),
                 is_ready=is_ready,
                 is_preview=is_preview,
+                leak_free=leak_free,
+                clean=clean,
             )
         )
 

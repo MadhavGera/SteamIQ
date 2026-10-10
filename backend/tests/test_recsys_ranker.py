@@ -378,7 +378,8 @@ def test_global_shap_and_explanation_templates():
     assert len(shap_dict) == len(FEATURE_COLUMNS)
     EXCLUDED_FROM_TEMPLATES = {
         "log_train_pop", "has_description", "popularity_rank_pct", "win", "mac", "linux", "steam_deck",
-        "history_len", "log_products", "log_reviews", "mean_log_hours"
+        "history_len", "log_products", "log_reviews", "mean_log_hours",
+        "positive_ratio", "log_user_reviews",
     }
     for col in FEATURE_COLUMNS:
         assert col in shap_dict

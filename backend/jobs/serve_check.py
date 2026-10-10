@@ -253,7 +253,11 @@ class ServeCheckJob(BaseJob):
                     targets.append(t)
                     seen_masks.append(set(h))
 
-                scores = ranker_model.score(histories).copy()
+                n_users_eval = len(histories)
+                scores = np.empty((n_users_eval, data.n_items), dtype=np.float32)
+                for b_i in range(0, n_users_eval, 256):
+                    b_slice = slice(b_i, min(b_i + 256, n_users_eval))
+                    scores[b_slice] = ranker_model.score(histories[b_slice])
                 for i, sm in enumerate(seen_masks):
                     scores[i, list(sm)] = -np.inf
 
@@ -328,9 +332,22 @@ class ServeCheckJob(BaseJob):
                 latencies_ms: list[float] = []
                 for h_apps in distinct_histories:
                     t0 = time.perf_counter()
-                    _ = service.recommend(liked_app_ids=h_apps, model=m_name, k=20, explain=explain_flag)
+                    rec_res = service.recommend(liked_app_ids=h_apps, model=m_name, k=20, explain=explain_flag)
                     dt_ms = (time.perf_counter() - t0) * 1000
                     latencies_ms.append(dt_ms)
+
+                    # Verify resolved model name matches expectation
+                    resolved_canonical = service.resolve_model_name(m_name)
+                    assert rec_res["model_name"] == resolved_canonical, (
+                        f"Resolved model mismatch: expected {resolved_canonical}, got {rec_res['model_name']}"
+                    )
+
+                    # Verify that explain=True computes SHAP for ranker (assert took_ms > 20)
+                    if "ranker" in m_name and explain_flag:
+                        took_ms = rec_res["took_ms"]
+                        assert took_ms > 20, (
+                            f"Expected took_ms > 20 for {m_name} when explain=True (SHAP calculation), but got {took_ms:.2f} ms"
+                        )
 
                 p50 = float(np.percentile(latencies_ms, 50))
                 p95 = float(np.percentile(latencies_ms, 95))

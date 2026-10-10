@@ -54,13 +54,14 @@ MODEL_ALIASES: dict[str, str] = {
     "recsys_two_tower_clean": "recsys_two_tower_clean",
     "recsys_two_tower": "recsys_two_tower_clean",
     "ranker": "recsys_two_tower_ranker_clean_v2",
-    "ranker_clean": "recsys_two_tower_ranker_clean_v2",
-    "two_tower_ranker_clean": "recsys_two_tower_ranker_clean_v2",
     "recsys_two_tower_ranker_clean": "recsys_two_tower_ranker_clean",
     "recsys_two_tower_ranker": "recsys_two_tower_ranker_clean",
+    "ranker_v2": "recsys_two_tower_ranker_clean_v2",
     "ranker_clean_v2": "recsys_two_tower_ranker_clean_v2",
     "two_tower_ranker_clean_v2": "recsys_two_tower_ranker_clean_v2",
     "recsys_two_tower_ranker_clean_v2": "recsys_two_tower_ranker_clean_v2",
+    "ranker_v2_trainstats": "recsys_two_tower_ranker_v2_trainstats",
+    "recsys_two_tower_ranker_v2_trainstats": "recsys_two_tower_ranker_v2_trainstats",
 }
 
 DEPLOYABLE_MODELS: list[str] = [
@@ -71,6 +72,7 @@ DEPLOYABLE_MODELS: list[str] = [
     "recsys_two_tower_clean",
     "recsys_two_tower_ranker_clean",
     "recsys_two_tower_ranker_clean_v2",
+    "recsys_two_tower_ranker_v2_trainstats",
 ]
 
 DEFAULT_MODEL_NAME = "recsys_two_tower_clean"
@@ -189,6 +191,24 @@ class RecommenderService:
             artifacts_base = self.data_dir / "artifacts"
             stage1_instances: dict[str, BaseRecommender] = {}
 
+            # Read fallback metrics from leaderboard.json in case DB is unreachable
+            lb_fallback: dict[str, dict[str, Any]] = {}
+            for lb_p in [
+                self.data_dir / "artifacts" / "recsys_leaderboard" / "leaderboard.json",
+                Path("docs/results/leaderboard.json"),
+                Path("artifacts/recsys_leaderboard/leaderboard.json"),
+            ]:
+                if lb_p.exists():
+                    try:
+                        import json
+                        entries = json.loads(lb_p.read_text(encoding="utf-8"))
+                        for e in entries:
+                            if isinstance(e, dict) and "model_name" in e:
+                                lb_fallback[e["model_name"]] = e
+                        break
+                    except Exception:
+                        pass
+
             db_runs_map: dict[str, Any] = {}
             try:
                 from recsys.registry import get_latest_recsys_runs_sync
@@ -199,27 +219,43 @@ class RecommenderService:
                 logger.debug("Database model_runs lookup fallback: %s", e)
 
             def resolve_model_artifact(model_name: str) -> tuple[Path | None, dict[str, Any]]:
+                meta: dict[str, Any] = {}
+                p: Path | None = None
                 if model_name in db_runs_map:
                     run_obj = db_runs_map[model_name]
-                    p = Path(run_obj.artifact_path)
-                    if p.exists():
+                    candidate_p = Path(run_obj.artifact_path)
+                    if candidate_p.exists():
+                        p = candidate_p
                         m = run_obj.metrics or {}
                         val_n = m.get("val_metrics", {}).get("ndcg_at_10") if isinstance(m.get("val_metrics"), dict) else m.get("val_ndcg_at_10", 0.0)
                         test_n = m.get("test_metrics", {}).get("ndcg_at_10") if isinstance(m.get("test_metrics"), dict) else m.get("test_ndcg_at_10", 0.0)
-                        return p, {
+                        meta = {
                             "artifact_path": str(p),
                             "model_run_id": str(run_obj.id),
                             "stage": run_obj.stage,
                             "val_ndcg_at_10": float(val_n) if val_n is not None else 0.0,
                             "test_ndcg_at_10": float(test_n) if test_n is not None else 0.0,
                         }
-                # Fallback to filesystem if not in db
-                art_dir = artifacts_base / model_name
-                if art_dir.exists():
-                    cand_dirs = sorted([d for d in art_dir.iterdir() if d.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True)
-                    if cand_dirs:
-                        return cand_dirs[0], {"artifact_path": str(cand_dirs[0]), "stage": "candidate"}
-                return None, {}
+
+                if p is None:
+                    # Fallback to filesystem if not in db
+                    art_dir = artifacts_base / model_name
+                    if art_dir.exists():
+                        cand_dirs = sorted([d for d in art_dir.iterdir() if d.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True)
+                        if cand_dirs:
+                            p = cand_dirs[0]
+                            meta = {"artifact_path": str(p), "stage": "candidate"}
+
+                # If missing model_run_id or val_ndcg_at_10 <= 0, enrich from leaderboard fallback
+                if p is not None:
+                    lb_entry = lb_fallback.get(model_name, {})
+                    if not meta.get("model_run_id"):
+                        meta["model_run_id"] = lb_entry.get("model_run_id") or p.name
+                    if not meta.get("val_ndcg_at_10") or meta["val_ndcg_at_10"] <= 0.0:
+                        meta["val_ndcg_at_10"] = float(lb_entry.get("val_ndcg_at_10", 0.0))
+                    if not meta.get("test_ndcg_at_10") or meta["test_ndcg_at_10"] <= 0.0:
+                        meta["test_ndcg_at_10"] = float(lb_entry.get("test_ndcg_at_10_mean", lb_entry.get("test_ndcg_at_10", 0.0)))
+                return p, meta
 
             # Load stage 1 models
             # (a) Popularity
@@ -299,6 +335,16 @@ class RecommenderService:
                     self.model_runs_meta["recsys_two_tower_ranker_clean_v2"] = ranker_v2_meta
                 except Exception as e:
                     logger.warning("Could not load Ranker V2 model: %s", e)
+
+            # (h) Clean Ranker V2 TrainStats
+            ranker_ts_dir, ranker_ts_meta = resolve_model_artifact("recsys_two_tower_ranker_v2_trainstats")
+            if ranker_ts_dir and ranker_ts_dir.exists() and "two_tower" in stage1_instances:
+                try:
+                    m_ts = RankerModel.load(ranker_ts_dir, data=self.data, models=stage1_instances)
+                    self.models["recsys_two_tower_ranker_v2_trainstats"] = m_ts
+                    self.model_runs_meta["recsys_two_tower_ranker_v2_trainstats"] = ranker_ts_meta
+                except Exception as e:
+                    logger.warning("Could not load Ranker V2 TrainStats model: %s", e)
 
             self.is_initialized = True
             init_time = (time.perf_counter() - t0) * 1000
@@ -464,11 +510,11 @@ class RecommenderService:
                         reasons.append("High semantic and tag similarity with games you liked/reviewed")
 
                     # Cosine anchors
-                    because_you_liked = self._compute_cosine_anchors(i_int, foldin_history, top_n=2)
+                    because_you_liked = self._compute_cosine_anchors(i_int, foldin_history, top_n=2, min_similarity=0.5)
 
                 elif canonical_model == "recsys_two_tower_clean":
                     # Two-Tower: because you liked from item vector space
-                    because_you_liked = self._compute_cosine_anchors(i_int, foldin_history, top_n=2)
+                    because_you_liked = self._compute_cosine_anchors(i_int, foldin_history, top_n=2, min_similarity=0.5)
                     reasons = []
 
                 elif canonical_model == "recsys_itemknn":
@@ -480,7 +526,7 @@ class RecommenderService:
                         for h_it in foldin_history:
                             h_int = int(h_it)
                             weight = float(sim_mat[h_int, i_int]) if h_int < sim_mat.shape[0] and i_int < sim_mat.shape[1] else 0.0
-                            if weight > 0:
+                            if weight >= 0.5:
                                 h_meta = self.items_metadata.get(h_int, {})
                                 contributions.append({
                                     "app_id": h_meta.get("app_id", 0),
@@ -538,7 +584,7 @@ class RecommenderService:
         target_idx: int,
         history: np.ndarray,
         top_n: int = 2,
-        min_similarity: float = 0.2,
+        min_similarity: float = 0.5,
     ) -> list[dict[str, Any]]:
         """Finds the top N items in history with highest cosine similarity to target_idx exceeding min_similarity."""
         if len(history) == 0:

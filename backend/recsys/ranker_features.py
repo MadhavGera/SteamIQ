@@ -74,9 +74,10 @@ FEATURE_COLUMNS: list[str] = [
 class ItemFeatureCache:
     """Pre-extracted and vectorized item catalog features for fast batch feature extraction."""
 
-    def __init__(self, data: RecsysData) -> None:
+    def __init__(self, data: RecsysData, train_stats_only: bool = False) -> None:
         n_items = data.n_items
         self.n_items = n_items
+        self.train_stats_only = train_stats_only
 
         # 1. Popularity features
         if data.item_train_pop is not None and len(data.item_train_pop) == n_items:
@@ -95,7 +96,7 @@ class ItemFeatureCache:
         self.price_final = np.zeros(n_items, dtype=np.float32)
         self.release_year = np.full(n_items, 2020.0, dtype=np.float32)
         self.age_years = np.full(n_items, 5.0, dtype=np.float32)
-        self.positive_ratio = np.full(n_items, 0.8, dtype=np.float32)
+        self.positive_ratio = np.full(n_items, 80.0, dtype=np.float32)
         self.log_user_reviews = np.zeros(n_items, dtype=np.float32)
         self.discount = np.zeros(n_items, dtype=np.float32)
         self.win = np.ones(n_items, dtype=np.float32)
@@ -103,6 +104,18 @@ class ItemFeatureCache:
         self.linux = np.zeros(n_items, dtype=np.float32)
         self.steam_deck = np.zeros(n_items, dtype=np.float32)
         self.has_description = np.zeros(n_items, dtype=np.float32)
+
+        # Derive train-only positive_ratio and log_review_count from train + train negatives if requested
+        if train_stats_only and data.train_df is not None:
+            pos_count = np.bincount(data.train_df["item_idx"], minlength=n_items)
+            neg_count = np.zeros(n_items, dtype=np.int64)
+            if data.negatives_df is not None and "split" in data.negatives_df.columns:
+                neg_train = data.negatives_df[data.negatives_df["split"] == "train"]
+                neg_count = np.bincount(neg_train["item_idx"], minlength=n_items)
+            tot_reviews = pos_count + neg_count
+            has_reviews = tot_reviews > 0
+            self.positive_ratio[has_reviews] = (pos_count[has_reviews] / tot_reviews[has_reviews]) * 100.0
+            self.log_user_reviews = np.log1p(tot_reviews.astype(np.float32))
 
         if data.items_df is not None and not data.items_df.empty:
             df = data.items_df
@@ -120,16 +133,17 @@ class ItemFeatureCache:
                     self.age_years[idx_arr] = np.maximum(0.0, 2026.0 - years)
                     break
 
-            for col in ["positive_ratio", "pos_ratio", "rating"]:
-                if col in df.columns:
-                    self.positive_ratio[idx_arr] = pd.to_numeric(df[col], errors="coerce").fillna(0.8).to_numpy()
-                    break
+            if not train_stats_only:
+                for col in ["positive_ratio", "pos_ratio", "rating"]:
+                    if col in df.columns:
+                        self.positive_ratio[idx_arr] = pd.to_numeric(df[col], errors="coerce").fillna(80.0).to_numpy()
+                        break
 
-            for col in ["user_reviews", "reviews", "num_reviews"]:
-                if col in df.columns:
-                    revs = pd.to_numeric(df[col], errors="coerce").fillna(0.0).to_numpy()
-                    self.log_user_reviews[idx_arr] = np.log1p(np.maximum(0.0, revs))
-                    break
+                for col in ["user_reviews", "reviews", "num_reviews"]:
+                    if col in df.columns:
+                        revs = pd.to_numeric(df[col], errors="coerce").fillna(0.0).to_numpy()
+                        self.log_user_reviews[idx_arr] = np.log1p(np.maximum(0.0, revs))
+                        break
 
             for col in ["discount", "discount_pct"]:
                 if col in df.columns:

@@ -45,7 +45,7 @@ from recsys.models.content import ContentRecommender
 from recsys.models.itemknn import ItemKNNRecommender
 from recsys.models.popularity import PopularityRecommender
 from recsys.models.two_tower import TwoTowerModel
-from recsys.ranker import RankerConfig, train_ranker
+from recsys.ranker import RankerConfig, RankerModel, train_ranker
 from recsys.registry import log_recsys_run
 
 
@@ -87,6 +87,7 @@ class TrainRankerJob(BaseJob):
         n_ranker_users: int = 15000,
         evaluate_test: bool = False,
         clean: bool = False,
+        train_stats_only: bool = False,
         profile: str | None = None,
         data_dir: Path | str | None = None,
         seed: int | None = None,
@@ -100,6 +101,7 @@ class TrainRankerJob(BaseJob):
         self.n_ranker_users = n_ranker_users
         self.evaluate_test = evaluate_test
         self.clean = clean
+        self.train_stats_only = train_stats_only
         self.profile = profile
         self.data_dir = data_dir
         self.seed = seed
@@ -252,6 +254,7 @@ class TrainRankerJob(BaseJob):
             n_jobs=cfg.num_threads,
             max_candidates=300,
             source_run_ids=source_run_ids,
+            train_stats_only=self.train_stats_only,
         )
 
         ranker_model, train_info = train_ranker(
@@ -269,7 +272,13 @@ class TrainRankerJob(BaseJob):
         self.logger.info("═══════════════════════════════════════════════════════════")
         self.logger.info("▶ Evaluating All Models on Evaluation Users (%d users)...", len(eval_users))
 
-        ranker_model_key = "recsys_two_tower_ranker_clean_v2" if self.clean else "recsys_two_tower_ranker"
+        if self.clean and self.train_stats_only:
+            ranker_model_key = "recsys_two_tower_ranker_v2_trainstats"
+        elif self.clean:
+            ranker_model_key = "recsys_two_tower_ranker_clean_v2"
+        else:
+            ranker_model_key = "recsys_two_tower_ranker"
+
         tt_model_key = "recsys_two_tower_clean" if self.clean else "recsys_two_tower"
 
         all_models_dict = {
@@ -282,6 +291,15 @@ class TrainRankerJob(BaseJob):
         }
 
         if self.clean:
+            if self.train_stats_only:
+                try:
+                    v2_dir, v2_run_id = _find_latest_artifact_dir(resolved_data_dir, "recsys_two_tower_ranker_clean_v2")
+                    v2_model = RankerModel.load(v2_dir, data=data, models=stage1_models)
+                    all_models_dict["recsys_two_tower_ranker_clean_v2"] = v2_model
+                    self.logger.info("Loaded v2 ranker from %s (run: %s) for comparative evaluation", v2_dir, v2_run_id)
+                except Exception as e:
+                    self.logger.warning("Could not load v2 ranker for comparative evaluation: %s", e)
+
             try:
                 old_rk_dir, old_rk_run_id = _find_latest_artifact_dir(resolved_data_dir, "recsys_two_tower_ranker_clean")
                 old_ranker_model = RankerModel.load(old_rk_dir, data=data, models=stage1_models)
@@ -327,6 +345,8 @@ class TrainRankerJob(BaseJob):
         ranker_test_res = test_results.get(ranker_model_key)
 
         comparison_targets = [tt_model_key, "recsys_itemknn", "recsys_als", "recsys_popularity"]
+        if "recsys_two_tower_ranker_clean_v2" in val_results and ranker_model_key != "recsys_two_tower_ranker_clean_v2":
+            comparison_targets.append("recsys_two_tower_ranker_clean_v2")
         if self.clean and "recsys_two_tower_ranker_clean" in val_results:
             comparison_targets.append("recsys_two_tower_ranker_clean")
 
@@ -702,6 +722,7 @@ def main() -> None:
     parser.add_argument("--n-ranker-users", type=int, default=15000, help="Max users to sample for ranker training")
     parser.add_argument("--evaluate-test", "--test", action="store_true", help="Evaluate final model on test split")
     parser.add_argument("--clean", action="store_true", help="Use clean Two-Tower Stage-1 and register as recsys_two_tower_ranker_clean_v2")
+    parser.add_argument("--train-stats-only", "--trainstats", action="store_true", help="Derive positive_ratio and log_user_reviews from train split interactions only")
     parser.add_argument("--profile", type=str, default=None, choices=["dev", "full"], help="Recsys profile override")
     parser.add_argument("--data-dir", type=str, default=None, help="Recsys precomputed data directory")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
@@ -716,6 +737,7 @@ def main() -> None:
         n_ranker_users=args.n_ranker_users,
         evaluate_test=args.evaluate_test,
         clean=args.clean,
+        train_stats_only=args.train_stats_only,
         profile=args.profile,
         data_dir=args.data_dir,
         seed=args.seed,

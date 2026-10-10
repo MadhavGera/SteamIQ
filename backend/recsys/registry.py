@@ -401,6 +401,15 @@ async def _get_latest_recsys_runs_with_session(
 
 def get_latest_recsys_runs_sync(*args: Any, **kwargs: Any) -> list[ModelRun]:
     """Synchronous convenience wrapper for get_latest_recsys_runs."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop is not None and loop.is_running():
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, get_latest_recsys_runs(*args, **kwargs)).result()
     return asyncio.run(get_latest_recsys_runs(*args, **kwargs))
 
 
