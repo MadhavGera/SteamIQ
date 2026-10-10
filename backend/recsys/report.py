@@ -487,8 +487,12 @@ def generate_leaderboard_markdown(
         metrics = m.get(f"{split}_metrics", {})
         if not metrics:
             continue
-        stage_str = "**Champion (Production)**" if is_champ else m.get("stage", "candidate").capitalize()
-        name_str = f"**`{model_name}`**" if is_champ else f"`{model_name}`"
+        if is_champ:
+            name_str = f"**`{model_name}`**"
+        elif model_name == "recsys_two_tower_ranker_clean":
+            name_str = f"`{model_name}` (stage-1 two-tower used all-time stats, not leak-free)"
+        else:
+            name_str = f"`{model_name}`"
 
         ndcg_val = metrics.get("ndcg_at_10", 0.0)
         ndcg_std = metrics.get("ndcg_at_10_std")

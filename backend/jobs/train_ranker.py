@@ -86,6 +86,7 @@ class TrainRankerJob(BaseJob):
         min_child_samples: int = 50,
         n_ranker_users: int = 15000,
         evaluate_test: bool = False,
+        clean: bool = False,
         profile: str | None = None,
         data_dir: Path | str | None = None,
         seed: int | None = None,
@@ -98,6 +99,7 @@ class TrainRankerJob(BaseJob):
         self.min_child_samples = min_child_samples
         self.n_ranker_users = n_ranker_users
         self.evaluate_test = evaluate_test
+        self.clean = clean
         self.profile = profile
         self.data_dir = data_dir
         self.seed = seed
@@ -182,9 +184,10 @@ class TrainRankerJob(BaseJob):
         self.logger.info("═══════════════════════════════════════════════════════════")
         self.logger.info("▶ Loading Stage-One Retrieval Artifacts (Zero Re-fitting)...")
 
-        tt_dir, tt_run_id = _find_latest_artifact_dir(resolved_data_dir, "recsys_two_tower")
+        tt_lookup = "recsys_two_tower_clean" if self.clean else "recsys_two_tower"
+        tt_dir, tt_run_id = _find_latest_artifact_dir(resolved_data_dir, tt_lookup)
         tt_model = TwoTowerModel.load(tt_dir, data=data)
-        self.logger.info("Loaded Two-Tower artifact from %s (run: %s)", tt_dir, tt_run_id)
+        self.logger.info("Loaded Two-Tower artifact from %s (run: %s, variant: %s)", tt_dir, tt_run_id, tt_lookup)
 
         knn_dir, knn_run_id = _find_latest_artifact_dir(resolved_data_dir, "recsys_itemknn")
         knn_model = ItemKNNRecommender.load(knn_dir)
@@ -248,6 +251,7 @@ class TrainRankerJob(BaseJob):
             seed=seed,
             n_jobs=cfg.num_threads,
             max_candidates=300,
+            source_run_ids=source_run_ids,
         )
 
         ranker_model, train_info = train_ranker(
@@ -265,14 +269,26 @@ class TrainRankerJob(BaseJob):
         self.logger.info("═══════════════════════════════════════════════════════════")
         self.logger.info("▶ Evaluating All Models on Evaluation Users (%d users)...", len(eval_users))
 
+        ranker_model_key = "recsys_two_tower_ranker_clean_v2" if self.clean else "recsys_two_tower_ranker"
+        tt_model_key = "recsys_two_tower_clean" if self.clean else "recsys_two_tower"
+
         all_models_dict = {
-            "recsys_two_tower_ranker": ranker_model,
-            "recsys_two_tower": tt_model,
+            ranker_model_key: ranker_model,
+            tt_model_key: tt_model,
             "recsys_itemknn": knn_model,
             "recsys_als": als_model,
             "recsys_popularity": pop_model,
             "recsys_content": content_model,
         }
+
+        if self.clean:
+            try:
+                old_rk_dir, old_rk_run_id = _find_latest_artifact_dir(resolved_data_dir, "recsys_two_tower_ranker_clean")
+                old_ranker_model = RankerModel.load(old_rk_dir, data=data, models=stage1_models)
+                all_models_dict["recsys_two_tower_ranker_clean"] = old_ranker_model
+                self.logger.info("Loaded old clean ranker from %s (run: %s) for comparative evaluation", old_rk_dir, old_rk_run_id)
+            except Exception as e:
+                self.logger.warning("Could not load old clean ranker for comparative evaluation: %s", e)
 
         val_results: dict[str, EvaluationResult] = {}
         test_results: dict[str, EvaluationResult] = {}
@@ -305,12 +321,14 @@ class TrainRankerJob(BaseJob):
                 )
                 test_results[m_key] = test_res
 
-        # 7. Compute Paired Bootstrap Differences vs Two-Tower, Item-kNN, ALS, Popularity
+        # 7. Compute Paired Bootstrap Differences vs Two-Tower, Item-kNN, ALS, Popularity, and old Ranker
         diff_comparisons: list[dict[str, Any]] = []
-        ranker_val_res = val_results["recsys_two_tower_ranker"]
-        ranker_test_res = test_results.get("recsys_two_tower_ranker")
+        ranker_val_res = val_results[ranker_model_key]
+        ranker_test_res = test_results.get(ranker_model_key)
 
-        comparison_targets = ["recsys_two_tower", "recsys_itemknn", "recsys_als", "recsys_popularity"]
+        comparison_targets = [tt_model_key, "recsys_itemknn", "recsys_als", "recsys_popularity"]
+        if self.clean and "recsys_two_tower_ranker_clean" in val_results:
+            comparison_targets.append("recsys_two_tower_ranker_clean")
 
         for target_name in comparison_targets:
             base_val_res = val_results[target_name]
@@ -361,7 +379,7 @@ class TrainRankerJob(BaseJob):
                 })
 
         # 8. Check Qualification for Champion Promotion (Addendum 6)
-        tt_val_res = val_results["recsys_two_tower"]
+        tt_val_res = val_results[tt_model_key]
         val_diff_vs_tt, val_lo_vs_tt, val_hi_vs_tt = paired_bootstrap_diff(
             ranker_val_res.per_user["ndcg_at_10"],
             tt_val_res.per_user["ndcg_at_10"],
@@ -372,7 +390,9 @@ class TrainRankerJob(BaseJob):
 
         # 9. Register Model Run and Save Artifacts
         run_uuid = str(uuid.uuid4())
-        artifact_dir = resolved_data_dir / "artifacts" / "recsys_two_tower_ranker" / run_uuid
+        model_name = ranker_model_key
+        family = ranker_model_key
+        artifact_dir = resolved_data_dir / "artifacts" / model_name / run_uuid
         artifact_dir.mkdir(parents=True, exist_ok=True)
 
         ranker_model.save(artifact_dir)
@@ -405,8 +425,8 @@ class TrainRankerJob(BaseJob):
         model_run_rec = None
         if session is not None and not self.dry_run:
             model_run_rec, mlflow_id = await log_recsys_run(
-                model_name="recsys_two_tower_ranker",
-                family="recsys_two_tower_ranker",
+                model_name=model_name,
+                family=family,
                 dataset_version=data.dataset_version,
                 hyperparameters=ranker_model.hyperparameters(),
                 val_metrics=ranker_val_res,
@@ -484,7 +504,17 @@ class TrainRankerJob(BaseJob):
         print("-" * 140)
 
         # Order models
-        order = ["recsys_two_tower_ranker", "recsys_two_tower", "recsys_itemknn", "recsys_als", "recsys_popularity", "recsys_content"]
+        order = [
+            "recsys_two_tower_ranker_clean_v2",
+            "recsys_two_tower_ranker",
+            "recsys_two_tower_ranker_clean",
+            "recsys_two_tower_clean",
+            "recsys_two_tower",
+            "recsys_itemknn",
+            "recsys_als",
+            "recsys_popularity",
+            "recsys_content",
+        ]
         for m_name in order:
             if m_name not in val_res:
                 continue
@@ -671,6 +701,7 @@ def main() -> None:
     parser.add_argument("--min-child-samples", type=int, default=50, help="Min samples per leaf")
     parser.add_argument("--n-ranker-users", type=int, default=15000, help="Max users to sample for ranker training")
     parser.add_argument("--evaluate-test", "--test", action="store_true", help="Evaluate final model on test split")
+    parser.add_argument("--clean", action="store_true", help="Use clean Two-Tower Stage-1 and register as recsys_two_tower_ranker_clean_v2")
     parser.add_argument("--profile", type=str, default=None, choices=["dev", "full"], help="Recsys profile override")
     parser.add_argument("--data-dir", type=str, default=None, help="Recsys precomputed data directory")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
@@ -684,6 +715,7 @@ def main() -> None:
         min_child_samples=args.min_child_samples,
         n_ranker_users=args.n_ranker_users,
         evaluate_test=args.evaluate_test,
+        clean=args.clean,
         profile=args.profile,
         data_dir=args.data_dir,
         seed=args.seed,

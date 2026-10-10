@@ -85,20 +85,20 @@ This document contains 25 essential questions and answers prepared for the techn
 ---
 
 ### Q13: What was the all-time-stats leakage, and how was it discovered and resolved?
-**Answer:** During initial experiments, the Stage-2 ranker used all-time total review counts and positive review percentages computed through the entire dataset. This leaked future engagement into past split targets. We resolved this by building clean feature pipelines (`recsys_two_tower_clean` and `recsys_two_tower_ranker_clean`) that compute popularity and review counts strictly on the training partition. All-time models are retained solely as non-deployable diagnostic reference benchmarks.  
+**Answer:** During initial experiments, the Stage-2 ranker used all-time total review counts and positive review percentages computed through the entire dataset, leaking future engagement into past split targets. While feature pipelines were rebuilt to compute item stats strictly from the train partition (`recsys_two_tower_clean`), audit inspection revealed that the initial clean ranker (`recsys_two_tower_ranker_clean`) still retrieved Stage-1 candidate pools using the all-time Two-Tower model (`c904bf03`). The old ranker was therefore renamed to "stage-1 two-tower used all-time stats (not leak-free)" and archived as a diagnostic benchmark. To achieve 100% leak-free isolation, we retrained the ranker with `--clean` against `recsys_two_tower_clean` (`eb9a3374`) and registered it as `recsys_two_tower_ranker_clean_v2` with clean Stage-1 source IDs.  
 **Evidence:** [`backend/jobs/train_ranker.py`](backend/jobs/train_ranker.py), [`backend/data/recsys/reports/leaderboard.md`](backend/data/recsys/reports/leaderboard.md).
 
 ---
 
 ### Q14: What is the pre-registered model promotion rule, and why is `recsys_two_tower_clean` the champion?
-**Answer:** Under the pre-registered tournament rule, the Clean Ranker must win over Clean Two-Tower on tuning-set validation NDCG@10 by more than the ranker's standard deviation: $\Delta_{\text{tuning}} > \sigma_{\text{ranker}} = 0.0021$. On the tuning validation set, the Clean Ranker achieves $0.0616 \pm 0.0021$ vs Clean Two-Tower $0.0621 \pm 0.0005$. The required margin is $> 0.0021$, but the observed difference is $\Delta = -0.0005$. Because the difference is negative and does not exceed the decision threshold, the ranker is not promoted, and `recsys_two_tower_clean` is promoted to `production` as the champion.  
+**Answer:** Under the pre-registered tournament rule, a candidate ranker must beat Two-Tower on tuning-set validation NDCG@10 by more than the ranker standard deviation: $\Delta_{\text{tuning}} > \sigma_{\text{ranker}} = 0.0021$. On the tuning validation set, the Clean Ranker achieves $0.0615$ vs Clean Two-Tower $0.0611$ ($\Delta = +0.0004 < \sigma_r$). Because the tuning margin does not exceed the promotion floor, the ranker is not promoted, and `recsys_two_tower_clean` is promoted to `production` as the champion for low-latency online serving.  
 **Evidence:** [`backend/jobs/promote_recsys.py`](backend/jobs/promote_recsys.py), [`backend/recsys/registry.py`](backend/recsys/registry.py), [`backend/data/recsys/reports/leaderboard.md`](backend/data/recsys/reports/leaderboard.md).
 
 ---
 
-### Q15: What causes metric variance across multi-seed training runs?
-**Answer:** When evaluating PyTorch Two-Tower and LightGBM across multiple random seeds (`[42, 43, 44, 45, 46]`), minor metric variance occurs due to stochastic in-batch negative sampling, mini-batch shuffling order, and gradient descent trajectories. Reporting multi-seed mean $\pm$ standard deviation ($0.0541 \pm 0.0018$ over 3 seeds for Two-Tower clean, $0.0558 \pm 0.0022$ over 5 seeds for Ranker clean) ensures we report true expected performance rather than an overfitted single lucky seed.  
-**Evidence:** [`backend/data/recsys/reports/leaderboard.md`](backend/data/recsys/reports/leaderboard.md), [`backend/recsys/evaluate.py`](backend/recsys/evaluate.py).
+### Q15: What causes metric variance across random seeds?
+**Answer:** In neural two-tower and tree boosting models, minor metric variance across random seeds occurs due to stochastic in-batch negative sampling, mini-batch shuffling, and feature sub-sampling. Deployed metrics report exact single-seed evaluations ($N=5,000$ users) with 1,000 bootstrap iterations (95% CI): `recsys_two_tower_clean` achieves test NDCG@10 of $0.0516$ ($[0.0473, 0.0562]$), and `recsys_two_tower_ranker_clean_v2` achieves test NDCG@10 of $0.0627$ ($[0.0572, 0.0680]$).  
+**Evidence:** [`docs/results/leaderboard.md`](docs/results/leaderboard.md), [`backend/recsys/evaluate.py`](backend/recsys/evaluate.py).
 
 ---
 
@@ -139,7 +139,7 @@ This document contains 25 essential questions and answers prepared for the techn
 ---
 
 ### Q22: What is the empirical impact of removing Sentence-Transformers MiniLM text embeddings?
-**Answer:** In Two-Tower ablations, dropping the 384-d text projection branch (`--no-text`) causes test NDCG@10 to fall from $0.0548 \pm 0.0007$ to $0.0482 \pm 0.0009$ ($\Delta = -0.0070$ $[-0.0109, -0.0032]$, $p < 0.05$). This confirms that deep semantic text embeddings provide critical ranking signal.  
+**Answer:** In Two-Tower ablations, dropping the 384-d text projection branch (`--no-text`) causes test NDCG@10 to fall from $0.0548$ to $0.0482$ ($\Delta = -0.0070$ $[-0.0109, -0.0032]$, $p < 0.05$). This confirms that deep semantic text embeddings provide critical ranking signal.  
 **Evidence:** [`backend/data/recsys/reports/ablations.json`](backend/data/recsys/reports/ablations.json), [`backend/data/recsys/reports/leaderboard.md`](backend/data/recsys/reports/leaderboard.md).
 
 ---

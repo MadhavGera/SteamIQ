@@ -70,7 +70,13 @@ def format_deployable_table(models: list[dict[str, Any]]) -> str:
             stage_str = "Baseline"
         else:
             stage_str = m.get("stage", "candidate").capitalize()
-        name_str = f"**`{model_name}`**" if is_champ else f"`{model_name}`"
+
+        if is_champ:
+            name_str = f"**`{model_name}`**"
+        elif model_name == "recsys_two_tower_ranker_clean":
+            name_str = f"`{model_name}` (stage-1 two-tower used all-time stats, not leak-free)"
+        else:
+            name_str = f"`{model_name}`"
 
         ndcg_val = metrics.get("ndcg_at_10", 0.0)
         ndcg_lo = metrics.get("ndcg_at_10_lo95", 0.0)

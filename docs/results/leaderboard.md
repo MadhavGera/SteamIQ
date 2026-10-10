@@ -16,8 +16,8 @@ Multi-seed mean ± std reported for deployable neural models; 95% bootstrap perc
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | **`recsys_two_tower_clean`** | **test** | 1 | **0.0516 [0.0473, 0.0562]** | **0.1028 [0.0954, 0.1108]** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
 | `recsys_two_tower_clean` | **val** | 1 | 0.0611 [0.0562, 0.0661] | 0.1190 [0.1104, 0.1280] | 0.0436 | 0.4347 | 0.7588 | Champion |
-| `recsys_two_tower_ranker_clean` | **test** | 1 | 0.0579 [0.0527, 0.0631] | 0.1102 [0.1014, 0.1186] | 0.0422 | 0.5253 | 0.7481 | Candidate |
-| `recsys_two_tower_ranker_clean` | **val** | 1 | 0.0615 [0.0563, 0.0666] | 0.1170 [0.1080, 0.1256] | 0.0447 | 0.5317 | 0.7431 | Candidate |
+| `recsys_two_tower_ranker_clean` (stage-1 two-tower used all-time stats, not leak-free) | **test** | 1 | 0.0579 [0.0527, 0.0631] | 0.1102 [0.1014, 0.1186] | 0.0422 | 0.5253 | 0.7481 | Candidate |
+| `recsys_two_tower_ranker_clean` (stage-1 two-tower used all-time stats, not leak-free) | **val** | 1 | 0.0615 [0.0563, 0.0666] | 0.1170 [0.1080, 0.1256] | 0.0447 | 0.5317 | 0.7431 | Candidate |
 | `recsys_itemknn` | **test** | 1 | 0.0445 [0.0403, 0.0494] | 0.0842 [0.0766, 0.0916] | 0.0326 | 0.6143 | 0.7255 | Candidate |
 | `recsys_als` | **test** | 1 | 0.0404 [0.0362, 0.0449] | 0.0776 [0.0704, 0.0852] | 0.0291 | 0.2480 | 0.7732 | Candidate |
 | `recsys_popularity` | **test** | 1 | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | Candidate |
@@ -29,8 +29,8 @@ Multi-seed mean ± std reported for deployable neural models; 95% bootstrap perc
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | `recsys_two_tower_clean` | **val** | 0.1190 [0.1104, 0.1280] | 0.1872 [0.1764, 0.1974] | 0.0611 [0.0562, 0.0661] | 0.0781 [0.0729, 0.0832] | 0.0436 | 0.4347 | 0.7588 | champion |
 | `recsys_two_tower_clean` | **test** | 0.1028 [0.0954, 0.1108] | 0.1604 [0.1506, 0.1702] | 0.0516 [0.0473, 0.0562] | 0.0660 [0.0616, 0.0708] | 0.0361 | 0.4383 | 0.7629 | champion |
-| `recsys_two_tower_ranker_clean` | **val** | 0.1170 [0.1080, 0.1256] | 0.1812 [0.1708, 0.1918] | 0.0615 [0.0563, 0.0666] | 0.0776 [0.0723, 0.0827] | 0.0447 | 0.5317 | 0.7431 | candidate |
-| `recsys_two_tower_ranker_clean` | **test** | 0.1102 [0.1014, 0.1186] | 0.1632 [0.1536, 0.1734] | 0.0579 [0.0527, 0.0631] | 0.0714 [0.0661, 0.0769] | 0.0422 | 0.5253 | 0.7481 | candidate |
+| `recsys_two_tower_ranker_clean` (stage-1 two-tower used all-time stats, not leak-free) | **val** | 0.1170 [0.1080, 0.1256] | 0.1812 [0.1708, 0.1918] | 0.0615 [0.0563, 0.0666] | 0.0776 [0.0723, 0.0827] | 0.0447 | 0.5317 | 0.7431 | candidate |
+| `recsys_two_tower_ranker_clean` (stage-1 two-tower used all-time stats, not leak-free) | **test** | 0.1102 [0.1014, 0.1186] | 0.1632 [0.1536, 0.1734] | 0.0579 [0.0527, 0.0631] | 0.0714 [0.0661, 0.0769] | 0.0422 | 0.5253 | 0.7481 | candidate |
 | `recsys_two_tower_ranker` | **val** | 0.1148 [0.1060, 0.1234] | 0.1756 [0.1652, 0.1856] | 0.0621 [0.0570, 0.0675] | 0.0773 [0.0719, 0.0828] | 0.0462 | 0.4697 | 0.7599 | Reference (all-time stats) |
 | `recsys_two_tower_ranker` | **test** | 0.1072 [0.0990, 0.1156] | 0.1602 [0.1500, 0.1708] | 0.0584 [0.0530, 0.0634] | 0.0716 [0.0661, 0.0770] | 0.0436 | 0.4557 | 0.7642 | Reference (all-time stats) |
 | `recsys_two_tower` | **val** | 0.1182 [0.1098, 0.1274] | 0.1866 [0.1758, 0.1964] | 0.0610 [0.0563, 0.0662] | 0.0783 [0.0733, 0.0835] | 0.0438 | 0.4547 | 0.7637 | Reference (all-time stats) |
@@ -48,15 +48,15 @@ Multi-seed mean ± std reported for deployable neural models; 95% bootstrap perc
 
 ## 2. Two-Tower Architectural Ablations (Multi-Seed Test)
 
-| Variant | Description | Seeds | Test NDCG@10 (mean ± std) | Test HR@10 (mean ± std) | Tail NDCG@10 (mean ± std) | Paired Diff vs Full (95% CI) | Significant? |
+| Variant | Description | Seeds | Test NDCG@10 | Test HR@10 | Tail NDCG@10 | Paired Diff vs Full (95% CI) | Significant? |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| `full` | Full Two-Tower Model (ID + Text + Tags + Numeric + Attn) | 42,43,44 | 0.0548 ± 0.0007 | 0.1053 ± 0.0021 | 0.0029 ± 0.0005 | +0.0000 [+0.0000, +0.0000] | NO |
-| `no_text` | Without MiniLM Text Projection (--no-text) | 42,43,44 | 0.0482 ± 0.0009 | 0.0945 ± 0.0035 | 0.0013 ± 0.0003 | -0.0070 [-0.0109, -0.0032] | YES (p<0.05) |
-| `no_tags` | Without Tag Multi-Hot Projection (--no-tags) | 42 | 0.0528 (n=1) | 0.1002 (n=1) | 0.0020 (n=1) | -0.0010 [-0.0041, +0.0017] | NO |
-| `no_numeric` | Without Standardized Numeric Projection (--no-numeric) | 42 | 0.0505 (n=1) | 0.0992 (n=1) | 0.0022 (n=1) | -0.0034 [-0.0069, +0.0002] | NO |
-| `no_id` | Without Item ID Embedding (--no-id) | 42,43,44 | 0.0530 ± 0.0004 | 0.1044 ± 0.0014 | 0.0030 ± 0.0012 | -0.0003 [-0.0037, +0.0029] | NO |
-| `pool_mean` | Masked Mean History Pooling (--pool mean) | 42 | 0.0542 (n=1) | 0.1030 (n=1) | 0.0008 (n=1) | +0.0003 [-0.0029, +0.0039] | NO |
-| `id_dropout_0` | Without ID Dropout (--id-dropout 0.0) | 42 | 0.0507 (n=1) | 0.0996 (n=1) | 0.0048 (n=1) | -0.0032 [-0.0064, -0.0002] | YES (p<0.05) |
+| `full` | Full Two-Tower Model (ID + Text + Tags + Numeric + Attn) | 42 | 0.0548 | 0.1053 | 0.0029 | +0.0000 [+0.0000, +0.0000] | NO |
+| `no_text` | Without MiniLM Text Projection (--no-text) | 42 | 0.0482 | 0.0945 | 0.0013 | -0.0070 [-0.0109, -0.0032] | YES (p<0.05) |
+| `no_tags` | Without Tag Multi-Hot Projection (--no-tags) | 42 | 0.0528 | 0.1002 | 0.0020 | -0.0010 [-0.0041, +0.0017] | NO |
+| `no_numeric` | Without Standardized Numeric Projection (--no-numeric) | 42 | 0.0505 | 0.0992 | 0.0022 | -0.0034 [-0.0069, +0.0002] | NO |
+| `no_id` | Without Item ID Embedding (--no-id) | 42 | 0.0530 | 0.1044 | 0.0030 | -0.0003 [-0.0037, +0.0029] | NO |
+| `pool_mean` | Masked Mean History Pooling (--pool mean) | 42 | 0.0542 | 0.1030 | 0.0008 | +0.0003 [-0.0029, +0.0039] | NO |
+| `id_dropout_0` | Without ID Dropout (--id-dropout 0.0) | 42 | 0.0507 | 0.0996 | 0.0048 | -0.0032 [-0.0064, -0.0002] | YES (p<0.05) |
 
 ---
 

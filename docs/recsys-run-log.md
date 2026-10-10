@@ -58,9 +58,12 @@ To ensure reproducibility without mutating frozen benchmark results:
 | Model / Experiment Run Name | Stage | Run ID (`model_runs.id`) | Key Validation Metric |
 | :--- | :---: | :--- | :--- |
 | `recsys_two_tower_clean` (**Production Champion**) | `production` | `9332aa72-a0fd-446a-937c-0def93dcd9c9` | Val NDCG@10: `0.0611` (Test: `0.0516`) |
-| `recsys_two_tower_ranker_clean` (**Candidate**) | `candidate` | `36759388-26dd-453c-ae7d-994bb32c1611` | Val NDCG@10: `0.0645` (Test: `0.0596`) |
-| `recsys_two_tower_ranker` (**Reference Benchmark**) | `candidate` | `4106d5c1-cbc4-4de3-a72c-ed95a84ba6da` | Val NDCG@10: `0.0621` (Test: `0.0584`) |
-| `recsys_two_tower` (**Reference Benchmark**) | `candidate` | `b88c0acf-2bff-4c14-b99b-d61563478dad` | Val NDCG@10: `0.0610` (Test: `0.0539`) |
+| `recsys_two_tower_clean` (**Duplicate / Archived**) | `archived` | `f4b876a5-7a93-49d6-b590-460a03dbae55` | Val NDCG@10: `0.0611` (Test: `0.0516`) |
+| `recsys_two_tower_ranker_clean_v2` (**Candidate / Clean TT Stage-1**) | `candidate` | `ee7dd444-1961-490d-87cb-c322b106946c` | Val NDCG@10: `0.0637` (Test: `0.0627`) |
+| `recsys_two_tower_ranker_clean` (**stage-1 two-tower used all-time stats, not leak-free**) | `candidate` | `36759388-26dd-453c-ae7d-994bb32c1611` | Val NDCG@10: `0.0645` (Test: `0.0596`) |
+| `recsys_two_tower_ranker_clean` (**Duplicate / Archived**) | `archived` | `8b41ead8-5dd4-4760-8c0f-44a77ddcc951` | Val NDCG@10: `0.0645` (Test: `0.0596`) |
+| `recsys_two_tower_ranker` (**Reference Benchmark / All-Time Stats**) | `candidate` | `4106d5c1-cbc4-4de3-a72c-ed95a84ba6da` | Val NDCG@10: `0.0621` (Test: `0.0584`) |
+| `recsys_two_tower` (**Reference Benchmark / All-Time Stats**) | `candidate` | `b88c0acf-2bff-4c14-b99b-d61563478dad` | Val NDCG@10: `0.0610` (Test: `0.0539`) |
 | `recsys_two_tower_item_holdout` | `candidate` | `0a99d05e-339b-4791-aecb-c764cac9807b` | Val NDCG@10: `0.0610` |
 | `recsys_two_tower_ranker_without_train_popularity` | `candidate` | `e8e956d8-f0db-4516-8aab-7bca8f4743fa` | Val NDCG@10: `0.0614` |
 | `recsys_two_tower_ranker_without_all_time_item_stats` | `candidate` | `62c287ed-0c0a-4c75-a51d-1746c012a7d8` | Val NDCG@10: `0.0619` |

@@ -58,6 +58,9 @@ MODEL_ALIASES: dict[str, str] = {
     "two_tower_ranker_clean": "recsys_two_tower_ranker_clean",
     "recsys_two_tower_ranker_clean": "recsys_two_tower_ranker_clean",
     "recsys_two_tower_ranker": "recsys_two_tower_ranker_clean",
+    "ranker_clean_v2": "recsys_two_tower_ranker_clean_v2",
+    "two_tower_ranker_clean_v2": "recsys_two_tower_ranker_clean_v2",
+    "recsys_two_tower_ranker_clean_v2": "recsys_two_tower_ranker_clean_v2",
 }
 
 DEPLOYABLE_MODELS: list[str] = [
@@ -67,6 +70,7 @@ DEPLOYABLE_MODELS: list[str] = [
     "recsys_als",
     "recsys_two_tower_clean",
     "recsys_two_tower_ranker_clean",
+    "recsys_two_tower_ranker_clean_v2",
 ]
 
 DEFAULT_MODEL_NAME = "recsys_two_tower_clean"
@@ -285,6 +289,16 @@ class RecommenderService:
                     self.model_runs_meta["recsys_two_tower_ranker_clean"] = ranker_meta
                 except Exception as e:
                     logger.warning("Could not load Ranker model: %s", e)
+
+            # (g) Clean Ranker V2 (Strictly Leak-Free Two-Tower Stage 1)
+            ranker_v2_dir, ranker_v2_meta = resolve_model_artifact("recsys_two_tower_ranker_clean_v2")
+            if ranker_v2_dir and ranker_v2_dir.exists() and "two_tower" in stage1_instances:
+                try:
+                    m_v2 = RankerModel.load(ranker_v2_dir, data=self.data, models=stage1_instances)
+                    self.models["recsys_two_tower_ranker_clean_v2"] = m_v2
+                    self.model_runs_meta["recsys_two_tower_ranker_clean_v2"] = ranker_v2_meta
+                except Exception as e:
+                    logger.warning("Could not load Ranker V2 model: %s", e)
 
             self.is_initialized = True
             init_time = (time.perf_counter() - t0) * 1000
