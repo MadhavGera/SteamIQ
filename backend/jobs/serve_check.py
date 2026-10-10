@@ -71,13 +71,18 @@ class ServeCheckJob(BaseJob):
         user_train_pos, _ = _build_user_interaction_maps(data)
 
         # Print loaded artifact paths
-        ranker_meta = service.model_runs_meta.get("recsys_two_tower_ranker_clean", {})
+        ranker_key = (
+            "recsys_two_tower_ranker_clean_v2"
+            if "recsys_two_tower_ranker_clean_v2" in service.models
+            else "recsys_two_tower_ranker_clean"
+        )
+        ranker_meta = service.model_runs_meta.get(ranker_key, {})
         loaded_art_dir = ranker_meta.get("artifact_path", "unknown")
         print("\n" + "=" * 110)
         print("📦 MODEL ARTIFACT RESOLUTION (via model_runs registry)")
         print("=" * 110)
         print(f"  Ranker Loaded Artifact Dir:     {loaded_art_dir}")
-        print(f"  model_runs (run 36759388-...) : {loaded_art_dir} (Run ID: {ranker_meta.get('model_run_id', '36759388-26dd-453c-ae7d-994bb32c1611')})")
+        print(f"  model_runs ({ranker_key}) : {loaded_art_dir} (Run ID: {ranker_meta.get('model_run_id', 'unknown')})")
         print("=" * 110)
 
         # ── (A) 500-User Offline vs Online Parity Check ───────────────────────
@@ -144,7 +149,6 @@ class ServeCheckJob(BaseJob):
                 raise AssertionError(f"Serving parity check failed for {m_key}: max diff {max_diff} > 1e-5 or mismatches {order_mismatches} > 0")
 
         # ── (A.2) Ranker vs Two-Tower 3-Way Top-10 Comparison ─────────────────
-        ranker_key = "recsys_two_tower_ranker_clean"
         tt_key = "recsys_two_tower_clean"
         if ranker_key in service.models and tt_key in service.models:
             ranker_inst = service.models[ranker_key]
@@ -214,7 +218,7 @@ class ServeCheckJob(BaseJob):
         print("=" * 110)
 
         ranker_serving_results: dict[str, Any] = {}
-        ranker_model = service.models.get("recsys_two_tower_ranker_clean")
+        ranker_model = service.models.get(ranker_key)
 
         if ranker_model is not None:
             from recsys.metrics import compute_ranks
@@ -258,7 +262,7 @@ class ServeCheckJob(BaseJob):
 
                 # Confirm service.recommend() produces identical top-10 recommendations to serving scores
                 sample_h_apps = [int(service.idx_to_app_id[idx]) for idx in histories[0] if idx in service.idx_to_app_id]
-                rec_srv = service.recommend(liked_app_ids=sample_h_apps, model="recsys_two_tower_ranker_clean", k=10, explain=False)
+                rec_srv = service.recommend(liked_app_ids=sample_h_apps, model=ranker_key, k=10, explain=False)
                 srv_items = [r["app_id"] for r in rec_srv["items"]]
                 sc_top10 = [int(service.idx_to_app_id[i]) for i in np.argsort(-scores[0])[:10]]
                 if srv_items != sc_top10:

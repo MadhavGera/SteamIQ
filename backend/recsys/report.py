@@ -527,6 +527,8 @@ def generate_leaderboard_markdown(
 
         cov_str = f"{metrics.get('catalog_coverage_at_10', 0.0):.4f}"
         div_str = f"{metrics.get('diversity_at_10', 0.0):.4f}"
+        stage = m.get("stage", "production" if is_champ else "candidate")
+        stage_str = f"`{stage}`"
 
         lines.append(
             f"| {name_str} | **{split}** | {seeds} | {ndcg_str} | {hr_str} | {mrr_str} | {cov_str} | {div_str} | {stage_str} |"

@@ -53,9 +53,9 @@ MODEL_ALIASES: dict[str, str] = {
     "two_tower_clean": "recsys_two_tower_clean",
     "recsys_two_tower_clean": "recsys_two_tower_clean",
     "recsys_two_tower": "recsys_two_tower_clean",
-    "ranker": "recsys_two_tower_ranker_clean",
-    "ranker_clean": "recsys_two_tower_ranker_clean",
-    "two_tower_ranker_clean": "recsys_two_tower_ranker_clean",
+    "ranker": "recsys_two_tower_ranker_clean_v2",
+    "ranker_clean": "recsys_two_tower_ranker_clean_v2",
+    "two_tower_ranker_clean": "recsys_two_tower_ranker_clean_v2",
     "recsys_two_tower_ranker_clean": "recsys_two_tower_ranker_clean",
     "recsys_two_tower_ranker": "recsys_two_tower_ranker_clean",
     "ranker_clean_v2": "recsys_two_tower_ranker_clean_v2",
@@ -405,7 +405,7 @@ class RecommenderService:
 
         # Precompute candidate features / SHAP if ranker and explain=True
         ranker_shap_map: dict[int, list[tuple[str, float]]] = {}
-        if explain and canonical_model == "recsys_two_tower_ranker_clean" and isinstance(model_inst, RankerModel):
+        if explain and "ranker" in canonical_model and isinstance(model_inst, RankerModel):
             try:
                 # Generate candidate pool & features for this single user
                 cand_res = generate_candidates(
@@ -446,7 +446,7 @@ class RecommenderService:
             reasons: list[str] = []
 
             if explain:
-                if canonical_model == "recsys_two_tower_ranker_clean":
+                if "ranker" in canonical_model:
                     # SHAP reasons + vector cosine anchors
                     shap_list = ranker_shap_map.get(i_int, [])
                     pos_features = sorted([f for f in shap_list if f[1] > 0 and f[0] in FEATURE_TEMPLATES], key=lambda x: x[1], reverse=True)
