@@ -76,7 +76,7 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
       if (name === "two_tower_unmasked") return "Two-Tower (Unmasked, ID & Popularity Leaked)";
       if (name.includes("two_tower_masked")) return "Two-Tower Masked [Reference: All-Time Stats]";
       if (name === "two_tower_intact") return "Two-Tower Intact (Reference)";
-      if (name === "two_tower") return "Two-Tower (Holdout Neutralized)";
+      if (name === "two_tower" || name.includes("all-time-stats architecture") || name === "two_tower (all-time-stats architecture, clean=False)") return "Two-Tower Holdout [all-time-stats architecture, clean=False]";
       if (name === "content") return "Content Cosine";
       if (name === "popularity") return "Popularity";
       if (name === "als") return "ALS";

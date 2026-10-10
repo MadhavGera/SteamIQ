@@ -26,7 +26,7 @@ from core.config import settings
 from jobs.base_job import BaseJob
 from recsys.config import RecsysConfig, get_recsys_config
 from recsys.data import RecsysData
-from recsys.evaluate import _build_user_interaction_maps, get_evaluation_user_split
+from recsys.evaluate import _build_user_interaction_maps, evaluate_model, get_evaluation_user_split
 from recsys.inference import RecommenderService
 from recsys.metrics import hit_rate_at_k, ndcg_at_k, paired_bootstrap_diff
 
@@ -210,7 +210,7 @@ class ServeCheckJob(BaseJob):
 
         # ── (B) Clean Ranker 5,000-User Full Split Evaluation ────────────────
         print("\n" + "=" * 110)
-        print("🏆 PART B: Clean Ranker Anonymous Serving Path vs Official Pipeline (5,000 Users)")
+        print("🏆 PART B: Clean Ranker Anonymous Serving Path vs Fresh Offline Evaluation (5,000 Users)")
         print("=" * 110)
 
         ranker_serving_results: dict[str, Any] = {}
@@ -222,12 +222,15 @@ class ServeCheckJob(BaseJob):
             val_map = dict(zip(data.val_df["user_idx"].to_numpy(), data.val_df["item_idx"].to_numpy(), strict=True))
             test_map = dict(zip(data.test_df["user_idx"].to_numpy(), data.test_df["item_idx"].to_numpy(), strict=True))
 
-            # Resolve official artifact ranks
-            ranker_art_path = Path(service.model_runs_meta.get("recsys_two_tower_ranker_clean", {}).get("artifact_path", loaded_art_dir))
-            art_ranks_val = np.load(ranker_art_path / "ranks_val.npy") if (ranker_art_path / "ranks_val.npy").exists() else None
-            art_ranks_test = np.load(ranker_art_path / "ranks_test.npy") if (ranker_art_path / "ranks_test.npy").exists() else None
+            for split_name in ["val", "test"]:
+                # Fresh offline evaluation
+                fresh_eval = evaluate_model(ranker_model, data, split=split_name, user_indices=eval_users)
+                fresh_ranks = fresh_eval.per_user["rank"]
+                fresh_ndcgs = ndcg_at_k(fresh_ranks, 10)
+                fresh_hrs = hit_rate_at_k(fresh_ranks, 10)
+                off_ndcg = float(np.mean(fresh_ndcgs))
+                off_hr = float(np.mean(fresh_hrs))
 
-            for split_name, art_ranks in [("val", art_ranks_val), ("test", art_ranks_test)]:
                 # 1. Serving path scoring with anonymous imputed user features & [-50:] history
                 histories = []
                 targets = []
@@ -258,14 +261,7 @@ class ServeCheckJob(BaseJob):
                 serv_ndcg = float(np.mean(serving_ndcgs))
                 serv_hr = float(np.mean(serving_hrs))
 
-                if art_ranks is not None:
-                    art_ndcgs = ndcg_at_k(art_ranks, 10)
-                    art_hrs = hit_rate_at_k(art_ranks, 10)
-                    off_ndcg = float(np.mean(art_ndcgs))
-                    off_hr = float(np.mean(art_hrs))
-                    diff, lo95, hi95 = paired_bootstrap_diff(serving_ndcgs, art_ndcgs, seed=self.seed)
-                else:
-                    off_ndcg, off_hr, diff, lo95, hi95 = serv_ndcg, serv_hr, 0.0, 0.0, 0.0
+                diff, lo95, hi95 = paired_bootstrap_diff(serving_ndcgs, fresh_ndcgs, seed=self.seed)
 
                 ranker_serving_results[split_name] = {
                     "offline_ndcg_at_10": off_ndcg,
@@ -278,7 +274,7 @@ class ServeCheckJob(BaseJob):
                 }
 
                 print(
-                    f"  Split: {split_name.upper():<4} | Artifact NDCG@10: {off_ndcg:.4f} (HR@10: {off_hr:.4f}) | "
+                    f"  Split: {split_name.upper():<4} | Fresh Eval NDCG@10: {off_ndcg:.4f} (HR@10: {off_hr:.4f}) | "
                     f"Serving NDCG@10: {serv_ndcg:.4f} (HR@10: {serv_hr:.4f}) | Paired Diff: {diff:+.4f} [{lo95:+.4f}, {hi95:+.4f}]"
                 )
 

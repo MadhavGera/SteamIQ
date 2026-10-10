@@ -133,9 +133,9 @@ User-level paired difference tests ($\Delta = \text{NDCG}_A(u) - \text{NDCG}_B(u
 
 ### B. Empirical Findings & Exact Report Metrics
 - **True Item Holdout ($N = 184$ users, 300 withheld items):**
-  - `recsys_content`: $\text{NDCG@10} = 0.0078$ ($[0.0016, 0.0155]$), $\text{HR@10} = 0.0217$ ($[0.0054, 0.0435]$, $4 / 184$ hits), Mean Catalog Rank $= 1,084.6$ ($[963.7, 1,212.3]$ out of 3,000). **Content-only recommender beats random (mean rank $1,084.6$ vs random $1,544.0$).**
-  - `random` (Analytic): $\text{NDCG@10} = 0.0000$, $\text{HR@10} = 0.0000$ ($0 / 184$ hits), Mean Catalog Rank $= 1,544.0$ ($N/2$).
-  - `recsys_two_tower_item_holdout`: **The two-tower dual encoder scores unseen items at or below random (mean rank $2,126.6$ vs random $1,544.0$; $\text{NDCG@10} = 0.0000$)** once popularity proxies and ID embeddings are neutralized:
+  - `recsys_content`: $\text{NDCG@10} = 0.0078$ ($[0.0016, 0.0155]$), $\text{HR@10} = 0.0217$ ($[0.0054, 0.0435]$, $4 / 184$ hits), Mean Catalog Rank $= 1,084.6$ ($[963.7, 1,212.3]$ out of 3,000). **Content-only recommender beats random (mean rank $1,084.6$ vs random $1,500.0$).**
+  - `random` (Analytic): $\text{NDCG@10} = 0.0015$, $\text{HR@10} = 0.0033$ ($1 / 184$ expected hits, $10/N$), Mean Catalog Rank $= 1,500.0$ ($N/2$).
+  - `recsys_two_tower_item_holdout` (all-time-stats architecture, `clean=False`): **The two-tower dual encoder scores unseen items at or below random (mean rank $2,126.6$ vs random $1,500.0$; $\text{NDCG@10} = 0.0000$)** once popularity proxies and ID embeddings are neutralized:
     - **(a) Unmasked:** Mean rank $= 820.2$ ($[724.4, 917.9]$), $\text{NDCG@10} = 0.0054$ ($1 / 184$ hits) — leaks item ID and popularity proxies.
     - **(b) Masked:** Mean rank $= 781.2$ ($[682.8, 873.4]$), $\text{NDCG@10} = 0.0034$ ($1 / 184$ hits) — ID masked, but popularity proxies leak volume.
     - **(c) Masked + Train Positives Raw 0:** Mean rank $= 2,162.4$ ($[2,063.4, 2,264.4]$), $\text{NDCG@10} = 0.0000$ ($0 / 184$ hits) — raw zero count causes extreme negative z-score ($z \approx -0.4$).

@@ -228,20 +228,26 @@ class GenerateColdStartReportJob(BaseJob):
             sc_c3[i, list(sm)] = -np.inf
         ho_rk_c3 = compute_ranks(sc_c3, ho_targ_arr)
 
-        # Analytic Random Baseline (mean rank = N / 2)
-        analytic_mean_rank = float(data.n_items / 2.0)
+        # Analytic Random Baseline (mean rank = N / 2, HR@10 = 10 / N, NDCG@10 analytic)
+        n_items = float(data.n_items)
+        analytic_mean_rank = n_items / 2.0
+        analytic_hr_10 = 10.0 / n_items
+        analytic_ndcg_10 = float(np.sum(1.0 / np.log2(np.arange(1, 11) + 1.0)) / n_items)
+        analytic_mrr_10 = float(np.sum(1.0 / np.arange(1, 11)) / n_items)
+        analytic_hits = int(round(n_ho_users * analytic_hr_10))
+
         random_summary = {
-            "hits_k": 0,
+            "hits_k": analytic_hits,
             "n_users": n_ho_users,
-            "hit_rate_at_10": 0.0,
-            "hit_rate_at_10_lo95": 0.0,
-            "hit_rate_at_10_hi95": 0.0,
-            "ndcg_at_10": 0.0,
-            "ndcg_at_10_lo95": 0.0,
-            "ndcg_at_10_hi95": 0.0,
-            "mrr_at_10": 0.0,
-            "mrr_at_10_lo95": 0.0,
-            "mrr_at_10_hi95": 0.0,
+            "hit_rate_at_10": analytic_hr_10,
+            "hit_rate_at_10_lo95": analytic_hr_10,
+            "hit_rate_at_10_hi95": analytic_hr_10,
+            "ndcg_at_10": analytic_ndcg_10,
+            "ndcg_at_10_lo95": analytic_ndcg_10,
+            "ndcg_at_10_hi95": analytic_ndcg_10,
+            "mrr_at_10": analytic_mrr_10,
+            "mrr_at_10_lo95": analytic_mrr_10,
+            "mrr_at_10_hi95": analytic_mrr_10,
             "mean_rank": analytic_mean_rank,
             "mean_rank_lo95": analytic_mean_rank,
             "mean_rank_hi95": analytic_mean_rank,
@@ -256,7 +262,9 @@ class GenerateColdStartReportJob(BaseJob):
             "two_tower_masked_train_pos_raw_0": summarize_model_ranks(ho_rk_c, n_ho_users, seed=self.seed),
             "two_tower_masked_standardized_z0": summarize_model_ranks(ho_rk_c2, n_ho_users, seed=self.seed),
             "two_tower_masked_all_proxies_neutralized": summarize_model_ranks(ho_rk_c3, n_ho_users, seed=self.seed),
-            "two_tower": summarize_model_ranks(ho_rk_c3, n_ho_users, seed=self.seed),
+            "two_tower (all-time-stats architecture, clean=False)": summarize_model_ranks(
+                ho_rk_c3, n_ho_users, seed=self.seed
+            ),
         }
 
         # ──────────────────────────────────────────────────────────────────────
@@ -369,7 +377,7 @@ class GenerateColdStartReportJob(BaseJob):
             "item_holdout_study": {
                 "study_type": "item_holdout",
                 "primary_evidence": True,
-                "title": "True Item Holdout (90% Catalog Retrained, 300 Items Withheld)",
+                "title": "True Item Holdout (90% Catalog Retrained, 300 Items Withheld — all-time-stats architecture, clean=False)",
                 "n_eval_users": n_ho_users,
                 "n_held_out_items": len(held_out_set),
                 "models": item_holdout_models,
@@ -378,7 +386,7 @@ class GenerateColdStartReportJob(BaseJob):
                     "ndcg_at_10": float(np.sum(1.0 / np.log2(np.arange(1, 11) + 1.0)) / data.n_items),
                     "formula": "10 / n_items",
                 },
-                "note": "True Item Holdout: Held-out items had zero interactions during model training. This is the primary prospective benchmark.",
+                "note": "True Item Holdout: Evaluated on the all-time-stats architecture (clean=False). Held-out items had zero interactions during model training. This is the primary prospective benchmark.",
             },
             "sparse_targets_study": {
                 "study_type": "sparse_targets",
