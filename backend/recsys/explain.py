@@ -25,30 +25,19 @@ logger = logging.getLogger("steamiq.recsys.explain")
 FEATURE_TEMPLATES: dict[str, str] = {
     # Item features
     "log_train_pop": "One of the most popular titles on Steam",
-    "popularity_rank_pct": "Top trending title across Steam libraries",
     "age_years": "Release era aligns with games you liked/reviewed",
     "positive_ratio": "Overwhelmingly positive reviews from the community",
     "log_user_reviews": "Highly reviewed and popular community favorite",
     "price_final": "Matches your preferred game pricing tier",
     "discount": "Currently on discount in the Steam store",
-    "win": "Fully optimized for Windows PC",
-    "mac": "Native support on macOS",
-    "linux": "Native support on Linux",
-    "steam_deck": "Verified for great playability on Steam Deck",
-    "has_description": "Rich store content and player documentation",
     # User-item features
     "price_gap": "Priced close to games you usually like/review",
     "abs_price_gap": "Priced similarly to titles you liked/reviewed",
     "tag_jaccard": "Shares tags with games you liked/reviewed",
     "content_max_cos": "Very similar themes and description to games you liked/reviewed",
     "content_mean_cos": "Strong thematic match with games you liked/reviewed",
-    "cos_to_last_item": "Similar in style to games you recently liked/reviewed",
+    "cos_to_last_item": "Similar in style to games you liked/reviewed",
     "release_year_gap": "Released in a similar era to games you liked/reviewed",
-    # User features
-    "history_len": "Curated based on titles you liked/reviewed",
-    "log_products": "Tailored based on games you liked/reviewed",
-    "log_reviews": "Matches your active community feedback profile",
-    "mean_log_hours": "Matches the depth of games you liked/reviewed",
 }
 
 

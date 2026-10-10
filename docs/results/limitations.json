@@ -1,0 +1,92 @@
+{
+  "metadata": {
+    "report_key": "limitations",
+    "dataset_version": "c662b8232dc0",
+    "git_commit": "9e9b5b8c7d6e1661e967feb25426b0b87fa11166",
+    "n_eval_users": 5000,
+    "seed": 42,
+    "generated_at": "2026-10-07T21:30:15.524720+00:00"
+  },
+  "limitations": [
+    {
+      "id": "implicit_feedback",
+      "title": "Implicit Feedback from Reviews Only",
+      "description": "Interactions are derived exclusively from Steam user reviews (is_recommended). Users write reviews for games they actively chose to purchase/play, meaning the dataset lacks explicit negative impressions from non-purchasers."
+    },
+    {
+      "id": "popularity_selection_bias",
+      "title": "Popularity and Selection Bias",
+      "description": "Highly popular titles receive a disproportionate volume of interactions. Baseline models and retrieval stages exhibit popularity bias towards top catalog items unless explicitly counterbalanced."
+    },
+    {
+      "id": "per_user_temporal_split",
+      "title": "Per-User Temporal Split Protocol",
+      "description": "The split uses a per-user chronological partition: for each user, their latest positive review forms the test target, their second-to-latest forms the validation target, and all preceding reviews form the training history. This evaluates next-item prediction per user rather than a single global time cutoff."
+    },
+    {
+      "id": "universe_selection_leakage",
+      "title": "Item Universe Selection from Full Period",
+      "description": "Catalog inclusion in the 3,000-game universe is determined using total positive counts across all periods. This is an accepted design trade-off to ensure stable item features."
+    },
+    {
+      "id": "leave_one_out_target",
+      "title": "Single Held-Out Item Target",
+      "description": "Each evaluation user has exactly one held-out target item in val and test. Consequently, Hit Rate @ k and Recall @ k are equivalent indicators."
+    },
+    {
+      "id": "offline_vs_online",
+      "title": "Offline Metrics vs Online Performance",
+      "description": "Offline ranking gains (NDCG@10, HR@10) reflect retrieval of historical positive reviews, but do not prove online user satisfaction, serendipity, or real-world purchase conversion."
+    },
+    {
+      "id": "cold_start_simulation",
+      "title": "Simulated Cold-Start Evaluation",
+      "description": "The cold-start study simulates new items at inference time by replacing learned ID embeddings with the unknown-item token and zeroing CF scores. Item content projections (MiniLM, tags) were trained on the catalog features, so this is a simulation rather than a prospective trial."
+    },
+    {
+      "id": "dev_profile_scale",
+      "title": "Dev-Profile Scale Constraints",
+      "description": "The dev profile operates on 5000 evaluation users and 3,000 items. Full production deployment covers hundreds of thousands of users and games."
+    },
+    {
+      "id": "temporal_test_shift",
+      "title": "Test Split Metric Shift",
+      "description": "Across all models, test metrics (e.g. NDCG@10 0.0535 vs 0.0630) are lower than validation metrics. This reflects genuine temporal drift: the held-out test review is each user's most recent interaction, often occurring months after training interactions."
+    },
+    {
+      "id": "all_time_item_statistics",
+      "title": "All-Time Item Statistics & Temporal Cutoff",
+      "description": "Item statistics (user_reviews count, positive_ratio) are all-time aggregations computed through 2022 and can include interactions after a user's chronological split cutoff point."
+    },
+    {
+      "id": "cold_start_proxy_leakage",
+      "title": "Cold-Start Evaluation & Popularity Proxy Leakage",
+      "description": "Evaluation on the 437 simulated new-item users (random 10% items, seed 42) with the seed-42 Two-Tower artifact yields: (a) unmasked: HR@10=0.0618, NDCG@10=0.0317, n=437; (b) ID masked: HR@10=0.0641, NDCG@10=0.0314, n=437; (c) ID masked + train_positives = raw 0: HR@10=0.0000, NDCG@10=0.0000, n=437; (c2) ID masked + train_positives = standardized catalog mean (z=0): HR@10=0.0023, NDCG@10=0.0011, n=437; (c3) as (c2) + user_reviews & positive_ratio at standardized catalog mean: HR@10=0.0023, NDCG@10=0.0010, n=437. The legacy score 0.0732 was not reproduced under any valid condition (documented as not reproduced, hypothesis: legacy un-neutralized popularity proxy / unmasked interaction leakage)."
+    },
+    {
+      "id": "ranker_eval_discrepancy",
+      "title": "Ranker Evaluation Discrepancy Analysis (0.0501 vs 0.0622)",
+      "description": "The earlier 0.0501 test NDCG@10 observed in preliminary experiment harnesses vs the official pipeline 0.0622 was investigated. Because exploratory test history was truncated, the exact code difference cannot be isolated to a single commit; the validated hypothesis is that earlier harnesses evaluated test candidates without appending the validation target item to the user fold-in history, causing a ~40% candidate pool miss rate. Official evaluate_model(split='test') evaluates on full fold-in history."
+    },
+    {
+      "id": "ranker_determinism",
+      "title": "LightGBM Ranker Determinism & Reproducibility",
+      "description": "LightGBM LambdaMART ranker training is configured with deterministic=True and force_row_wise=True to guarantee bitwise reproducibility across runs with the same random seed. Multi-threaded training on seed 45 and seed 46 achieves bitwise identical validation and test metrics across multiple fresh process runs."
+    },
+    {
+      "id": "multiple_comparisons_ci",
+      "title": "Ablation Confidence Intervals & Multiplicity",
+      "description": "Bootstrap confidence intervals for architectural and feature-group ablations are computed pairwise at the nominal 95% level and are not adjusted for multiple comparisons."
+    },
+    {
+      "id": "single_seed_ablations",
+      "title": "Single-Seed Ablation Interpretability",
+      "description": "Single-seed ablations are indicative only; multi-seed evaluations are recommended to distinguish marginal feature effects from optimization and sampling variance."
+    },
+    {
+      "id": "coverage_mystery_resolution",
+      "title": "Catalog Coverage Definition (Masked vs Unmasked)",
+      "description": "Official catalog coverage@10 (0.3597 test for Two-Tower) is strictly computed after masking out items already seen in the user's fold-in history (-inf). If computed on unmasked raw scores, coverage appears higher (0.4373) because models repetitively recommend already-consumed items. Seen-item masking is essential for production serving."
+    }
+  ]
+}

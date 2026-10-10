@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "report_key": "dataset",
+    "dataset_version": "c662b8232dc0",
+    "git_commit": "9e9b5b8c7d6e1661e967feb25426b0b87fa11166",
+    "n_eval_users": 5000,
+    "seed": 42,
+    "generated_at": "2026-10-07T21:30:15.487610+00:00"
+  },
+  "manifest": {
+    "dataset_version": "c662b8232dc0",
+    "n_users": 20000,
+    "n_items": 3000,
+    "n_train_interactions": 165741,
+    "n_val_interactions": 20000,
+    "n_test_interactions": 20000,
+    "n_negatives": 26845
+  },
+  "split_protocol": "Per-user chronological split: For each user with >= min_user_positives (default 5), all interaction events are ordered by review timestamp. The latest positive interaction is assigned to TEST, the second latest to VAL, and all preceding interactions to TRAIN. Evaluation is strictly fold-in next-item recommendation over 5,000 fixed evaluation users."
+}

@@ -714,6 +714,8 @@ class TwoTowerModel(BaseRecommender):
         if model.cached_item_vecs is None:
             model.precompute_item_vectors()
 
+        model.model_dir = str(path)
+        model.model_run_id = path.name
         return model
 
     def hyperparameters(self) -> dict[str, Any]:

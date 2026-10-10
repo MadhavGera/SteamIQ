@@ -734,3 +734,163 @@ def save_report_json(filepath: Path | str, payload: dict[str, Any]) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
     logger.info("Saved report JSON to %s", path)
+
+
+def rebuild_leaderboard(
+    data_dir: Path | str | None = None,
+    eval_users: list[int] | None = None,
+    seed: int = 42,
+    save: bool = True,
+) -> dict[str, Any]:
+    """
+    Rebuilds the leaderboard payload using fresh evaluate_model passes on 5,000 evaluation users.
+    Marks rank_source as 'fresh evaluate_model' on every evaluated model.
+    """
+    from core.config import settings
+    from recsys.data import RecsysData
+    from recsys.evaluate import evaluate_model, get_evaluation_user_split
+    from recsys.models.als import ALSRecommender
+    from recsys.models.content import ContentRecommender
+    from recsys.models.itemknn import ItemKNNRecommender
+    from recsys.models.popularity import PopularityRecommender
+    from recsys.models.two_tower import TwoTowerModel
+    from recsys.ranker import RankerModel
+
+    resolved_data_dir = Path(data_dir) if data_dir else Path(settings.resolved_recsys_data_dir)
+    data = RecsysData.load(resolved_data_dir)
+
+    if eval_users is None:
+        eval_users, _ = get_evaluation_user_split(
+            data,
+            n_eval_users=5000,
+            n_tuning_users=5000,
+            seed=seed,
+            persistence_dir=resolved_data_dir,
+        )
+
+    art_base = resolved_data_dir / "artifacts"
+
+    def _latest_dir(model_name: str) -> tuple[Path, str]:
+        p = art_base / model_name
+        dirs = [d for d in p.iterdir() if d.is_dir()]
+        dirs.sort(key=lambda d: ((d / "ranks_test.npy").exists(), d.stat().st_mtime), reverse=True)
+        return dirs[0], dirs[0].name
+
+    # 1. Load baseline models
+    pop_dir, pop_id = _latest_dir("recsys_popularity")
+    pop_m = PopularityRecommender.load(pop_dir)
+
+    cnt_dir, cnt_id = _latest_dir("recsys_content")
+    cnt_m = ContentRecommender.load(cnt_dir)
+
+    als_dir, als_id = _latest_dir("recsys_als")
+    als_m = ALSRecommender.load(als_dir)
+
+    knn_dir, knn_id = _latest_dir("recsys_itemknn")
+    knn_m = ItemKNNRecommender.load(knn_dir)
+
+    # 2. Load Two-Tower models
+    clean_tt_dir, clean_tt_id = _latest_dir("recsys_two_tower_clean")
+    clean_tt_m = TwoTowerModel.load(clean_tt_dir, data=data)
+
+    ref_tt_dir, ref_tt_id = _latest_dir("recsys_two_tower")
+    ref_tt_m = TwoTowerModel.load(ref_tt_dir, data=data)
+
+    # 3. Load Ranker models with matching stage-1 models
+    clean_stage1 = {
+        "two_tower": clean_tt_m,
+        "itemknn": knn_m,
+        "als": als_m,
+        "content": cnt_m,
+    }
+    clean_rk_dir, clean_rk_id = _latest_dir("recsys_two_tower_ranker_clean")
+    clean_rk_m = RankerModel.load(clean_rk_dir, data=data, models=clean_stage1)
+
+    ref_stage1 = {
+        "two_tower": ref_tt_m,
+        "itemknn": knn_m,
+        "als": als_m,
+        "content": cnt_m,
+    }
+    ref_rk_dir, ref_rk_id = _latest_dir("recsys_two_tower_ranker")
+    ref_rk_m = RankerModel.load(ref_rk_dir, data=data, models=ref_stage1)
+
+    models_to_eval = [
+        ("recsys_two_tower_clean", "champion", clean_tt_id, clean_tt_m),
+        ("recsys_two_tower_ranker_clean", "candidate", clean_rk_id, clean_rk_m),
+        ("recsys_two_tower_ranker", "upper_bound_reference", ref_rk_id, ref_rk_m),
+        ("recsys_two_tower", "upper_bound_reference", ref_tt_id, ref_tt_m),
+        ("recsys_itemknn", "candidate", knn_id, knn_m),
+        ("recsys_als", "candidate", als_id, als_m),
+        ("recsys_popularity", "candidate", pop_id, pop_m),
+        ("recsys_content", "candidate", cnt_id, cnt_m),
+    ]
+
+    models_payload_data: list[dict[str, Any]] = []
+
+    for name, stage, run_id, model in models_to_eval:
+        logger.info("Evaluating %s with fresh evaluate_model passes...", name)
+        v_res = evaluate_model(model, data, split="val", k_list=(10, 20), user_indices=eval_users, seed=seed)
+        t_res = evaluate_model(model, data, split="test", k_list=(10, 20), user_indices=eval_users, seed=seed)
+
+        models_payload_data.append({
+            "model_name": name,
+            "family": name,
+            "stage": stage,
+            "model_run_id": run_id,
+            "rank_source": "fresh evaluate_model",
+            "hyperparameters": model.hyperparameters() if hasattr(model, "hyperparameters") else {},
+            "val_metrics": v_res.metrics,
+            "test_metrics": t_res.metrics,
+            "val_slices": v_res.slices,
+            "test_slices": t_res.slices,
+        })
+
+    payload = build_leaderboard_payload(
+        dataset_version=data.dataset_version,
+        models_data=models_payload_data,
+        n_eval_users=len(eval_users),
+        seed=seed,
+    )
+
+    if save:
+        reports_dir = resolved_data_dir / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        save_report_json(reports_dir / "leaderboard.json", payload)
+
+        # Update leaderboard.md
+        ablations_p = None
+        if (reports_dir / "ablations.json").exists():
+            with open(reports_dir / "ablations.json", encoding="utf-8") as f:
+                ablations_p = json.load(f)
+        rk_ablations_p = None
+        if (reports_dir / "ranker_ablations.json").exists():
+            with open(reports_dir / "ranker_ablations.json", encoding="utf-8") as f:
+                rk_ablations_p = json.load(f)
+        slices_p = None
+        if (reports_dir / "slices.json").exists():
+            with open(reports_dir / "slices.json", encoding="utf-8") as f:
+                slices_p = json.load(f)
+        cold_p = None
+        if (reports_dir / "cold_start.json").exists():
+            with open(reports_dir / "cold_start.json", encoding="utf-8") as f:
+                cold_p = json.load(f)
+        beyond_p = None
+        if (reports_dir / "beyond_accuracy.json").exists():
+            with open(reports_dir / "beyond_accuracy.json", encoding="utf-8") as f:
+                beyond_p = json.load(f)
+
+        md_content = generate_leaderboard_markdown(
+            leaderboard_payload=payload,
+            ablations_payload=ablations_p,
+            ranker_ablations_payload=rk_ablations_p,
+            slices_payload=slices_p,
+            cold_start_payload=cold_p,
+            beyond_accuracy_payload=beyond_p,
+        )
+        with open(reports_dir / "leaderboard.md", "w", encoding="utf-8") as f:
+            f.write(md_content)
+        with open(resolved_data_dir / "leaderboard.md", "w", encoding="utf-8") as f:
+            f.write(md_content)
+
+    return payload

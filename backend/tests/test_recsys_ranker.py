@@ -376,10 +376,20 @@ def test_global_shap_and_explanation_templates():
 
     shap_dict = train_info["global_shap"]
     assert len(shap_dict) == len(FEATURE_COLUMNS)
+    EXCLUDED_FROM_TEMPLATES = {
+        "has_description", "popularity_rank_pct", "win", "mac", "linux", "steam_deck",
+        "history_len", "log_products", "log_reviews", "mean_log_hours"
+    }
     for col in FEATURE_COLUMNS:
         assert col in shap_dict
-        if col.startswith("in_") or col.endswith("_rank") or col.endswith("_score") or col.endswith("_in_cands"):
-            # Source rank/score/indicator features are excluded from explanation templates
+        if (
+            col.startswith("in_")
+            or col.endswith("_rank")
+            or col.endswith("_score")
+            or col.endswith("_in_cands")
+            or col in EXCLUDED_FROM_TEMPLATES
+        ):
+            # Source features, platform, description, popularity rank, and generic filler are excluded
             assert col not in FEATURE_TEMPLATES
         else:
             assert col in FEATURE_TEMPLATES

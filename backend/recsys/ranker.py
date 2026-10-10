@@ -54,13 +54,14 @@ class RankerConfig:
     seed: int = 42
     n_jobs: int = 4
     max_candidates: int = 300
+    source_run_ids: dict[str, str] | None = None
 
     def __post_init__(self) -> None:
         if self.eval_at is None:
             self.eval_at = [10]
 
 
-_SCORE_CAND_CACHE: dict[tuple[int, tuple[str, ...], int], tuple[np.ndarray, CandidateResult, pd.DataFrame]] = {}
+_SCORE_CAND_CACHE: dict[tuple[int, tuple[tuple[str, Any], ...], int], tuple[np.ndarray, CandidateResult, pd.DataFrame]] = {}
 
 
 class RankerModel(BaseRecommender):
@@ -126,7 +127,11 @@ class RankerModel(BaseRecommender):
             len(histories[0]) if len(histories) > 0 else 0,
             len(histories[-1]) if len(histories) > 0 else 0,
         )
-        cache_key = (n_users, tuple(sorted(self.models.keys())), hist_sig)
+        model_run_sig = tuple(
+            (k, getattr(m, "model_run_id", None) or getattr(m, "model_dir", None) or str(id(m)))
+            for k, m in sorted(self.models.items())
+        )
+        cache_key = (n_users, model_run_sig, hist_sig)
 
         if (
             precomputed_base_scores is None
@@ -267,13 +272,16 @@ class RankerModel(BaseRecommender):
         else:
             feature_names = list(FEATURE_COLUMNS)
 
-        return cls(
+        inst = cls(
             ranker=booster,
             models=models or {},
             config=config,
             feature_names=feature_names,
             data=data,
         )
+        inst.model_dir = str(path)
+        inst.model_run_id = path.name
+        return inst
 
     def hyperparameters(self) -> dict[str, Any]:
         return asdict(self.config)

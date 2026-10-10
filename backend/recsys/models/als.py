@@ -249,7 +249,7 @@ class ALSRecommender(BaseRecommender):
             with open(meta_file, encoding="utf-8") as f:
                 metadata = json.load(f)
 
-        return cls(
+        inst = cls(
             factors=metadata.get("factors", item_factors.shape[1]),
             regularization=metadata.get("regularization", 0.05),
             alpha=metadata.get("alpha", 15.0),
@@ -258,6 +258,9 @@ class ALSRecommender(BaseRecommender):
             item_factors=item_factors,
             n_items=metadata.get("n_items", item_factors.shape[0]),
         )
+        inst.model_dir = str(path)
+        inst.model_run_id = path.name
+        return inst
 
     def hyperparameters(self) -> dict[str, Any]:
         return {

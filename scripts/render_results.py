@@ -25,7 +25,9 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-LEADERBOARD_JSON = ROOT_DIR / "backend" / "data" / "recsys" / "reports" / "leaderboard.json"
+DOCS_RESULTS_JSON = ROOT_DIR / "docs" / "results" / "leaderboard.json"
+BACKEND_REPORTS_JSON = ROOT_DIR / "backend" / "data" / "recsys" / "reports" / "leaderboard.json"
+LEADERBOARD_JSON = DOCS_RESULTS_JSON if DOCS_RESULTS_JSON.exists() else BACKEND_REPORTS_JSON
 README_MD = ROOT_DIR / "README.md"
 GUIDE_MD = ROOT_DIR / "docs" / "ml-accuracy-and-evaluation-guide.md"
 

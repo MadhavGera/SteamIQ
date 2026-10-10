@@ -193,12 +193,15 @@ class ItemKNNRecommender(BaseRecommender):
             with open(meta_path, encoding="utf-8") as f:
                 metadata = json.load(f)
 
-        return cls(
+        inst = cls(
             k_neighbors=metadata.get("k_neighbors", 100),
             shrink=metadata.get("shrink", 10.0),
             similarity_matrix=similarity_matrix,
             n_items=metadata.get("n_items", similarity_matrix.shape[0]),
         )
+        inst.model_dir = str(path)
+        inst.model_run_id = path.name
+        return inst
 
     def hyperparameters(self) -> dict[str, Any]:
         return {

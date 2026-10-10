@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "report_key": "training_curves",
+    "dataset_version": "c662b8232dc0",
+    "git_commit": "9e9b5b8c7d6e1661e967feb25426b0b87fa11166",
+    "n_eval_users": 5000,
+    "seed": 42,
+    "generated_at": "2026-10-07T21:30:15.448081+00:00"
+  },
+  "two_tower_curves": {},
+  "ranker_curves": null
+}

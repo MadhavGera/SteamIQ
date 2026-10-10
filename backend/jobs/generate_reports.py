@@ -40,11 +40,13 @@ class GenerateReportsJob(BaseJob):
         data_dir: Path | str | None = None,
         seed: int = 42,
         dry_run: bool = False,
+        rebuild_leaderboard: bool = False,
     ) -> None:
         super().__init__(dry_run=dry_run)
         self.profile = profile
         self.data_dir = data_dir
         self.seed = seed
+        self.rebuild_leaderboard = rebuild_leaderboard
 
     async def _run_async(self, session: AsyncSession | None = None) -> dict[str, Any]:
         cfg: RecsysConfig = get_recsys_config(self.profile)
@@ -89,6 +91,15 @@ class GenerateReportsJob(BaseJob):
         for k in required_keys:
             with open(reports_dir / f"{k}.json", encoding="utf-8") as f:
                 all_payloads[k] = json.load(f)
+
+        if self.rebuild_leaderboard:
+            self.logger.info("Rebuilding leaderboard with fresh evaluate_model passes...")
+            from recsys.report import rebuild_leaderboard
+            all_payloads["leaderboard"] = rebuild_leaderboard(
+                data_dir=resolved_data_dir,
+                seed=self.seed,
+                save=True,
+            )
 
         # Find latest model runs for model_run_id association
         model_runs_dict: dict[str, ModelRun] = {}
@@ -162,6 +173,7 @@ def main() -> None:
     parser.add_argument("--data-dir", type=str, default=None, help="Recsys precomputed data directory")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--dry-run", action="store_true", help="Run without DB writes")
+    parser.add_argument("--rebuild-leaderboard", action="store_true", help="Re-evaluate models with fresh evaluate_model passes")
     args = parser.parse_args()
 
     job = GenerateReportsJob(
@@ -169,6 +181,7 @@ def main() -> None:
         data_dir=args.data_dir,
         seed=args.seed,
         dry_run=args.dry_run,
+        rebuild_leaderboard=args.rebuild_leaderboard,
     )
     job.execute()
 

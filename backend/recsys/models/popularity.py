@@ -88,7 +88,10 @@ class PopularityRecommender(BaseRecommender):
             raise FileNotFoundError(f"Missing item_scores.npy in {path}")
 
         scores = np.load(scores_file)
-        return cls(scores=scores)
+        inst = cls(scores=scores)
+        inst.model_dir = str(path)
+        inst.model_run_id = path.name
+        return inst
 
     def hyperparameters(self) -> dict[str, Any]:
         return {
