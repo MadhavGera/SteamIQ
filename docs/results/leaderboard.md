@@ -1,10 +1,10 @@
 # 🏆 SteamIQ Recommender System Evaluation & Evidence Report
 
 - **Dataset Version:** `c662b8232dc0`
-- **Git Commit:** `9e9b5b8c7d6e1661e967feb25426b0b87fa11166`
+- **Git Commit:** `ad87f976054b2ab021829d81ba1c82134b71dec1`
 - **Evaluation Users:** 5,000
 - **Random Seed:** 42
-- **Generated At:** 2026-10-07T21:30:15.166205+00:00
+- **Generated At:** 2026-10-10T16:16:47.707549+00:00
 
 ---
 
@@ -14,10 +14,10 @@ Multi-seed mean ± std reported for deployable neural models; 95% bootstrap perc
 
 | Model | Split | Seeds | NDCG@10 (mean ± std / 95% CI) | HR@10 (mean ± std / 95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Stage |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`recsys_two_tower_clean`** | **test** | 3 | **0.0516 [0.0473, 0.0562]** | **0.1028 [0.0954, 0.1108]** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
-| `recsys_two_tower_clean` | **val** | 3 | 0.0611 [0.0562, 0.0661] | 0.1190 [0.1104, 0.1280] | 0.0436 | 0.4347 | 0.7588 | Champion |
-| `recsys_two_tower_ranker_clean` | **test** | 5 | 0.0579 [0.0527, 0.0631] | 0.1102 [0.1014, 0.1186] | 0.0422 | 0.5253 | 0.7481 | Candidate |
-| `recsys_two_tower_ranker_clean` | **val** | 5 | 0.0615 [0.0563, 0.0666] | 0.1170 [0.1080, 0.1256] | 0.0447 | 0.5317 | 0.7431 | Candidate |
+| **`recsys_two_tower_clean`** | **test** | 1 | **0.0516 [0.0473, 0.0562]** | **0.1028 [0.0954, 0.1108]** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
+| `recsys_two_tower_clean` | **val** | 1 | 0.0611 [0.0562, 0.0661] | 0.1190 [0.1104, 0.1280] | 0.0436 | 0.4347 | 0.7588 | Champion |
+| `recsys_two_tower_ranker_clean` | **test** | 1 | 0.0579 [0.0527, 0.0631] | 0.1102 [0.1014, 0.1186] | 0.0422 | 0.5253 | 0.7481 | Candidate |
+| `recsys_two_tower_ranker_clean` | **val** | 1 | 0.0615 [0.0563, 0.0666] | 0.1170 [0.1080, 0.1256] | 0.0447 | 0.5317 | 0.7431 | Candidate |
 | `recsys_itemknn` | **test** | 1 | 0.0445 [0.0403, 0.0494] | 0.0842 [0.0766, 0.0916] | 0.0326 | 0.6143 | 0.7255 | Candidate |
 | `recsys_als` | **test** | 1 | 0.0404 [0.0362, 0.0449] | 0.0776 [0.0704, 0.0852] | 0.0291 | 0.2480 | 0.7732 | Candidate |
 | `recsys_popularity` | **test** | 1 | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | Candidate |

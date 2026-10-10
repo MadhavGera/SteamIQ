@@ -94,16 +94,16 @@ The deployable champion is **`recsys_two_tower_clean`**. It relies strictly on t
 
 | Model | Split | Seeds | NDCG@10 (mean ± std / 95% CI) | HR@10 (mean ± std / 95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Stage |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`recsys_two_tower_clean`** | **test** | 3 | **0.0541 ± 0.0018** | **0.1039 ± 0.0022** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
-| `recsys_two_tower_clean` | **val** | 3 | 0.0621 ± 0.0005 | 0.1206 ± 0.0020 | 0.0436 | 0.4347 | 0.7588 | Champion (Production) |
-| `recsys_two_tower_ranker_clean` | **test** | 5 | 0.0558 ± 0.0022 | 0.1062 ± 0.0035 | 0.0445 | 0.4887 | 0.7462 | Candidate |
-| `recsys_two_tower_ranker_clean` | **val** | 5 | 0.0616 ± 0.0021 | 0.1200 ± 0.0032 | 0.0467 | 0.4990 | 0.7419 | Candidate |
+| **`recsys_two_tower_clean`** | **test** | 1 | **0.0516 [0.0473, 0.0562]** | **0.1028 [0.0954, 0.1108]** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
+| `recsys_two_tower_clean` | **val** | 1 | 0.0611 [0.0562, 0.0661] | 0.1190 [0.1104, 0.1280] | 0.0436 | 0.4347 | 0.7588 | Champion (Production) |
+| `recsys_two_tower_ranker_clean` | **test** | 1 | 0.0579 [0.0527, 0.0631] | 0.1102 [0.1014, 0.1186] | 0.0422 | 0.5253 | 0.7481 | Candidate |
+| `recsys_two_tower_ranker_clean` | **val** | 1 | 0.0615 [0.0563, 0.0666] | 0.1170 [0.1080, 0.1256] | 0.0447 | 0.5317 | 0.7431 | Candidate |
 | `recsys_itemknn` | **test** | 1 | 0.0445 [0.0403, 0.0494] | 0.0842 [0.0766, 0.0916] | 0.0326 | 0.6143 | 0.7255 | Candidate |
 | `recsys_als` | **test** | 1 | 0.0404 [0.0362, 0.0449] | 0.0776 [0.0704, 0.0852] | 0.0291 | 0.2480 | 0.7732 | Candidate |
 | `recsys_popularity` | **test** | 1 | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | Baseline |
 | `recsys_content` | **test** | 1 | 0.0146 [0.0120, 0.0176] | 0.0268 [0.0226, 0.0316] | 0.0110 | 0.6303 | 0.5041 | Baseline |
 
-> **Note on the Clean Ranker vs Two-Tower Comparison:** In multi-seed evaluation, `recsys_two_tower_clean` achieves $0.0541 \pm 0.0018$ test NDCG@10 (3 seeds) while `recsys_two_tower_ranker_clean` achieves $0.0558 \pm 0.0022$ (5 seeds). Under the pre-registered tournament rule, the ranker must win tuning-set val NDCG@10 by more than its standard deviation ($\sigma_r = 0.0021$); with tuning val NDCG@10 of $0.0616 \pm 0.0021$ vs Two-Tower $0.0621 \pm 0.0005$ ($\Delta = -0.0005$), the threshold is not met and `recsys_two_tower_clean` is promoted as the production champion.
+> **Note on the Clean Ranker vs Two-Tower Comparison:** For the deployed clean models, `recsys_two_tower_clean` (seed 44 champion) achieves test NDCG@10 of 0.0516 [0.0473, 0.0562] and validation NDCG@10 of 0.0611 [0.0562, 0.0661]. The candidate `recsys_two_tower_ranker_clean` (seed 42 candidate) achieves test NDCG@10 of 0.0579 [0.0527, 0.0631] (+0.0063 lift over Two-Tower alone on held-out test) and validation NDCG@10 of 0.0615 [0.0563, 0.0666] (no difference on validation tuning split). Under the pre-registered tournament rule, promotion requires $\Delta_{\text{tuning}} > \max(\sigma_{\text{ranker}}, \sigma_{\text{tt}})$; because validation performance showed no significant advantage on the tuning split, `recsys_two_tower_clean` was promoted as the production champion for low-latency online serving, and `recsys_two_tower_ranker_clean` was retained in candidate stage.
 
 ### 2. Diagnostic Reference Models (Non-Deployable Upper Bounds)
 

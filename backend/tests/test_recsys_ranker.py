@@ -377,7 +377,7 @@ def test_global_shap_and_explanation_templates():
     shap_dict = train_info["global_shap"]
     assert len(shap_dict) == len(FEATURE_COLUMNS)
     EXCLUDED_FROM_TEMPLATES = {
-        "has_description", "popularity_rank_pct", "win", "mac", "linux", "steam_deck",
+        "log_train_pop", "has_description", "popularity_rank_pct", "win", "mac", "linux", "steam_deck",
         "history_len", "log_products", "log_reviews", "mean_log_hours"
     }
     for col in FEATURE_COLUMNS:

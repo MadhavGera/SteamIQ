@@ -24,7 +24,6 @@ logger = logging.getLogger("steamiq.recsys.explain")
 
 FEATURE_TEMPLATES: dict[str, str] = {
     # Item features
-    "log_train_pop": "One of the most popular titles on Steam",
     "age_years": "Release era aligns with games you liked/reviewed",
     "positive_ratio": "Overwhelmingly positive reviews from the community",
     "log_user_reviews": "Highly reviewed and popular community favorite",
@@ -38,6 +37,21 @@ FEATURE_TEMPLATES: dict[str, str] = {
     "content_mean_cos": "Strong thematic match with games you liked/reviewed",
     "cos_to_last_item": "Similar in style to games you liked/reviewed",
     "release_year_gap": "Released in a similar era to games you liked/reviewed",
+}
+
+FEATURE_CONCEPTS: dict[str, str] = {
+    "age_years": "era",
+    "release_year_gap": "era",
+    "price_final": "price",
+    "price_gap": "price",
+    "abs_price_gap": "price",
+    "discount": "discount",
+    "positive_ratio": "reviews",
+    "log_user_reviews": "reviews",
+    "tag_jaccard": "tags",
+    "content_max_cos": "content",
+    "content_mean_cos": "content",
+    "cos_to_last_item": "content",
 }
 
 
@@ -116,6 +130,7 @@ def explain_recommendation(
     two_tower_item_vecs: np.ndarray | None = None,
     top_n_anchors: int = 2,
     top_n_reasons: int = 3,
+    min_similarity: float = 0.2,
 ) -> dict[str, Any]:
     """
     Synthesizes human-readable explanations for a recommended candidate item.
@@ -129,6 +144,7 @@ def explain_recommendation(
         two_tower_item_vecs: Optional precomputed L2-normalized Two-Tower item vectors.
         top_n_anchors: Number of 'because you liked' anchor games to return (default: 2).
         top_n_reasons: Number of human-readable explanation reasons to return (default: 3).
+        min_similarity: Cosine similarity cutoff for valid anchor games (default: 0.2).
 
     Returns:
         Dictionary holding item_idx, game_name, because_you_liked list, and reasons list.
@@ -167,6 +183,9 @@ def explain_recommendation(
         top_anchor_idx = np.argsort(-sims)[:k_anchors]
 
         for a_pos in top_anchor_idx:
+            sim_val = float(sims[a_pos])
+            if sim_val < min_similarity:
+                continue
             anchor_item = int(valid_hist[a_pos])
             a_name = f"Game #{anchor_item}"
             if data.items_df is not None and not data.items_df.empty and "name" in data.items_df.columns:
@@ -177,10 +196,10 @@ def explain_recommendation(
             because_you_liked.append({
                 "item_idx": anchor_item,
                 "name": a_name,
-                "similarity": float(sims[a_pos]),
+                "similarity": sim_val,
             })
 
-    # 3. Map top positive SHAP features to human-readable explanation reasons
+    # 3. Map top positive SHAP features to human-readable explanation reasons (deduped by concept)
     if isinstance(shap_row, dict):
         shap_items = list(shap_row.items())
     elif feature_names is not None:
@@ -193,17 +212,19 @@ def explain_recommendation(
     pos_shap.sort(key=lambda x: x[1], reverse=True)
 
     reasons: list[str] = []
-    seen_templates: set[str] = set()
+    seen_concepts: set[str] = set()
 
     for feat, _val in pos_shap:
         if feat not in FEATURE_TEMPLATES:
             continue
+        concept = FEATURE_CONCEPTS.get(feat, feat)
+        if concept in seen_concepts:
+            continue
+        seen_concepts.add(concept)
         template = FEATURE_TEMPLATES[feat]
-        if template not in seen_templates:
-            seen_templates.add(template)
-            reasons.append(template)
-            if len(reasons) >= top_n_reasons:
-                break
+        reasons.append(template)
+        if len(reasons) >= top_n_reasons:
+            break
 
     # Fallback if no positive SHAP feature was found
     if not reasons:

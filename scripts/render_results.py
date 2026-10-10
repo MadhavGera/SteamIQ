@@ -43,10 +43,10 @@ def format_deployable_table(models: list[dict[str, Any]]) -> str:
     models_by_name = {m["model_name"]: m for m in models}
 
     deployable_order = [
-        ("recsys_two_tower_clean", "test", 3, True),
-        ("recsys_two_tower_clean", "val", 3, False),
-        ("recsys_two_tower_ranker_clean", "test", 5, False),
-        ("recsys_two_tower_ranker_clean", "val", 5, False),
+        ("recsys_two_tower_clean", "test", 1, True),
+        ("recsys_two_tower_clean", "val", 1, False),
+        ("recsys_two_tower_ranker_clean", "test", 1, False),
+        ("recsys_two_tower_ranker_clean", "val", 1, False),
         ("recsys_itemknn", "test", 1, False),
         ("recsys_als", "test", 1, False),
         ("recsys_popularity", "test", 1, False),
@@ -58,14 +58,6 @@ def format_deployable_table(models: list[dict[str, Any]]) -> str:
         "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |",
     ]
     rows: list[str] = []
-
-    # Multi-seed published numbers for neural/ranker clean stack
-    clean_ms = {
-        ("recsys_two_tower_clean", "test"): ("0.0541 ± 0.0018", "0.1039 ± 0.0022", "0.0361", "0.4383", "0.7629"),
-        ("recsys_two_tower_clean", "val"): ("0.0621 ± 0.0005", "0.1206 ± 0.0020", "0.0436", "0.4347", "0.7588"),
-        ("recsys_two_tower_ranker_clean", "test"): ("0.0558 ± 0.0022", "0.1062 ± 0.0035", "0.0445", "0.4887", "0.7462"),
-        ("recsys_two_tower_ranker_clean", "val"): ("0.0616 ± 0.0021", "0.1200 ± 0.0032", "0.0467", "0.4990", "0.7419"),
-    }
 
     for model_name, split, seeds, is_champ in deployable_order:
         m = models_by_name.get(model_name, {})
@@ -80,26 +72,24 @@ def format_deployable_table(models: list[dict[str, Any]]) -> str:
             stage_str = m.get("stage", "candidate").capitalize()
         name_str = f"**`{model_name}`**" if is_champ else f"`{model_name}`"
 
-        if (model_name, split) in clean_ms:
-            ndcg_str, hr_str, mrr_str, cov_str, div_str = clean_ms[(model_name, split)]
-            if is_champ:
-                ndcg_str = f"**{ndcg_str}**"
-                hr_str = f"**{hr_str}**"
-                mrr_str = f"**{mrr_str}**"
-        else:
-            ndcg_val = metrics.get("ndcg_at_10", 0.0)
-            ndcg_lo = metrics.get("ndcg_at_10_lo95", 0.0)
-            ndcg_hi = metrics.get("ndcg_at_10_hi95", 0.0)
-            ndcg_str = f"{ndcg_val:.4f} [{ndcg_lo:.4f}, {ndcg_hi:.4f}]"
+        ndcg_val = metrics.get("ndcg_at_10", 0.0)
+        ndcg_lo = metrics.get("ndcg_at_10_lo95", 0.0)
+        ndcg_hi = metrics.get("ndcg_at_10_hi95", 0.0)
+        ndcg_str = f"{ndcg_val:.4f} [{ndcg_lo:.4f}, {ndcg_hi:.4f}]"
 
-            hr_val = metrics.get("hit_rate_at_10", 0.0)
-            hr_lo = metrics.get("hit_rate_at_10_lo95", 0.0)
-            hr_hi = metrics.get("hit_rate_at_10_hi95", 0.0)
-            hr_str = f"{hr_val:.4f} [{hr_lo:.4f}, {hr_hi:.4f}]"
+        hr_val = metrics.get("hit_rate_at_10", 0.0)
+        hr_lo = metrics.get("hit_rate_at_10_lo95", 0.0)
+        hr_hi = metrics.get("hit_rate_at_10_hi95", 0.0)
+        hr_str = f"{hr_val:.4f} [{hr_lo:.4f}, {hr_hi:.4f}]"
 
-            mrr_str = f"{metrics.get('mrr_at_10', 0.0):.4f}"
-            cov_str = f"{metrics.get('catalog_coverage_at_10', 0.0):.4f}"
-            div_str = f"{metrics.get('diversity_at_10', 0.0):.4f}"
+        mrr_str = f"{metrics.get('mrr_at_10', 0.0):.4f}"
+        cov_str = f"{metrics.get('catalog_coverage_at_10', 0.0):.4f}"
+        div_str = f"{metrics.get('diversity_at_10', 0.0):.4f}"
+
+        if is_champ:
+            ndcg_str = f"**{ndcg_str}**"
+            hr_str = f"**{hr_str}**"
+            mrr_str = f"**{mrr_str}**"
 
         rows.append(
             f"| {name_str} | **{split}** | {seeds} | {ndcg_str} | {hr_str} | {mrr_str} | {cov_str} | {div_str} | {stage_str} |"

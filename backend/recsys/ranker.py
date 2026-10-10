@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections import OrderedDict
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -61,7 +62,27 @@ class RankerConfig:
             self.eval_at = [10]
 
 
-_SCORE_CAND_CACHE: dict[tuple[int, tuple[tuple[str, Any], ...], int], tuple[np.ndarray, CandidateResult, pd.DataFrame]] = {}
+class _LRUCache(OrderedDict):
+    """Thread-safe bounded LRU cache for multi-source candidate generation."""
+
+    def __init__(self, maxsize: int = 128, *args: Any, **kwargs: Any) -> None:
+        self.maxsize = maxsize
+        super().__init__(*args, **kwargs)
+
+    def __getitem__(self, key: Any) -> Any:
+        val = super().__getitem__(key)
+        self.move_to_end(key)
+        return val
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        if key in self:
+            self.move_to_end(key)
+        super().__setitem__(key, value)
+        if len(self) > self.maxsize:
+            self.popitem(last=False)
+
+
+_SCORE_CAND_CACHE: _LRUCache = _LRUCache(maxsize=128)
 
 
 class RankerModel(BaseRecommender):

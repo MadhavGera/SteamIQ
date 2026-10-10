@@ -27,7 +27,7 @@ from core.config import settings
 from core.errors import GameNotFoundError, ModelNotReadyError, ValidationError
 from recsys.candidates import DEFAULT_CANDIDATE_COUNTS, generate_candidates
 from recsys.data import RecsysData
-from recsys.explain import FEATURE_TEMPLATES
+from recsys.explain import FEATURE_CONCEPTS, FEATURE_TEMPLATES
 from recsys.models.als import ALSRecommender
 from recsys.models.base import BaseRecommender
 from recsys.models.content import ContentRecommender
@@ -436,10 +436,16 @@ class RecommenderService:
                     # SHAP reasons + vector cosine anchors
                     shap_list = ranker_shap_map.get(i_int, [])
                     pos_features = sorted([f for f in shap_list if f[1] > 0 and f[0] in FEATURE_TEMPLATES], key=lambda x: x[1], reverse=True)
-                    for feat_name, _ in pos_features[:3]:
+                    seen_concepts: set[str] = set()
+                    for feat_name, _ in pos_features:
+                        concept = FEATURE_CONCEPTS.get(feat_name, feat_name)
+                        if concept in seen_concepts:
+                            continue
+                        seen_concepts.add(concept)
                         t_str = FEATURE_TEMPLATES[feat_name]
-                        if t_str not in reasons:
-                            reasons.append(t_str)
+                        reasons.append(t_str)
+                        if len(reasons) >= 3:
+                            break
                     if not reasons:
                         reasons.append("High semantic and tag similarity with games you liked/reviewed")
 
@@ -518,8 +524,9 @@ class RecommenderService:
         target_idx: int,
         history: np.ndarray,
         top_n: int = 2,
+        min_similarity: float = 0.2,
     ) -> list[dict[str, Any]]:
-        """Finds the top N items in history with highest cosine similarity to target_idx."""
+        """Finds the top N items in history with highest cosine similarity to target_idx exceeding min_similarity."""
         if len(history) == 0:
             return []
 
@@ -542,12 +549,15 @@ class RecommenderService:
 
         anchors: list[dict[str, Any]] = []
         for pos in top_h_pos:
+            sim_val = float(sims[pos])
+            if sim_val < min_similarity:
+                continue
             h_idx = int(history[pos])
             h_meta = self.items_metadata.get(h_idx, {})
             anchors.append({
                 "app_id": h_meta.get("app_id", self.idx_to_app_id.get(h_idx, 0)),
                 "title": h_meta.get("title", f"Game #{h_idx}"),
-                "similarity": float(sims[pos]),
+                "similarity": sim_val,
             })
         return anchors
 

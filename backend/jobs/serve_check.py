@@ -256,6 +256,14 @@ class ServeCheckJob(BaseJob):
                 targets_arr = np.asarray(targets, dtype=np.int64)
                 serving_ranks = compute_ranks(scores, targets_arr)
 
+                # Confirm service.recommend() produces identical top-10 recommendations to serving scores
+                sample_h_apps = [int(service.idx_to_app_id[idx]) for idx in histories[0] if idx in service.idx_to_app_id]
+                rec_srv = service.recommend(liked_app_ids=sample_h_apps, model="recsys_two_tower_ranker_clean", k=10, explain=False)
+                srv_items = [r["app_id"] for r in rec_srv["items"]]
+                sc_top10 = [int(service.idx_to_app_id[i]) for i in np.argsort(-scores[0])[:10]]
+                if srv_items != sc_top10:
+                    raise AssertionError(f"service.recommend() mismatch with serving scores: {srv_items} vs {sc_top10}")
+
                 serving_ndcgs = ndcg_at_k(serving_ranks, 10)
                 serving_hrs = hit_rate_at_k(serving_ranks, 10)
                 serv_ndcg = float(np.mean(serving_ndcgs))
@@ -287,21 +295,36 @@ class ServeCheckJob(BaseJob):
                 service.ranker_is_preview = False
                 self.logger.info("Ranker serving test NDCG meets parity criteria. Status: NORMAL.")
 
-        # ── (C) Latency Profiling (100 Requests, 5 Liked Games) ──────────────
+        # ── (C) Latency Profiling (100 Distinct Histories, CPU Budget: P95 < 1.0s)
         print("\n" + "=" * 110)
-        print("⚡ PART C: Latency Profiling (100 Requests, 5 Liked Games per Model, CPU Budget: P95 < 1.0s)")
+        print("⚡ PART C: Latency Profiling (100 Distinct User Histories per Model, CPU Budget: P95 < 1.0s)")
         print("=" * 110)
 
-        # Pick 5 popular games as test library
-        sample_apps = [int(service.idx_to_app_id[i]) for i in range(min(5, service.n_items))]
+        # Build 100 distinct user histories from catalog interactions
+        distinct_histories: list[list[int]] = []
+        for u_int, pos in user_train_pos.items():
+            if len(pos) >= 3:
+                h_apps = [int(service.idx_to_app_id[idx]) for idx in pos[-10:] if idx in service.idx_to_app_id]
+                if h_apps and h_apps not in distinct_histories:
+                    distinct_histories.append(h_apps)
+            if len(distinct_histories) >= 100:
+                break
+
+        if len(distinct_histories) < 100:
+            rng = np.random.default_rng(self.seed)
+            all_aids = list(service.app_id_to_idx.keys())
+            while len(distinct_histories) < 100:
+                h_len = int(rng.integers(3, 15))
+                distinct_histories.append([int(x) for x in rng.choice(all_aids, size=h_len, replace=False)])
+
         latency_results: dict[str, Any] = {}
 
         for m_name in list(service.models.keys()):
             for explain_flag in [False, True]:
                 latencies_ms: list[float] = []
-                for _ in range(100):
+                for h_apps in distinct_histories:
                     t0 = time.perf_counter()
-                    _ = service.recommend(liked_app_ids=sample_apps, model=m_name, k=20, explain=explain_flag)
+                    _ = service.recommend(liked_app_ids=h_apps, model=m_name, k=20, explain=explain_flag)
                     dt_ms = (time.perf_counter() - t0) * 1000
                     latencies_ms.append(dt_ms)
 

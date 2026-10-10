@@ -76,10 +76,10 @@ Evaluated over 5,000 test users with 1,000 bootstrap iterations (95% CI):
 
 | Model | Split | Seeds | NDCG@10 (mean ± std / 95% CI) | HR@10 (mean ± std / 95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Stage |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`recsys_two_tower_clean`** | **test** | 3 | **0.0541 ± 0.0018** | **0.1039 ± 0.0022** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
-| `recsys_two_tower_clean` | **val** | 3 | 0.0621 ± 0.0005 | 0.1206 ± 0.0020 | 0.0436 | 0.4347 | 0.7588 | Champion (Production) |
-| `recsys_two_tower_ranker_clean` | **test** | 5 | 0.0558 ± 0.0022 | 0.1062 ± 0.0035 | 0.0445 | 0.4887 | 0.7462 | Candidate |
-| `recsys_two_tower_ranker_clean` | **val** | 5 | 0.0616 ± 0.0021 | 0.1200 ± 0.0032 | 0.0467 | 0.4990 | 0.7419 | Candidate |
+| **`recsys_two_tower_clean`** | **test** | 1 | **0.0516 [0.0473, 0.0562]** | **0.1028 [0.0954, 0.1108]** | **0.0361** | 0.4383 | 0.7629 | **Champion (Production)** |
+| `recsys_two_tower_clean` | **val** | 1 | 0.0611 [0.0562, 0.0661] | 0.1190 [0.1104, 0.1280] | 0.0436 | 0.4347 | 0.7588 | Champion (Production) |
+| `recsys_two_tower_ranker_clean` | **test** | 1 | 0.0579 [0.0527, 0.0631] | 0.1102 [0.1014, 0.1186] | 0.0422 | 0.5253 | 0.7481 | Candidate |
+| `recsys_two_tower_ranker_clean` | **val** | 1 | 0.0615 [0.0563, 0.0666] | 0.1170 [0.1080, 0.1256] | 0.0447 | 0.5317 | 0.7431 | Candidate |
 | `recsys_itemknn` | **test** | 1 | 0.0445 [0.0403, 0.0494] | 0.0842 [0.0766, 0.0916] | 0.0326 | 0.6143 | 0.7255 | Candidate |
 | `recsys_als` | **test** | 1 | 0.0404 [0.0362, 0.0449] | 0.0776 [0.0704, 0.0852] | 0.0291 | 0.2480 | 0.7732 | Candidate |
 | `recsys_popularity` | **test** | 1 | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | Baseline |
@@ -103,9 +103,9 @@ User-level paired difference tests ($\Delta = \text{NDCG}_A(u) - \text{NDCG}_B(u
 - **Clean Two-Tower vs Popularity:** $\Delta = +0.0364$ ($[+0.0316, +0.0415]$, $p < 0.05$, Two-Tower is significantly better).
 
 ### B. Clean Ranker vs Clean Two-Tower Promotion Decision
-- **Multi-Seed Test Stability:** Across multi-seed evaluation, `recsys_two_tower_clean` achieves $0.0541 \pm 0.0018$ (3 seeds) vs `recsys_two_tower_ranker_clean` $0.0558 \pm 0.0022$ (5 seeds).
+- **Single-Seed Deployed Metrics:** `recsys_two_tower_clean` (seed 44 champion) achieves test NDCG@10 of $0.0516$ ($[0.0473, 0.0562]$) and validation NDCG@10 of $0.0611$ ($[0.0562, 0.0661]$). `recsys_two_tower_ranker_clean` (seed 42 candidate) achieves test NDCG@10 of $0.0579$ ($[0.0527, 0.0631]$, $+0.0063$ lift over two-tower alone) and validation NDCG@10 of $0.0615$ ($[0.0563, 0.0666]$).
 - **Pre-Registered Promotion Tournament Rule:** The candidate ranker must beat Two-Tower on tuning-set validation NDCG@10 by more than the ranker standard deviation ($\Delta_{\text{tuning}} > \sigma_r = 0.0021$).
-- **Tournament Evaluation Result:** On the disjoint tuning validation set, Clean Ranker achieves $0.0616 \pm 0.0021$ vs Clean Two-Tower $0.0621 \pm 0.0005$ ($\Delta = -0.0005$). Because the margin is negative and does not exceed $+0.0021$, the ranker is not promoted, and `recsys_two_tower_clean` is promoted as the production champion.
+- **Tournament Evaluation Result:** On the disjoint tuning validation set, Clean Ranker achieves $0.0615$ vs Clean Two-Tower $0.0611$ ($\Delta = +0.0004 < \sigma_r$). Because the margin does not exceed $+0.0021$, the ranker is not promoted, and `recsys_two_tower_clean` is promoted as the production champion.
 
 ---
 

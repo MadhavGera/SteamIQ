@@ -472,10 +472,10 @@ def generate_leaderboard_markdown(
 
     models_by_name = {m.get("model_name", ""): m for m in models}
     deployable_order = [
-        ("recsys_two_tower_clean", "test", 3, True),
-        ("recsys_two_tower_clean", "val", 3, False),
-        ("recsys_two_tower_ranker_clean", "test", 5, False),
-        ("recsys_two_tower_ranker_clean", "val", 5, False),
+        ("recsys_two_tower_clean", "test", 1, True),
+        ("recsys_two_tower_clean", "val", 1, False),
+        ("recsys_two_tower_ranker_clean", "test", 1, False),
+        ("recsys_two_tower_ranker_clean", "val", 1, False),
         ("recsys_itemknn", "test", 1, False),
         ("recsys_als", "test", 1, False),
         ("recsys_popularity", "test", 1, False),
