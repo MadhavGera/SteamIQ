@@ -62,7 +62,7 @@ def test_latency_resolved_model_and_shap_assertion() -> None:
 
     # 1. Test model name resolution
     assert service.resolve_model_name("two_tower") == "recsys_two_tower_clean"
-    assert service.resolve_model_name("ranker") == "recsys_two_tower_ranker_clean_v2"
+    assert service.resolve_model_name("ranker") == "recsys_two_tower_ranker_v2_trainstats"
     assert service.resolve_model_name("recsys_popularity") == "recsys_popularity"
 
     # Verify old aliases do not silently remap to v2
@@ -71,9 +71,13 @@ def test_latency_resolved_model_and_shap_assertion() -> None:
 
     # 2. Test ranker with explain=True computes SHAP (took_ms > 20)
     ranker_key = (
-        "recsys_two_tower_ranker_clean_v2"
-        if "recsys_two_tower_ranker_clean_v2" in service.models
-        else "recsys_two_tower_ranker_clean"
+        "recsys_two_tower_ranker_v2_trainstats"
+        if "recsys_two_tower_ranker_v2_trainstats" in service.models
+        else (
+            "recsys_two_tower_ranker_clean_v2"
+            if "recsys_two_tower_ranker_clean_v2" in service.models
+            else "recsys_two_tower_ranker_clean"
+        )
     )
     if ranker_key in service.models:
         rec_res = service.recommend(liked_app_ids=[10, 20, 30], model=ranker_key, k=10, explain=True)
@@ -116,12 +120,21 @@ async def test_models_registry_api_flags_and_candidates() -> None:
             assert old_r["leak_free"] is False, "Old ranker must have leak_free=False"
             assert old_r["clean"] is False, "Old ranker must have clean=False"
 
-        # Verify v2 has explicit deployable, leak_free, clean flags
+        # Verify v2 has explicit reference, non-deployable, leak_free=False, clean=False flags
         if "recsys_two_tower_ranker_clean_v2" in model_dict:
             v2_r = model_dict["recsys_two_tower_ranker_clean_v2"]
-            assert v2_r["deployable"] is True, "v2 ranker must have deployable=True"
-            assert v2_r["leak_free"] is True, "v2 ranker must have leak_free=True"
-            assert v2_r["clean"] is True, "v2 ranker must have clean=True"
+            assert v2_r["deployable"] is False, "v2 ranker must have deployable=False (reference)"
+            assert v2_r["leak_free"] is False, "v2 ranker must have leak_free=False (reference)"
+            assert v2_r["clean"] is False, "v2 ranker must have clean=False (reference)"
+            assert v2_r["stage"] == "reference", "v2 ranker stage must be reference"
+
+        # Verify trainstats is marked as the leak-free ranker candidate
+        if "recsys_two_tower_ranker_v2_trainstats" in model_dict:
+            ts_r = model_dict["recsys_two_tower_ranker_v2_trainstats"]
+            assert ts_r["deployable"] is True, "trainstats ranker must have deployable=True"
+            assert ts_r["leak_free"] is True, "trainstats ranker must have leak_free=True"
+            assert ts_r["clean"] is True, "trainstats ranker must have clean=True"
+            assert ts_r["stage"] == "candidate", "trainstats ranker stage must be candidate"
 
         # Verify clean TT has explicit flags
         if "recsys_two_tower_clean" in model_dict:

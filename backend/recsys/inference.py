@@ -53,7 +53,7 @@ MODEL_ALIASES: dict[str, str] = {
     "two_tower_clean": "recsys_two_tower_clean",
     "recsys_two_tower_clean": "recsys_two_tower_clean",
     "recsys_two_tower": "recsys_two_tower_clean",
-    "ranker": "recsys_two_tower_ranker_clean_v2",
+    "ranker": "recsys_two_tower_ranker_v2_trainstats",
     "recsys_two_tower_ranker_clean": "recsys_two_tower_ranker_clean",
     "recsys_two_tower_ranker": "recsys_two_tower_ranker_clean",
     "ranker_v2": "recsys_two_tower_ranker_clean_v2",
@@ -714,10 +714,18 @@ class RecommenderService:
             test_m = lb_entry.get("test_metrics", {})
             val_m = lb_entry.get("val_metrics", {})
 
+            if fam == "recsys_two_tower_ranker_clean":
+                deployable = False
+            elif fam == "recsys_two_tower_ranker_clean_v2":
+                deployable = False
+                stage = "reference"
+            else:
+                deployable = True
+
             info_list.append({
                 "model_name": fam,
                 "display_name": fam.replace("recsys_", "").replace("_clean", "").replace("_", " ").title(),
-                "deployable": True,
+                "deployable": deployable,
                 "stage": stage,
                 "model_run_id": meta.get("model_run_id") or lb_entry.get("model_run_id"),
                 "val_ndcg_at_10": meta.get("val_ndcg_at_10") or val_m.get("ndcg_at_10", 0.0),

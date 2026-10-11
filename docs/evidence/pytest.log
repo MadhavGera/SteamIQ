@@ -1,0 +1,70 @@
+C:\Users\Madhav\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts =============================
+platform win32 -- Python 3.12.7, pytest-8.3.4, pluggy-1.6.0
+rootdir: D:\Coding\SteamIQ\backend
+configfile: pyproject.toml
+plugins: anyio-4.13.0, Faker-40.21.0, langsmith-0.8.9, asyncio-0.24.0, cov-7.1.0, docker-3.2.5
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 169 items
+
+backend\tests\test_games.py .......                                      [  4%]
+backend\tests\test_health.py ..                                          [  5%]
+backend\tests\test_phase4_ml.py .........                                [ 10%]
+backend\tests\test_phase5_e2e_page_audit.py ..                           [ 11%]
+backend\tests\test_phase5_game_match.py .......                          [ 15%]
+backend\tests\test_phase5_marts.py ........                              [ 20%]
+backend\tests\test_phase5_recommendations.py .....                       [ 23%]
+backend\tests\test_phase5_update_impact.py ........                      [ 28%]
+backend\tests\test_recsys_api.py .............                           [ 36%]
+backend\tests\test_recsys_audit.py .......                               [ 40%]
+backend\tests\test_recsys_corrective_experiments.py .....                [ 43%]
+backend\tests\test_recsys_eval_audit.py ....                             [ 45%]
+backend\tests\test_recsys_experiments.py .........                       [ 50%]
+backend\tests\test_recsys_fixup.py ...                                   [ 52%]
+backend\tests\test_recsys_metrics.py ................                    [ 62%]
+backend\tests\test_recsys_models.py .........                            [ 67%]
+backend\tests\test_recsys_prepare.py .....                               [ 70%]
+backend\tests\test_recsys_provenance_and_serving.py ...                  [ 72%]
+backend\tests\test_recsys_ranker.py .........                            [ 77%]
+backend\tests\test_recsys_reconciliation.py ....                         [ 79%]
+backend\tests\test_recsys_reports.py ........                            [ 84%]
+backend\tests\test_recsys_two_tower.py .............                     [ 92%]
+backend\tests\test_search_steam_integration.py ....                      [ 94%]
+backend\tests\test_ui_ingestion.py .........                             [100%]
+
+============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+tests/test_phase4_ml.py: 15 warnings
+  C:\Users\Madhav\AppData\Local\Programs\Python\Python312\Lib\site-packages\sklearn\utils\validation.py:2827: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+    warnings.warn(
+
+tests/test_recsys_fixup.py::test_lightgbm_ranker_determinism
+tests/test_recsys_fixup.py::test_lightgbm_ranker_determinism
+tests/test_recsys_fixup.py::test_lightgbm_ranker_determinism
+tests/test_recsys_ranker.py::test_final_list_construction_target_outside_candidates
+tests/test_recsys_ranker.py::test_global_shap_and_explanation_templates
+tests/test_recsys_ranker.py::test_ranker_seed_determinism
+tests/test_recsys_ranker.py::test_ranker_seed_determinism
+tests/test_recsys_ranker.py::test_ranker_job_never_calls_fit_on_stage1_models
+  C:\Users\Madhav\AppData\Local\Programs\Python\Python312\Lib\site-packages\lightgbm\sklearn.py:861: UserWarning: Found 'eval_at' in params. Will use it instead of 'eval_at' argument
+    _log_warning(f"Found '{alias}' in params. Will use it instead of 'eval_at' argument")
+
+tests/test_recsys_fixup.py::test_lightgbm_ranker_determinism
+tests/test_recsys_fixup.py::test_lightgbm_ranker_determinism
+  C:\Users\Madhav\AppData\Local\Programs\Python\Python312\Lib\site-packages\sklearn\utils\validation.py:2827: UserWarning: X does not have valid feature names, but LGBMRanker was fitted with feature names
+    warnings.warn(
+
+tests/test_recsys_models.py::test_als_closed_form_fold_in
+  C:\Users\Madhav\AppData\Local\Programs\Python\Python312\Lib\site-packages\implicit\cpu\als.py:96: RuntimeWarning: OpenBLAS is configured to use 8 threads. It is highly recommended to disable its internal threadpool by setting the environment variable 'OPENBLAS_NUM_THREADS=1' or by calling 'threadpoolctl.threadpool_limits(1, "blas")'. Having OpenBLAS use a threadpool can lead to severe performance issues here.
+    check_blas_config()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================ 169 passed, 28 warnings in 110.41s (0:01:50) =================

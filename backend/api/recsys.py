@@ -273,7 +273,8 @@ async def list_models(
             rep_res = await db.execute(rep_stmt)
             report_row = rep_res.scalar_one_or_none()
             if report_row and isinstance(report_row.payload, dict):
-                for row in report_row.payload.get("rows", []):
+                rows = report_row.payload.get("rows", report_row.payload.get("models", []))
+                for row in rows:
                     m_name = row.get("model_name")
                     if m_name:
                         leaderboard_rows[m_name] = row
@@ -293,7 +294,7 @@ async def list_models(
         "recsys_content": {"test_ndcg": 0.0146, "test_hr": 0.0268, "val_ndcg": 0.0152, "seeds": 1},
         "recsys_itemknn": {"test_ndcg": 0.0445, "test_hr": 0.0842, "val_ndcg": 0.0498, "seeds": 1},
         "recsys_als": {"test_ndcg": 0.0404, "test_hr": 0.0776, "val_ndcg": 0.0471, "seeds": 1},
-        "recsys_two_tower_clean": {"test_ndcg": 0.0516, "test_hr": 0.1028, "val_ndcg": 0.0611, "seeds": 3},
+        "recsys_two_tower_clean": {"test_ndcg": 0.0516, "test_hr": 0.1028, "val_ndcg": 0.0611, "seeds": 1},
         "recsys_two_tower_ranker_clean": {"test_ndcg": 0.0596, "test_hr": 0.1092, "val_ndcg": 0.0645, "seeds": 1},
         "recsys_two_tower_ranker_clean_v2": {"test_ndcg": 0.0627, "test_hr": 0.1158, "val_ndcg": 0.0637, "seeds": 1},
         "recsys_two_tower_ranker_v2_trainstats": {"test_ndcg": 0.0536, "test_hr": 0.0992, "val_ndcg": 0.0633, "seeds": 1},
@@ -310,11 +311,28 @@ async def list_models(
         run_id = run.id if run else None
 
         test_ndcg = lb.get("test_ndcg_at_10_mean") or lb.get("test_ndcg_at_10") or dm.get("test_ndcg")
-        test_ndcg_std = lb.get("test_ndcg_at_10_std") or (0.0008 if model_key == "recsys_two_tower_clean" else 0.0006 if "ranker" in model_key else 0.0)
         test_hr = lb.get("test_hr_at_10_mean") or lb.get("test_hr_at_10") or dm.get("test_hr")
-        test_hr_std = lb.get("test_hr_at_10_std") or (0.0012 if model_key == "recsys_two_tower_clean" else 0.0010 if "ranker" in model_key else 0.0)
-        val_ndcg = lb.get("val_ndcg_at_10") or dm.get("val_ndcg")
-        n_seeds = lb.get("n_seeds") or dm.get("seeds", 1)
+
+        # n_seeds and std handling: if from single-seed rows or uncomputed, return n_seeds=1 and std=None (null)
+        raw_n_seeds = lb.get("n_seeds")
+        if raw_n_seeds and int(raw_n_seeds) > 1:
+            n_seeds = int(raw_n_seeds)
+            test_ndcg_std = lb.get("test_ndcg_at_10_std")
+            test_hr_std = lb.get("test_hr_at_10_std")
+        else:
+            n_seeds = 1
+            test_ndcg_std = None
+            test_hr_std = None
+
+        # Provenance alignment: val_ndcg_at_10 in /models and in recommend() must come from the same registry field
+        run_val_ndcg = None
+        if run and run.metrics:
+            m = run.metrics
+            run_val_ndcg = m.get("val_metrics", {}).get("ndcg_at_10") if isinstance(m.get("val_metrics"), dict) else m.get("val_ndcg_at_10")
+
+        svc_meta = getattr(service, "model_runs_meta", {}) if service else {}
+        svc_val_ndcg = svc_meta.get(model_key, {}).get("val_ndcg_at_10") if svc_meta else None
+        val_ndcg = svc_val_ndcg if (svc_val_ndcg is not None and svc_val_ndcg > 0.0) else (run_val_ndcg or lb.get("val_ndcg_at_10") or dm.get("val_ndcg"))
 
         is_ready = model_key in service.models if service else True
         is_preview = service.ranker_is_preview if ("ranker" in model_key and service) else False
@@ -324,14 +342,22 @@ async def list_models(
             deployable = False
             leak_free = False
             clean = False
-        elif model_key in ("recsys_two_tower_ranker_clean_v2", "recsys_two_tower_ranker_v2_trainstats"):
+            stage = "candidate"
+        elif model_key == "recsys_two_tower_ranker_clean_v2":
+            deployable = False
+            leak_free = False
+            clean = False
+            stage = "reference"
+        elif model_key == "recsys_two_tower_ranker_v2_trainstats":
             deployable = True
             leak_free = True
             clean = True
+            stage = "candidate"
         elif model_key == "recsys_two_tower_clean":
             deployable = True
             leak_free = True
             clean = True
+            stage = "production"
         else:
             deployable = True
             leak_free = True

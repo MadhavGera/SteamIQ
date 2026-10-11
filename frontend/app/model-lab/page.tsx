@@ -111,6 +111,7 @@ export default function ModelLabPage() {
           </h1>
           <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
             Comprehensive offline evaluation metrics, paired statistical tests, fairness diagnostics, and TreeSHAP explainability.
+            Headline production champion: <strong style={{ color: "var(--accent-primary)" }}>recsys_two_tower_clean</strong>. With train-only item stats the ranker&apos;s gain over the two-tower is not significant (+0.0021 [-0.0026, +0.0065]); the all-time-stats gain (+0.0111) is leakage-confounded.
           </p>
         </div>
       </div>

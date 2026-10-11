@@ -1,0 +1,418 @@
+==============================================================================================================
+3-USER EXPLAIN AUDIT WITH DATABASE HISTORY & RAW SERVICE.RECOMMEND OUTPUT
+Model: recsys_two_tower_ranker_clean_v2 (Run ID: ee7dd444-1961-490d-87cb-c322b106946c)
+==============================================================================================================
+
+##############################################################################################################
+USER IDX: 2 (Total train interactions: 3, Recent liked seed apps: 3)
+##############################################################################################################
+
+--- [POSTGRESQL DB HISTORY] ---
+  * AppID  271590: 'Grand Theft Auto V' | Tags: [N/A] | Pos: 86% | Rev: 1484122
+  * AppID  368500: 'Assassin's Creed® Syndicate' | Tags: [Assassin, Open World, Action, Stealth, Parkour] | Pos: 80% | Rev: 22876
+  * AppID  508440: 'Totally Accurate Battle Simulator' | Tags: [N/A] | Pos: 98% | Rev: 104218
+
+--- [RAW service.recommend OUTPUT (JSON)] ---
+{
+  "items": [
+    {
+      "rank": 1,
+      "app_id": 292030,
+      "item_idx": 2,
+      "title": "The Witcher® 3: Wild Hunt",
+      "header_image_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/292030/header.jpg",
+      "score": 0.43142810463905334,
+      "price_final": 40.0,
+      "positive_ratio": 96,
+      "user_reviews": 668455,
+      "tags": [],
+      "description_short": "",
+      "popularity_rank": 3,
+      "win": true,
+      "mac": false,
+      "linux": false,
+      "steam_deck": true,
+      "because_you_liked": [
+        {
+          "app_id": 271590,
+          "title": "Grand Theft Auto V",
+          "similarity": 0.8143923282623291
+        },
+        {
+          "app_id": 368500,
+          "title": "Assassin's Creed® Syndicate",
+          "similarity": 0.7062916159629822
+        }
+      ],
+      "reasons": [
+        "Highly reviewed and popular community favorite",
+        "Very similar themes and description to games you liked/reviewed",
+        "Priced close to games you usually like/review"
+      ]
+    },
+    {
+      "rank": 2,
+      "app_id": 359550,
+      "item_idx": 12,
+      "title": "Tom Clancy's Rainbow Six® Siege",
+      "header_image_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/359550/header.jpg",
+      "score": 0.4299430847167969,
+      "price_final": 20.0,
+      "positive_ratio": 86,
+      "user_reviews": 993312,
+      "tags": [],
+      "description_short": "",
+      "popularity_rank": 13,
+      "win": true,
+      "mac": false,
+      "linux": false,
+      "steam_deck": true,
+      "because_you_liked": [
+        {
+          "app_id": 271590,
+          "title": "Grand Theft Auto V",
+          "similarity": 0.874718964099884
+        },
+        {
+          "app_id": 508440,
+          "title": "Totally Accurate Battle Simulator",
+          "similarity": 0.6890108585357666
+        }
+      ],
+      "reasons": [
+        "Highly reviewed and popular community favorite",
+        "Similar in style to games you liked/reviewed",
+        "Matches your preferred game pricing tier"
+      ]
+    },
+    {
+      "rank": 3,
+      "app_id": 1174180,
+      "item_idx": 16,
+      "title": "Red Dead Redemption 2",
+      "header_image_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/1174180/header.jpg",
+      "score": 0.25148066878318787,
+      "price_final": 20.0,
+      "positive_ratio": 90,
+      "user_reviews": 410074,
+      "tags": [],
+      "description_short": "",
+      "popularity_rank": 17,
+      "win": true,
+      "mac": false,
+      "linux": false,
+      "steam_deck": true,
+      "because_you_liked": [
+        {
+          "app_id": 271590,
+          "title": "Grand Theft Auto V",
+          "similarity": 0.7815743684768677
+        },
+        {
+          "app_id": 508440,
+          "title": "Totally Accurate Battle Simulator",
+          "similarity": 0.6768949031829834
+        }
+      ],
+      "reasons": [
+        "Highly reviewed and popular community favorite",
+        "Matches your preferred game pricing tier",
+        "Very similar themes and description to games you liked/reviewed"
+      ]
+    }
+  ],
+  "total_items": 3,
+  "model_name": "recsys_two_tower_ranker_clean_v2",
+  "model_run_id": null,
+  "val_ndcg_at_10": 0.0,
+  "dataset_version": "c662b8232dc0",
+  "universe_size": 3000,
+  "unknown_app_ids": [],
+  "warning": null,
+  "took_ms": 113.31570000038482
+}
+
+##############################################################################################################
+USER IDX: 4 (Total train interactions: 16, Recent liked seed apps: 10)
+##############################################################################################################
+
+--- [POSTGRESQL DB HISTORY] ---
+  * AppID  326480: 'If My Heart Had Wings' | Tags: [Visual Novel, Romance, Dating Sim, Point & Click, Cute] | Pos: 92% | Rev: 3837
+  * AppID  391720: 'Layers of Fear (2016)' | Tags: [Horror, Psychological Horror, Atmospheric, Walking Simulator, First-Person] | Pos: 90% | Rev: 11155
+  * AppID  378610: 'Valley' | Tags: [Adventure, First-Person, Exploration, Parkour, Indie] | Pos: 91% | Rev: 5940
+  * AppID  301860: 'Submerged' | Tags: [Exploration, Relaxing, Female Protagonist, Walking Simulator, Family Friendly] | Pos: 75% | Rev: 3924
+  * AppID  474960: 'Quantum Break' | Tags: [Action, Story Rich, Time Manipulation, Sci-fi, Singleplayer] | Pos: 86% | Rev: 17487
+  * AppID  414340: 'Hellblade: Senua's Sacrifice' | Tags: [Atmospheric, Psychological, Female Protagonist, Story Rich, Mythology] | Pos: 91% | Rev: 48300
+  * AppID  282140: 'SOMA' | Tags: [Horror, Psychological Horror, Atmospheric, Survival Horror, Exploration] | Pos: 96% | Rev: 31153
+  * AppID  343710: 'Kholat' | Tags: [Horror, Atmospheric, Walking Simulator, Survival Horror, Psychological Horror] | Pos: 67% | Rev: 1822
+  * AppID  554620: 'Life is Strange: Before the Storm' | Tags: [Story Rich, Choices Matter, Great Soundtrack, Female Protagonist, Atmospheric] | Pos: 93% | Rev: 31775
+  * AppID  396750: 'EVERSPACE™' | Tags: [Space, Action Roguelike, Action, Indie, Sci-fi] | Pos: 78% | Rev: 8632
+
+--- [RAW service.recommend OUTPUT (JSON)] ---
+{
+  "items": [
+    {
+      "rank": 1,
+      "app_id": 683320,
+      "item_idx": 264,
+      "title": "GRIS",
+      "header_image_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/683320/header.jpg",
+      "score": 0.2056168019771576,
+      "price_final": 14.99,
+      "positive_ratio": 96,
+      "user_reviews": 55346,
+      "tags": [
+        "Beautiful",
+        "Atmospheric",
+        "Great Soundtrack",
+        "Indie",
+        "Female Protagonist",
+        "Adventure",
+        "Hand-drawn",
+        "Platformer",
+        "Singleplayer",
+        "2D",
+        "Relaxing",
+        "Story Rich",
+        "Puzzle",
+        "Colorful",
+        "Puzzle Platformer",
+        "Surreal",
+        "Casual",
+        "Exploration",
+        "Walking Simulator",
+        "Anime"
+      ],
+      "description_short": "Gris is a hopeful young girl lost in her own world, dealing with a painful experience in her life. Her journey through sorrow is manifested in her dress, which grants new abilities to better navigate her faded reality.",
+      "popularity_rank": 265,
+      "win": true,
+      "mac": true,
+      "linux": false,
+      "steam_deck": true,
+      "because_you_liked": [
+        {
+          "app_id": 554620,
+          "title": "Life is Strange: Before the Storm",
+          "similarity": 0.8045727014541626
+        },
+        {
+          "app_id": 414340,
+          "title": "Hellblade: Senua's Sacrifice",
+          "similarity": 0.8036537766456604
+        }
+      ],
+      "reasons": [
+        "Highly reviewed and popular community favorite",
+        "Strong thematic match with games you liked/reviewed"
+      ]
+    },
+    {
+      "rank": 2,
+      "app_id": 275850,
+      "item_idx": 20,
+      "title": "No Man's Sky",
+      "header_image_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/275850/header.jpg",
+      "score": 0.12968844175338745,
+      "price_final": 60.0,
+      "positive_ratio": 76,
+      "user_reviews": 209971,
+      "tags": [],
+      "description_short": "",
+      "popularity_rank": 21,
+      "win": true,
+      "mac": true,
+      "linux": false,
+      "steam_deck": true,
+      "because_you_liked": [
+        {
+          "app_id": 414340,
+          "title": "Hellblade: Senua's Sacrifice",
+          "similarity": 0.7313492894172668
+        },
+        {
+          "app_id": 282140,
+          "title": "SOMA",
+          "similarity": 0.6640845537185669
+        }
+      ],
+      "reasons": [
+        "Highly reviewed and popular community favorite",
+        "Priced close to games you usually like/review",
+        "Similar in style to games you liked/reviewed"
+      ]
+    },
+    {
+      "rank": 3,
+      "app_id": 292030,
+      "item_idx": 2,
+      "title": "The Witcher® 3: Wild Hunt",
+      "header_image_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/292030/header.jpg",
+      "score": 0.12591099739074707,
+      "price_final": 40.0,
+      "positive_ratio": 96,
+      "user_reviews": 668455,
+      "tags": [],
+      "description_short": "",
+      "popularity_rank": 3,
+      "win": true,
+      "mac": false,
+      "linux": false,
+      "steam_deck": true,
+      "because_you_liked": [
+        {
+          "app_id": 414340,
+          "title": "Hellblade: Senua's Sacrifice",
+          "similarity": 0.8033063411712646
+        },
+        {
+          "app_id": 474960,
+          "title": "Quantum Break",
+          "similarity": 0.7097700834274292
+        }
+      ],
+      "reasons": [
+        "Highly reviewed and popular community favorite",
+        "Priced close to games you usually like/review",
+        "Shares tags with games you liked/reviewed"
+      ]
+    }
+  ],
+  "total_items": 3,
+  "model_name": "recsys_two_tower_ranker_clean_v2",
+  "model_run_id": null,
+  "val_ndcg_at_10": 0.0,
+  "dataset_version": "c662b8232dc0",
+  "universe_size": 3000,
+  "unknown_app_ids": [],
+  "warning": null,
+  "took_ms": 127.906300000177
+}
+
+##############################################################################################################
+USER IDX: 15 (Total train interactions: 3, Recent liked seed apps: 3)
+##############################################################################################################
+
+--- [POSTGRESQL DB HISTORY] ---
+  * AppID 1520470: 'Soul Dossier' | Tags: [Sexual Content, Nudity, Free to Play, Mature, Horror] | Pos: 80% | Rev: 19925
+  * AppID 1549180: 'Propnight' | Tags: [Multiplayer, Horror, Action, Survival Horror, Online Co-Op] | Pos: 67% | Rev: 12010
+  * AppID 1196590: 'Resident Evil Village' | Tags: [N/A] | Pos: 95% | Rev: 65621
+
+--- [RAW service.recommend OUTPUT (JSON)] ---
+{
+  "items": [
+    {
+      "rank": 1,
+      "app_id": 952060,
+      "item_idx": 309,
+      "title": "Resident Evil 3",
+      "header_image_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/952060/header.jpg",
+      "score": 0.8927424550056458,
+      "price_final": 40.0,
+      "positive_ratio": 80,
+      "user_reviews": 49001,
+      "tags": [],
+      "description_short": "",
+      "popularity_rank": 310,
+      "win": true,
+      "mac": false,
+      "linux": false,
+      "steam_deck": true,
+      "because_you_liked": [
+        {
+          "app_id": 1196590,
+          "title": "Resident Evil Village",
+          "similarity": 0.8197509050369263
+        },
+        {
+          "app_id": 1520470,
+          "title": "Soul Dossier",
+          "similarity": 0.33022835850715637
+        }
+      ],
+      "reasons": [
+        "Similar in style to games you liked/reviewed",
+        "Highly reviewed and popular community favorite",
+        "Matches your preferred game pricing tier"
+      ]
+    },
+    {
+      "rank": 2,
+      "app_id": 883710,
+      "item_idx": 124,
+      "title": "Resident Evil 2",
+      "header_image_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/883710/header.jpg",
+      "score": 0.6798065304756165,
+      "price_final": 40.0,
+      "positive_ratio": 97,
+      "user_reviews": 93910,
+      "tags": [],
+      "description_short": "",
+      "popularity_rank": 125,
+      "win": true,
+      "mac": false,
+      "linux": false,
+      "steam_deck": true,
+      "because_you_liked": [
+        {
+          "app_id": 1196590,
+          "title": "Resident Evil Village",
+          "similarity": 0.8525856733322144
+        },
+        {
+          "app_id": 1520470,
+          "title": "Soul Dossier",
+          "similarity": 0.29020094871520996
+        }
+      ],
+      "reasons": [
+        "Very similar themes and description to games you liked/reviewed",
+        "Highly reviewed and popular community favorite",
+        "Priced similarly to titles you liked/reviewed"
+      ]
+    },
+    {
+      "rank": 3,
+      "app_id": 1091500,
+      "item_idx": 10,
+      "title": "Cyberpunk 2077",
+      "header_image_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg",
+      "score": 0.22092631459236145,
+      "price_final": 60.0,
+      "positive_ratio": 80,
+      "user_reviews": 557051,
+      "tags": [],
+      "description_short": "",
+      "popularity_rank": 11,
+      "win": true,
+      "mac": false,
+      "linux": false,
+      "steam_deck": true,
+      "because_you_liked": [
+        {
+          "app_id": 1196590,
+          "title": "Resident Evil Village",
+          "similarity": 0.7535594701766968
+        },
+        {
+          "app_id": 1549180,
+          "title": "Propnight",
+          "similarity": 0.22766374051570892
+        }
+      ],
+      "reasons": [
+        "Highly reviewed and popular community favorite",
+        "Priced close to games you usually like/review",
+        "Strong thematic match with games you liked/reviewed"
+      ]
+    }
+  ],
+  "total_items": 3,
+  "model_name": "recsys_two_tower_ranker_clean_v2",
+  "model_run_id": null,
+  "val_ndcg_at_10": 0.0,
+  "dataset_version": "c662b8232dc0",
+  "universe_size": 3000,
+  "unknown_app_ids": [],
+  "warning": null,
+  "took_ms": 111.15609999978915
+}
