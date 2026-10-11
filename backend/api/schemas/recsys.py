@@ -128,7 +128,7 @@ class RecsysModelInfoSchema(BaseModel):
     model_name: str = Field(..., description="Canonical model name")
     display_name: str = Field(..., description="Human-friendly model title")
     deployable: bool = Field(default=True, description="Whether this model is approved for online serving")
-    stage: str = Field(..., description="Registry stage (production, candidate, staging)")
+    stage: str = Field(..., description="Registry stage (production, candidate, reference, staging)")
     model_run_id: uuid.UUID | str | None = Field(default=None, description="Latest model_run ID")
     val_ndcg_at_10: float | None = Field(default=None, description="Validation NDCG@10")
     test_ndcg_at_10_mean: float | None = Field(default=None, description="Benchmark test NDCG@10 mean")

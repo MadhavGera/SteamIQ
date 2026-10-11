@@ -90,7 +90,7 @@ All figures below are generated directly from the frozen evaluation reports ([`b
 
 ### 1. Deployable Models (Online-Safe, Train-Split Statistics Only)
 
-The headline production model is **`recsys_two_tower_clean`**. It relies strictly on train-split item statistics and generalizable modalities. With train-only item stats, the ranker's gain over the two-tower is not significant (+0.0021 [-0.0026, +0.0065]); the all-time-stats gain (+0.0111) is leakage-confounded.
+The headline production model is **`recsys_two_tower_clean`**. It relies strictly on train-split item statistics and generalizable modalities. With train-only item stats, there is no evidence of gain (CI includes 0: +0.0021 [-0.0026, +0.0065]); the all-time-stats gain (+0.0111) is leakage-confounded.
 
 | Model | Split | Seeds | NDCG@10 (mean ± std / 95% CI) | HR@10 (mean ± std / 95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Stage |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
@@ -103,7 +103,7 @@ The headline production model is **`recsys_two_tower_clean`**. It relies strictl
 | `recsys_popularity` | **test** | 1 | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | Baseline |
 | `recsys_content` | **test** | 1 | 0.0146 [0.0120, 0.0176] | 0.0268 [0.0226, 0.0316] | 0.0110 | 0.6303 | 0.5041 | Baseline |
 
-> **Headline Model & Clean Ranker vs Two-Tower Comparison:** The clean Two-Tower (`recsys_two_tower_clean`, seed 44 champion) is the headline production model, achieving test NDCG@10 of 0.0516 [0.0473, 0.0562] and validation NDCG@10 of 0.0611 [0.0562, 0.0661]. With train-only item stats (`recsys_two_tower_ranker_v2_trainstats`), the ranker's gain over the clean two-tower is not significant (+0.0021 [-0.0026, +0.0065]; test NDCG@10: 0.0536 vs 0.0516); the all-time-stats gain (+0.0111) is leakage-confounded. Consequently, the clean Two-Tower is the headline model.
+> **Headline Model & Clean Ranker vs Two-Tower Comparison:** The clean Two-Tower (`recsys_two_tower_clean`, seed 44 champion) is the headline production model, achieving test NDCG@10 of 0.0516 [0.0473, 0.0562] and validation NDCG@10 of 0.0611 [0.0562, 0.0661]. With train-only item stats (`recsys_two_tower_ranker_v2_trainstats`), there is no evidence of gain (CI includes 0: +0.0021 [-0.0026, +0.0065]; test NDCG@10: 0.0536 vs 0.0516); the all-time-stats gain (+0.0111) is leakage-confounded. Consequently, the clean Two-Tower is the headline model.
 > 
 > **Leakage Isolation & Exploratory Status Caveat:** Leak-free status applies strictly to the isolated interaction pipeline: user interaction split boundaries, fold-in histories, Stage-1 Two-Tower retrieval representations, and train-derived interaction features. Static store catalog attributes (`price_final`, `age_years`, platform flags) originate from Steam store catalog snapshots (`items.parquet`). Because the test split was inspected repeatedly during development and debugging iterations, the ranker's test gain is **exploratory**; prospective live traffic A/B evaluation is required before declaring online superiority. Under the pre-registered tournament rule, `recsys_two_tower_clean` remains the headline production serving champion for low-latency online serving, while `recsys_two_tower_ranker_v2_trainstats` serves as the leak-free ranker candidate.
 

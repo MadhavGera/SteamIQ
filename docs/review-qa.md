@@ -86,7 +86,7 @@ This document contains 25 essential questions and answers prepared for the techn
 
 ### Q13: What was the all-time-stats leakage, and what is its verification status?
 **Answer:** During initial experiments, the Stage-2 ranker retrieved candidate pools from a Stage-1 Two-Tower model (`c904bf03`) trained with all-time item interaction counts, and initial tabular features used all-time review totals. The pipeline addressed this by training a clean Stage-1 Two-Tower (`recsys_two_tower_clean`, seed 44 `eb9a3374`) strictly using train-split interactions and train-only popularity (`log_train_pop`). The candidate ranker was retrained against this clean retriever with train-only item statistics as `recsys_two_tower_ranker_v2_trainstats`.
-With train-only item stats, the ranker's gain over the clean two-tower is not significant ($+0.0021$ [$ -0.0026, +0.0065$]; test NDCG@10: $0.0536$ vs $0.0516$). The all-time-stats gain ($+0.0111$, $0.0627$ vs $0.0516$) is leakage-confounded because it relied on lookahead in all-time item review aggregates. Consequently, the clean Two-Tower (`recsys_two_tower_clean`) is the definitive headline production model.  
+With train-only item stats, there is no evidence of gain (CI includes 0: $+0.0021$ [$-0.0026, +0.0065$]; test NDCG@10: $0.0536$ vs $0.0516$). The all-time-stats gain ($+0.0111$, $0.0627$ vs $0.0516$) is leakage-confounded because it relied on lookahead in all-time item review aggregates. Consequently, the clean Two-Tower (`recsys_two_tower_clean`) is the definitive headline production model.  
 **Evidence:** [`backend/jobs/train_ranker.py`](backend/jobs/train_ranker.py), [`backend/recsys/ranker_features.py`](backend/recsys/ranker_features.py), [`docs/results/leaderboard.md`](docs/results/leaderboard.md).
 
 ---

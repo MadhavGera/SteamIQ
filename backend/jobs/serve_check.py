@@ -72,9 +72,13 @@ class ServeCheckJob(BaseJob):
 
         # Print loaded artifact paths
         ranker_key = (
-            "recsys_two_tower_ranker_clean_v2"
-            if "recsys_two_tower_ranker_clean_v2" in service.models
-            else "recsys_two_tower_ranker_clean"
+            "recsys_two_tower_ranker_v2_trainstats"
+            if "recsys_two_tower_ranker_v2_trainstats" in service.models
+            else (
+                "recsys_two_tower_ranker_clean_v2"
+                if "recsys_two_tower_ranker_clean_v2" in service.models
+                else "recsys_two_tower_ranker_clean"
+            )
         )
         ranker_meta = service.model_runs_meta.get(ranker_key, {})
         loaded_art_dir = ranker_meta.get("artifact_path", "unknown")
