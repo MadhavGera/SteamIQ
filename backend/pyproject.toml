@@ -49,12 +49,15 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["api*", "core*", "db*", "jobs*", "recsys*", "services*"]
+include = ["api*", "assistant*", "core*", "db*", "jobs*", "mlops*", "recsys*", "services*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+markers = [
+    "artifacts: marks tests that require full recsys artifacts (deselected by default in CI)",
+]
 
 [tool.ruff]
 line-length = 100
@@ -65,4 +68,4 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501", "B008"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["core", "api", "db", "jobs", "recsys", "services"]
+known-first-party = ["core", "api", "assistant", "db", "jobs", "mlops", "recsys", "services"]

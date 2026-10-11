@@ -164,11 +164,41 @@ health: ## Check backend health endpoint
 	curl -s http://localhost:8000/health | python -m json.tool
 
 # ─── Testing & Quality ────────────────────────────────────────────────────────
-test: ## Run full pytest suite
-	cd $(BACKEND) && pytest tests/ -v --tb=short
+test: ## Run full pytest suite (excluding heavy artifact marks)
+	cd $(BACKEND) && pytest tests/ -v --tb=short -m "not artifacts"
+
+test-artifacts: ## Run artifact regression tests against local saved weights
+	cd $(BACKEND) && pytest tests/golden/test_golden_artifacts.py -v
 
 lint: ## Run ruff linter
 	cd $(BACKEND) && ruff check . --fix
+
+# ─── Assistant (Phase 6) & MLOps (Phase 7) ────────────────────────────────────
+assistant-train: ## Train Ask SteamIQ intent routers, calibrator, and evaluate on gold queries
+	cd $(BACKEND) && $(PYTHON) -m jobs.train_assistant
+
+assistant-serve-check: ## Verify Ask SteamIQ serving parity, latency SLA, and mode refusal
+	cd $(BACKEND) && $(PYTHON) -m jobs.serve_check_assistant
+
+validate-detectors: ## Validate statistical drift detectors (PSI, KS, JSD) power simulation
+	cd $(BACKEND) && $(PYTHON) -m jobs.validate_drift_detectors
+
+monitor-models: ## Run statistical drift monitoring on live telemetry and item features
+	cd $(BACKEND) && $(PYTHON) -m jobs.monitor_models
+
+retrain-gate: ## Evaluate champion/challenger retraining gate (dry-run by default; pass ARGS="--execute")
+	cd $(BACKEND) && $(PYTHON) -m jobs.retrain_gate $(ARGS)
+
+model-cards: ## Render standardized markdown model cards for production & candidate models
+	cd $(BACKEND) && $(PYTHON) -m jobs.generate_model_cards
+
+ci: ## Run complete local continuous integration pipeline
+	cd $(BACKEND) && ruff check .
+	cd $(BACKEND) && pytest tests/ -v -m "not artifacts"
+	$(PYTHON) scripts/check_no_hardcoded_metrics.py
+	$(PYTHON) scripts/check_honest_fallbacks.py
+	$(PYTHON) scripts/render_results.py --check
+	npm --prefix $(FRONTEND) run lint
 
 # ─── Docker ───────────────────────────────────────────────────────────────────
 build-backend: ## Build backend Docker image

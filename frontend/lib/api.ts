@@ -718,6 +718,25 @@ export const api = {
   },
 
   /**
+   * Ask SteamIQ Assistant.
+   * POST /api/v1/assistant/ask
+   */
+  async assistantAsk(req: AssistantAskRequest): Promise<AssistantAskResponse> {
+    return apiFetch<AssistantAskResponse>("/api/v1/assistant/ask", {
+      method: "POST",
+      body: JSON.stringify(req),
+    });
+  },
+
+  /**
+   * Get Ask SteamIQ Assistant model status and health.
+   * GET /api/v1/assistant/health
+   */
+  async assistantHealth(): Promise<AssistantHealthResponse> {
+    return apiFetch<AssistantHealthResponse>("/api/v1/assistant/health");
+  },
+
+  /**
    * Health check.
    * GET /health
    */
@@ -725,6 +744,57 @@ export const api = {
     return apiFetch<{ status: string; db: string; version: string }>("/health");
   },
 } as const;
+
+// ─── Assistant Types ──────────────────────────────────────────────────────────
+
+export interface AssistantAskRequest {
+  query: string;
+  user_mode?: "player" | "developer";
+  game_app_id?: number | null;
+  liked_app_ids?: number[];
+}
+
+export interface AssistantProvenance {
+  model_run_id: string | null;
+  data_tables_read: string[];
+  materialized_at: string | null;
+  cached: boolean;
+  took_ms: number;
+}
+
+export interface AssistantRetrievedPassage {
+  passage_id: string;
+  app_id: number;
+  title: string;
+  field: string;
+  text: string;
+  score: number;
+}
+
+export interface AssistantAskResponse {
+  answer: string;
+  intent: string;
+  confidence: number;
+  abstained: boolean;
+  user_mode: "player" | "developer";
+  resolved_game: {
+    app_id: number;
+    title: string;
+    confidence: number;
+    method: string;
+  } | null;
+  provenance: AssistantProvenance;
+  retrieval_passages: AssistantRetrievedPassage[];
+  structured_args: Record<string, unknown>;
+}
+
+export interface AssistantHealthResponse {
+  status: string;
+  is_ready: boolean;
+  model_name: string;
+  run_id: string | null;
+  tau: number;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

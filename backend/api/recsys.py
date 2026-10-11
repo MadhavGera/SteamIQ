@@ -197,6 +197,37 @@ async def recommend_for_you(
                 f"Unknown model '{request.model}'. Valid deployable models: {valid_models}"
             )
 
+    from core.cache import ResponseCache
+    from mlops.telemetry import TelemetryRegistry
+
+    resolved_model = MODEL_ALIASES.get(request.model.strip().lower() if request.model else DEFAULT_MODEL_NAME, DEFAULT_MODEL_NAME)
+    active_meta = getattr(service, "model_runs_meta", {}).get(resolved_model, {})
+    model_run_id = active_meta.get("model_run_id")
+
+    cache = ResponseCache.get_instance()
+    cache_key = cache.make_recsys_key(
+        model_run_id=model_run_id,
+        liked_app_ids=request.liked_app_ids,
+        k=request.k,
+        explain=request.explain,
+    )
+
+    t_start = time.perf_counter()
+    cached_payload = await cache.get(cache_key)
+    if cached_payload is not None:
+        took_ms = round((time.perf_counter() - t_start) * 1000, 2)
+        TelemetryRegistry.get_instance().record_recsys_request(
+            model_name=resolved_model,
+            took_ms=took_ms,
+            library_len=len(request.liked_app_ids),
+            scores=[it.get("score", 0.0) for it in cached_payload.get("items", [])],
+            cached=True,
+        )
+        return ApiResponse.ok(
+            data=RecsysForYouResponse(**cached_payload),
+            took_ms=took_ms,
+        )
+
     rec_result = service.recommend(
         liked_app_ids=request.liked_app_ids,
         model=request.model,
@@ -242,9 +273,20 @@ async def recommend_for_you(
         took_ms=round(rec_result["took_ms"], 2),
     )
 
+    took_ms = round(rec_result["took_ms"], 2)
+    TelemetryRegistry.get_instance().record_recsys_request(
+        model_name=rec_result["model_name"],
+        took_ms=took_ms,
+        library_len=len(request.liked_app_ids),
+        scores=[it["score"] for it in rec_result["items"]],
+        cached=False,
+    )
+
+    await cache.set(cache_key, response_payload.model_dump())
+
     return ApiResponse.ok(
         data=response_payload,
-        took_ms=round(rec_result["took_ms"], 2),
+        took_ms=took_ms,
     )
 
 

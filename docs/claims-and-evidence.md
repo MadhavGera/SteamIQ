@@ -16,6 +16,10 @@ One-page reference for the review. Every quantitative claim maps to a reproducib
 | 6 | All-time two-tower fails cold start once proxies neutralized | [README cold-start section](../../README.md) | NDCG@10 = 0.0000, 0/184 hits, mean rank 2,127 |
 | 7 | Online scoring matches offline scoring (stage-1 models) | [`evidence/serve_check.log`](../evidence/serve_check.log) Part A | Max diff 0.00e+00, 0/500 order mismatches, all 5 models |
 | 8 | Ranker actively re-ranks (not pass-through) | [`evidence/serve_check.log`](../evidence/serve_check.log) Part A.2 | `service == ranker.score() ≠ two_tower` for 3 users |
+| 9 | Ask SteamIQ MiniLM intent router outperforms baselines | [`evidence/assistant_train.log`](../evidence/assistant_train.log) | Accuracy **0.9154** [0.8860, 0.9485] vs TF-IDF 0.7978, Keyword 0.4706 |
+| 10 | Ask SteamIQ Temperature Scaling calibration achieves low ECE | [`evidence/assistant_train.log`](../evidence/assistant_train.log) | ECE **0.0400**, Out-of-scope AUROC **0.9975**, Selective accuracy **0.9154** |
+| 11 | Ask SteamIQ online serving matches offline with low latency | [`evidence/assistant_serve_check.log`](../evidence/assistant_serve_check.log) | 100% parity across 200 queries (max diff 4.99e-5), P95 **18.74 ms** (< 300 ms SLA) |
+| 12 | Statistical drift detectors show zero FPR on null resamples | [`evidence/drift_detector_power.log`](../evidence/drift_detector_power.log) | Null FPR **0.0000** for PSI/JSD, Power **0.82-1.00** on moderate shifts |
 
 ---
 

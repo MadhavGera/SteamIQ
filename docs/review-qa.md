@@ -178,3 +178,23 @@ With train-only item stats, there is no evidence of gain (CI includes 0: $+0.002
 3. **Ranker vs Two-Tower on Test (+0.0063) and Val (No Difference):** On the held-out test split, evaluating the Clean Ranker with the deployed Clean Two-Tower yields NDCG@10 = `0.057925` vs Clean Two-Tower alone at `0.051587` — an active re-ranking gain of **+0.006338 (+0.0063)**. Conversely, on the validation split, the Clean Ranker achieves Val NDCG@10 = `0.061492` compared to Clean Two-Tower Val NDCG@10 = `0.061059` (difference < 0.0004, effectively no difference).
 4. **Pre-Registered Promotion Decision Rule:** Under the pre-registered protocol, promotion to production champion is evaluated strictly on the tuning/validation split requiring ranker advantage to exceed the decision threshold: $\Delta_{\text{tuning}} > \max(\sigma_{\text{ranker}}, \sigma_{\text{tt}})$. Because validation performance showed no significant advantage ($\Delta = 0.0004 < \sigma$), the pre-registered rule promoted the single-stage Clean Two-Tower as champion for low-latency online serving, maintaining Clean Ranker in `candidate` stage.  
 **Evidence:** [`backend/recsys/report.py`](backend/recsys/report.py), [`backend/jobs/serve_check.py`](backend/jobs/serve_check.py), [`docs/results/leaderboard.json`](docs/results/leaderboard.json).
+
+---
+
+### Q27: How does Ask SteamIQ fulfill conversational assistance without LLM hallucinations or data leakage?
+**Answer:** Ask SteamIQ (Phase 6, ADR 0006) completely avoids free-text LLM generation. Instead, ML is confined to:
+1. **Query Intent Classification:** `all-MiniLM-L6-v2` embeddings + calibrated logistic regression routes user questions to 12 domain intents (Accuracy 91.54% [0.8860, 0.9485], ECE 0.0400).
+2. **Selective Abstention:** Threshold $\tau = 0.10$ and Temperature Scaling ($T=0.210$) abstain when confidence is insufficient.
+3. **Entity Resolution:** Hybrid exact/fuzzy/semantic matcher links mentioned titles to catalog `app_id` (86.1% accuracy).
+4. **Deterministic SQL Execution:** Resolved queries execute parameterized SQL lookups strictly against precomputed `mart_*` and `serving_*` tables. Answers are populated into deterministic markdown templates.
+5. **Extractive Passage Retrieval:** Out-of-scope or unmapped queries fall back to dense retrieval of unedited quoted excerpts from verified player reviews (Recall@3 = 83.33%, MRR = 0.5278).  
+**Evidence:** [`backend/assistant/`](backend/assistant/), [`backend/jobs/train_assistant.py`](backend/jobs/train_assistant.py), [`docs/steamiq-0006-assistant-inference.md`](docs/steamiq-0006-assistant-inference.md).
+
+---
+
+### Q28: How does SteamIQ productionize ML models with drift detection and champion/challenger retraining gates?
+**Answer:** Phase 7 implements comprehensive MLOps infrastructure:
+1. **Statistical Drift Detection:** Non-parametric tests (PSI, two-sample Kolmogorov-Smirnov, Jensen-Shannon Distance) monitor catalog features, recommendation scores, library sizes, and intent distributions. Validated via synthetic simulations showing 0.00% empirical false-positive rate on null resamples and 82–100% statistical power on moderate distribution shifts.
+2. **Champion/Challenger Retraining Gate:** `backend/jobs/retrain_gate.py` runs multi-seed retraining with pre-registered qualification rules (validation NDCG margin $>$ seed standard deviation and paired-bootstrap non-inferiority). Retraining defaults to dry-run and never auto-promotes to production.
+3. **Response Caching:** Redis caching keyed on `hash(model_run_id, ...)` guarantees byte-for-byte fidelity with instant invalidation upon candidate promotion, with zero-downtime degradation when Redis is offline.  
+**Evidence:** [`backend/mlops/drift.py`](backend/mlops/drift.py), [`backend/jobs/validate_drift_detectors.py`](backend/jobs/validate_drift_detectors.py), [`backend/jobs/retrain_gate.py`](backend/jobs/retrain_gate.py).

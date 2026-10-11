@@ -10,6 +10,7 @@ import { BeyondAccuracyTab } from "@/components/model-lab/BeyondAccuracyTab";
 import { TrainingCurvesTab } from "@/components/model-lab/TrainingCurvesTab";
 import { ExplainabilityTab } from "@/components/model-lab/ExplainabilityTab";
 import { DataMethodTab } from "@/components/model-lab/DataMethodTab";
+import { AssistantTab } from "@/components/model-lab/AssistantTab";
 
 type TabKey =
   | "leaderboard"
@@ -19,7 +20,8 @@ type TabKey =
   | "beyond_accuracy"
   | "curves"
   | "explainability"
-  | "data_method";
+  | "data_method"
+  | "assistant";
 
 const REPORT_KEYS = [
   "leaderboard",
@@ -32,6 +34,10 @@ const REPORT_KEYS = [
   "shap_global",
   "dataset",
   "limitations",
+  "assistant_leaderboard",
+  "assistant_calibration",
+  "assistant_retrieval",
+  "assistant_errors",
 ];
 
 export default function ModelLabPage() {
@@ -77,6 +83,7 @@ export default function ModelLabPage() {
     { key: "curves", label: "Training Curves", icon: "show_chart" },
     { key: "explainability", label: "Explainability", icon: "psychology" },
     { key: "data_method", label: "Data & Method", icon: "description" },
+    { key: "assistant", label: "Assistant", icon: "chat_spark" },
   ];
 
   // HONEST-FALLBACK: Read dataset version from leaderboard report or fallback string
@@ -111,7 +118,7 @@ export default function ModelLabPage() {
           </h1>
           <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
             Comprehensive offline evaluation metrics, paired statistical tests, fairness diagnostics, and TreeSHAP explainability.
-            Headline production champion: <strong style={{ color: "var(--accent-primary)" }}>recsys_two_tower_clean</strong>. With train-only item stats there is no evidence of gain (CI includes 0: +0.0021 [-0.0026, +0.0065]); the all-time-stats gain (+0.0111) is leakage-confounded.
+            Headline production champion: <strong style={{ color: "var(--accent-primary)" }}>recsys_two_tower_clean</strong>. With train-only item stats there is no evidence of gain (CI includes 0); the all-time-stats gain is leakage-confounded.
           </p>
         </div>
       </div>
@@ -207,6 +214,15 @@ export default function ModelLabPage() {
             <DataMethodTab
               datasetPayload={reports["dataset"]?.payload || null}
               limitationsPayload={reports["limitations"]?.payload || null}
+            />
+          )}
+
+          {activeTab === "assistant" && (
+            <AssistantTab
+              leaderboardPayload={reports["assistant_leaderboard"]?.payload || null}
+              calibrationPayload={reports["assistant_calibration"]?.payload || null}
+              retrievalPayload={reports["assistant_retrieval"]?.payload || null}
+              errorsPayload={reports["assistant_errors"]?.payload || null}
             />
           )}
         </div>

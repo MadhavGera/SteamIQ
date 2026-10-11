@@ -1,0 +1,112 @@
+name: SteamIQ Continuous Integration
+
+on:
+  push:
+    branches: [main, feat/*]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Nightly drift power and integrity validation at 02:00 UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  backend:
+    name: Backend Lint, Integrity & Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./backend[dev]"
+
+      - name: Ruff Linting
+        run: |
+          ruff check backend/
+
+      - name: Hardcoded Metrics Integrity Check
+        run: |
+          python scripts/check_no_hardcoded_metrics.py
+
+      - name: Markdown Results Consistency Check
+        run: |
+          python scripts/render_results.py --check
+
+      - name: Pytest Suite (Excluding heavy artifacts)
+        run: |
+          cd backend && pytest tests/ -v --tb=short -m "not artifacts"
+
+  frontend:
+    name: Frontend Lint, Typecheck & Next.js Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up Python for Linters
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+
+      - name: Honest Fallbacks Linter
+        run: |
+          python scripts/check_honest_fallbacks.py
+
+      - name: Next.js Lint
+        working-directory: frontend
+        run: |
+          npm run lint
+
+      - name: Next.js Production Build
+        working-directory: frontend
+        run: |
+          npm run build
+        env:
+          NEXT_PUBLIC_API_URL: "http://localhost:8000"
+
+  nightly-drift-validation:
+    name: Statistical Drift Detector Power Validation
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./backend[dev]"
+
+      - name: Run Drift Detector Power Simulation
+        run: |
+          cd backend && python -m jobs.validate_drift_detectors

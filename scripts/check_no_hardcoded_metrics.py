@@ -21,6 +21,8 @@ FRONTEND_DIRS = [
 ]
 BACKEND_DIRS = [
     ROOT_DIR / "backend" / "recsys",
+    ROOT_DIR / "backend" / "assistant",
+    ROOT_DIR / "backend" / "mlops",
     ROOT_DIR / "backend" / "jobs",
 ]
 

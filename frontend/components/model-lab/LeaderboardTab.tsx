@@ -248,7 +248,7 @@ export function LeaderboardTab({ payload }: LeaderboardTabProps) {
       {renderTable(
         deployableRows,
         "Deployable Models",
-        "Online-safe models that do not rely on test-time feature leakages or all-time item statistics. Headline production champion: recsys_two_tower_clean (with train-only item stats there is no evidence of gain (CI includes 0: +0.0021 [-0.0026, +0.0065]); all-time-stats gain of +0.0111 is leakage-confounded)."
+        "Online-safe models that do not rely on test-time feature leakages or all-time item statistics. Headline production champion: recsys_two_tower_clean (with train-only item stats there is no evidence of gain (CI includes 0); all-time-stats gain is leakage-confounded)."
       )}
 
       {/* 2. Reference Models Table */}

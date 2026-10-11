@@ -1,0 +1,4 @@
+2026-10-12T02:58:40 | INFO     | steamiq.jobs.generate_model_cards | ▶ Starting generate_model_cards  
+2026-10-12T02:58:40 | INFO     | steamiq.jobs.generate_model_cards | Generating model cards in D:\Coding\SteamIQ\docs\model-cards...
+2026-10-12T02:58:40 | INFO     | steamiq.jobs.generate_model_cards | Successfully wrote 3 model cards to D:\Coding\SteamIQ\docs\model-cards.
+2026-10-12T02:58:40 | INFO     | steamiq.jobs.generate_model_cards | ✅ Finished generate_model_cards in 0.00s  model_cards_written=['D:\\Coding\\SteamIQ\\docs\\model-cards\\recsys_two_tower_clean.md', 'D:\\Coding\\SteamIQ\\docs\\model-cards\\recsys_two_tower_ranker_v2_trainstats.md', 'D:\\Coding\\SteamIQ\\docs\\model-cards\\assistant_intent_main.md']

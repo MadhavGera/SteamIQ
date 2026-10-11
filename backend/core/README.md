@@ -18,6 +18,12 @@
 > To allow users to search for and discover games outside of the locally ingested catalog, the search handler performs a real-time HTTP request to the external Steam Store API (`https://store.steampowered.com/api/storesearch/`). 
 > This is a documented, narrow exception to the Golden Rule. Its bounds are strict: it is a read-only passthrough. It does not write to the database, it does not trigger synchronous ingestion, and it performs no local computation on the result other than deduplication against `mart_game_overview`.
 
+### Golden Rule Addendum 3 (Ask SteamIQ Assistant Inference Exception — ADR 0006)
+
+> **Ask SteamIQ Query Inference (`POST /api/v1/assistant/ask`):**
+> Natural language queries are encoded via a pre-cached CPU sentence embedder (`all-MiniLM-L6-v2`) and evaluated against a linear intent classifier and extractive passage matrix in memory.
+> This is a documented, bounded exception to the Golden Rule (ADR 0006): it performs fixed-size CPU inference ($P_{95} < 300\text{ ms}$) without request-time training, database writes, or `raw_*`/`feature_*` table scans. Answers are rendered strictly from pre-materialized `mart_*`/`serving_*` data and fixed templates. User queries are never persisted.
+
 Pin this on your monitor. It's the single rule that, if followed from Phase 1, prevents SteamIQ from repeating the mistake nearly every past project made.
 
 ---

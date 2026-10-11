@@ -1,0 +1,136 @@
+{
+  "version": "1.0.0",
+  "description": "SteamIQ Ask Assistant Schema Metadata — Single Source of Truth for Intent Routing, Slot Binding, and Deterministic Templating",
+  "intents": {
+    "game_overview": {
+      "display_name": "Game Overview",
+      "description": "General summary, release date, tags, genre, and high-level metrics for a game",
+      "source_endpoint": "/api/v1/games/{app_id}",
+      "source_table": "mart_game_overview",
+      "required_slots": ["game_app_id"],
+      "mode_visibility": ["player", "developer"],
+      "template_id": "template_game_overview",
+      "keywords": ["what is", "tell me about", "overview", "genre", "developer", "release date", "tags"]
+    },
+    "review_summary": {
+      "display_name": "Review Summary",
+      "description": "Aggregated player sentiment, rating breakdown, and sentiment summary text",
+      "source_endpoint": "/api/v1/games/{app_id}/reviews",
+      "source_table": "mart_review_intelligence",
+      "required_slots": ["game_app_id"],
+      "mode_visibility": ["player", "developer"],
+      "template_id": "template_review_summary",
+      "keywords": ["reviews", "sentiment", "ratings", "what do players think", "overall reception", "community response"]
+    },
+    "top_complaints": {
+      "display_name": "Top Player Complaints",
+      "description": "Top recurring issues, negative feedback themes, and complaints extracted from reviews",
+      "source_endpoint": "/api/v1/games/{app_id}/reviews",
+      "source_table": "mart_review_intelligence",
+      "required_slots": ["game_app_id"],
+      "mode_visibility": ["player", "developer"],
+      "template_id": "template_top_complaints",
+      "keywords": ["complaints", "problems", "bugs", "issues", "what's wrong with", "negatives", "hate", "criticisms"]
+    },
+    "loved_features": {
+      "display_name": "Loved Features & Praises",
+      "description": "Most praised gameplay mechanics, features, and positive player highlights",
+      "source_endpoint": "/api/v1/games/{app_id}/reviews",
+      "source_table": "mart_review_intelligence",
+      "required_slots": ["game_app_id"],
+      "mode_visibility": ["player", "developer"],
+      "template_id": "template_loved_features",
+      "keywords": ["loved", "praise", "best features", "why do people love", "great mechanics", "highlights", "positives"]
+    },
+    "similar_games": {
+      "display_name": "Similar Games / Competitors",
+      "description": "Nearest neighbor titles in embedding space (Similar Games in player mode, Competitors in dev mode)",
+      "source_endpoint": "/api/v1/games/{app_id}/competitors",
+      "source_table": "serving_similar_games",
+      "required_slots": ["game_app_id"],
+      "mode_visibility": ["player", "developer"],
+      "template_id": "template_similar_games",
+      "keywords": ["similar to", "like", "games like", "competitors", "alternatives", "comparable titles"]
+    },
+    "price_advice": {
+      "display_name": "Pricing Advice & History",
+      "description": "Pricing spectrum and advice: 'buy now or wait' for players; competitor price positioning for developers",
+      "source_endpoint": "/api/v1/games/{app_id}/market",
+      "source_table": "mart_game_overview",
+      "required_slots": ["game_app_id"],
+      "mode_visibility": ["player", "developer"],
+      "template_id": "template_price_advice",
+      "keywords": ["price", "cost", "discount", "sale", "buy now", "wait for sale", "historical low", "pricing spectrum"]
+    },
+    "player_match": {
+      "display_name": "Game Match Profile",
+      "description": "6-dimension gameplay intensity profile (difficulty, story, exploration, combat, multiplayer, session length)",
+      "source_endpoint": "/api/v1/games/{app_id}/match/profile",
+      "source_table": "mart_game_match_profile",
+      "required_slots": ["game_app_id"],
+      "mode_visibility": ["player", "developer"],
+      "template_id": "template_player_match",
+      "keywords": ["match", "is this for me", "difficulty", "session length", "story weight", "combat", "how hard is"]
+    },
+    "success_score": {
+      "display_name": "Predictive Success Score",
+      "description": "ML-predicted commercial success probability and top SHAP feature drivers (Developer Mode only)",
+      "source_endpoint": "/api/v1/games/{app_id}/recommendations",
+      "source_table": "serving_predictions",
+      "required_slots": ["game_app_id"],
+      "mode_visibility": ["developer"],
+      "template_id": "template_success_score",
+      "keywords": ["success score", "success probability", "shap", "feature drivers", "will this succeed", "prediction"]
+    },
+    "update_impact": {
+      "display_name": "Update Impact Analysis",
+      "description": "Pre/post patch sentiment shifts and review volume deltas after updates (Developer Mode only)",
+      "source_endpoint": "/api/v1/games/{app_id}/updates",
+      "source_table": "mart_trends",
+      "required_slots": ["game_app_id"],
+      "mode_visibility": ["developer"],
+      "template_id": "template_update_impact",
+      "keywords": ["update impact", "patch notes", "after the update", "recent update", "sentiment change after patch"]
+    },
+    "recommendations": {
+      "display_name": "Strategic Recommendations",
+      "description": "Hybrid rule-based and SHAP action recommendations for game developers (Developer Mode only)",
+      "source_endpoint": "/api/v1/games/{app_id}/recommendations",
+      "source_table": "serving_recommendations",
+      "required_slots": ["game_app_id"],
+      "mode_visibility": ["developer"],
+      "template_id": "template_recommendations",
+      "keywords": ["how to improve", "developer recommendations", "strategic advice", "what should we fix", "roadmap suggestions"]
+    },
+    "market_opportunity": {
+      "display_name": "Market Opportunity Finder",
+      "description": "High-opportunity underserved genre and tag niches (Developer Mode only)",
+      "source_endpoint": "/api/v1/market/opportunities",
+      "source_table": "mart_opportunity_scores",
+      "required_slots": [],
+      "mode_visibility": ["developer"],
+      "template_id": "template_market_opportunity",
+      "keywords": ["market opportunity", "white space", "underserved tags", "niche", "where should i build", "genre opportunity"]
+    },
+    "recommend_for_me": {
+      "display_name": "Personalized Recommendations",
+      "description": "Personalized game suggestions based on a user's library of played or liked games",
+      "source_endpoint": "/api/v1/recsys/for-you",
+      "source_table": "serving_rec_items",
+      "required_slots": ["liked_app_ids"],
+      "mode_visibility": ["player", "developer"],
+      "template_id": "template_recommend_for_me",
+      "keywords": ["recommend for me", "what should i play next", "suggest games for me", "based on my library", "my recommendations"]
+    },
+    "out_of_scope": {
+      "display_name": "Out of Scope",
+      "description": "Queries outside of SteamIQ analytical capabilities (weather, general trivia, code generation, off-topic)",
+      "source_endpoint": "",
+      "source_table": "",
+      "required_slots": [],
+      "mode_visibility": ["player", "developer"],
+      "template_id": "template_out_of_scope",
+      "keywords": ["weather", "president", "write python code", "recipe", "who is", "capital of", "movie"]
+    }
+  }
+}

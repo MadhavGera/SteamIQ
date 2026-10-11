@@ -8,6 +8,7 @@ export function TopNavBar() {
   const pathname = usePathname();
 
   const isForYou = pathname === "/";
+  const isAsk = pathname.startsWith("/ask");
   const isModelLab = pathname.startsWith("/model-lab");
   const isEmbeddingMap = pathname.startsWith("/embedding-map");
   const isDashboard = pathname.startsWith("/dashboard");
@@ -39,6 +40,13 @@ export function TopNavBar() {
             id="nav-for-you"
           >
             For You
+          </Link>
+          <Link
+            href="/ask"
+            className={`stitch-nav__link ${isAsk ? "stitch-nav__link--active" : ""}`}
+            id="nav-ask"
+          >
+            Ask
           </Link>
           <Link
             href="/model-lab"

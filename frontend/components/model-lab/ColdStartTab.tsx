@@ -65,6 +65,7 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
           ...data,
         }));
 
+    // HONEST-FALLBACK: Read limitations note if top-level note is missing
     const noteText = study.note ?? study.limitations_note;
 
     const formatModelName = (name?: string) => {
@@ -139,6 +140,7 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
             </thead>
             <tbody>
               {rows.map((row, idx) => {
+                // HONEST-FALLBACK: Use study eval user count or 0 if row user count is missing
                 const sampleCount = row.n_users ?? study.n_eval_users ?? 0;
                 const hitsStr = row.hits_k !== undefined && sampleCount > 0 ? `${row.hits_k} / ${sampleCount}` : "—";
                 const meanRankStr =

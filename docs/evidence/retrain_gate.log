@@ -1,0 +1,28 @@
+2026-10-12T02:57:39 | INFO     | steamiq.jobs.retrain_gate | Evaluating Retraining Gate (execute=False, challenger=recsys_two_tower_ranker)...
+2026-10-12T02:57:40 | INFO     | steamiq.jobs.retrain_gate | Executing gate in DRY-RUN mode. Analyzing champion criteria and qualification rules...
+
+{
+  "decision": "DRY_RUN",
+  "mode": "dry_run",
+  "explanation": "Dry-run execution only. Pass --execute to run multi-seed training and gate evaluation.",
+  "dataset_version": "unknown",
+  "champion": {
+    "model_name": "recsys_two_tower_clean",
+    "val_ndcg_at_10": 0.0
+  },
+  "challenger": {
+    "family": "recsys_two_tower_ranker",
+    "target_seeds": [
+      42,
+      123,
+      456
+    ],
+    "min_seeds_required": 3
+  },
+  "gate_rules": {
+    "rule_1": "Challenger mean val NDCG@10 - Champion val NDCG@10 > challenger seed std",
+    "rule_2": "Paired bootstrap test 95% CI lower bound vs champion > -epsilon (non-inferiority)",
+    "rule_3": "Requires manual sign-off; never auto-promotes to production stage"
+  },
+  "generated_at": "2026-10-11T21:27:40.011118+00:00"
+}
