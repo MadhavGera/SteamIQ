@@ -165,7 +165,8 @@ With train-only item stats, there is no evidence of gain (CI includes 0: $+0.002
 4. **Item Universe Selection from Full Period:** 3,000 items chosen based on aggregate period counts to stabilize metadata.
 5. **Single Held-Out Item Target:** Exactly one target per user in test and val (Hit Rate equals Recall).
 6. **Offline Metrics vs Online Performance:** High offline NDCG reflects historical review retrieval, not guaranteed purchase conversion.
-7. **Simulated Cold-Start Evaluation:** Item content embeddings are pre-trained on catalog text, meaning offline simulations benchmark semantic alignment rather than live prospective adoption.  
+7. **Simulated Cold-Start Evaluation:** Item content embeddings are pre-trained on catalog text, meaning offline simulations benchmark semantic alignment rather than live prospective adoption.
+8. **Crawl-Time Price and Discount Snapshots:** `price_final` and `discount` reflect a single Steam store crawl, not the price at each user's interaction time. The 3,000-item universe was selected using all-period review counts (a known design trade-off for metadata stability).  
 **Evidence:** [`backend/data/recsys/reports/limitations.json`](backend/data/recsys/reports/limitations.json), [`docs/ml-accuracy-and-evaluation-guide.md`](docs/ml-accuracy-and-evaluation-guide.md).
 
 ---

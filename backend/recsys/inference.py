@@ -717,6 +717,12 @@ class RecommenderService:
             if fam == "recsys_two_tower_ranker_clean":
                 deployable = False
             elif fam == "recsys_two_tower_ranker_clean_v2":
+                # v2's DB row has stage="candidate" (the default from log_recsys_run).
+                # We override to "reference" here because v2 uses all-time-stats
+                # stage-1 retrieval and is kept only as a diagnostic upper bound.
+                # Artifact loading is unaffected: get_latest_recsys_runs has no
+                # stage filter. promote_champion excludes v2 by the experiment-name
+                # filter, so it is never eligible for promotion regardless of DB stage.
                 deployable = False
                 stage = "reference"
             else:

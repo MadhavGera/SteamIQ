@@ -344,6 +344,9 @@ async def list_models(
             clean = False
             stage = "candidate"
         elif model_key == "recsys_two_tower_ranker_clean_v2":
+            # v2's DB row has stage="candidate" (default from log_recsys_run).
+            # Override to "reference": v2 uses all-time-stats stage-1 retrieval,
+            # kept only as a diagnostic upper bound. See inference.py for details.
             deployable = False
             leak_free = False
             clean = False
