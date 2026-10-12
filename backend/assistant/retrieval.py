@@ -140,12 +140,12 @@ class PassageIndex:
                 "tfidf": {f"recall_at_{k}": 0.0 for k in k_vals} | {"mrr": 0.0},
             }
 
-        def eval_method(method: str) -> dict[str, float]:
-            recalls = {k: 0 for k in k_vals}
-            rr_sum = 0.0
+        def eval_method(method: str) -> dict[str, Any]:
             n_queries = len(gold_queries)
+            hit_k_vecs = {k: np.zeros(n_queries, dtype=float) for k in k_vals}
+            rr_vec = np.zeros(n_queries, dtype=float)
 
-            for item in gold_queries:
+            for i, item in enumerate(gold_queries):
                 q = item["query"]
                 exp_app_id = item.get("expected_app_id")
                 exp_field = item.get("expected_field")
@@ -163,19 +163,31 @@ class PassageIndex:
                         break
 
                 if hit_rank > 0:
-                    rr_sum += 1.0 / hit_rank
+                    rr_vec[i] = 1.0 / hit_rank
                     for k in k_vals:
                         if hit_rank <= k:
-                            recalls[k] += 1
+                            hit_k_vecs[k][i] = 1.0
 
-            metrics = {
-                f"recall_at_{k}": round(float(recalls[k] / n_queries), 4)
-                for k in k_vals
+            def _boot(arr: np.ndarray) -> list[float]:
+                if len(arr) == 0:
+                    return [0.0, 0.0]
+                rng = np.random.default_rng(42)
+                means = [float(np.mean(rng.choice(arr, size=len(arr), replace=True))) for _ in range(1000)]
+                return [round(float(np.percentile(means, 2.5)), 4), round(float(np.percentile(means, 97.5)), 4)]
+
+            metrics: dict[str, Any] = {
+                "n_queries": n_queries,
             }
-            metrics["mrr"] = round(float(rr_sum / n_queries), 4)
+            for k in k_vals:
+                metrics[f"recall_at_{k}"] = round(float(np.mean(hit_k_vecs[k])), 4)
+                metrics[f"recall_at_{k}_ci"] = _boot(hit_k_vecs[k])
+
+            metrics["mrr"] = round(float(np.mean(rr_vec)), 4)
+            metrics["mrr_ci"] = _boot(rr_vec)
             return metrics
 
         return {
+            "n_queries": len(gold_queries),
             "dense": eval_method("dense"),
             "tfidf": eval_method("tfidf"),
         }

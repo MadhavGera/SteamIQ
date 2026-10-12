@@ -15,16 +15,12 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
 
 import numpy as np
-import pytest
 
 from assistant.calibration import (
     TemperatureCalibrator,
-    compute_coverage_accuracy_curve,
     compute_ece,
-    evaluate_selective_prediction,
     select_abstention_threshold,
 )
 from assistant.entity_resolver import EntityResolver
@@ -37,10 +33,8 @@ from assistant.intents import ALL_INTENTS, Intent
 from assistant.retrieval import PassageIndex
 from assistant.router import (
     KeywordBaselineRouter,
-    MiniLMKnnRouter,
     TfidfLogisticRouter,
 )
-
 
 # ─── 1. Intent Taxonomy & Schema Metadata ─────────────────────────────────────
 

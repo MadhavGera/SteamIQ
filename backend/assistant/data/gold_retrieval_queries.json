@@ -1,0 +1,327 @@
+[
+  {
+    "query": "why do players get frustrated with hades boss runs?",
+    "expected_app_id": 1145360,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "what god boons and dialogue make hades so popular?",
+    "expected_app_id": 1145360,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "what kind of game is hades in greek mythology?",
+    "expected_app_id": 1145360,
+    "expected_field": "summary"
+  },
+  {
+    "query": "repetitive boss fights and finger strain in hades",
+    "expected_app_id": 1145360,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "soundtrack and voice acting praise in hades",
+    "expected_app_id": 1145360,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "tell me about hallownest and the hollow knight setting",
+    "expected_app_id": 367520,
+    "expected_field": "summary"
+  },
+  {
+    "query": "why do people criticize hollow knight corpse run walkbacks?",
+    "expected_app_id": 367520,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "what makes the nail combat and art in hollow knight so good?",
+    "expected_app_id": 367520,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "lack of map direction and dying far from bench in hollow knight",
+    "expected_app_id": 367520,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "deep lore and hand drawn metroidvania map exploration hollow knight",
+    "expected_app_id": 367520,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "how does the combat loop work in dead cells?",
+    "expected_app_id": 588650,
+    "expected_field": "summary"
+  },
+  {
+    "query": "why are boss stem cells so frustratingly hard in dead cells?",
+    "expected_app_id": 588650,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "responsive dodge rolling and weapon synergies in dead cells",
+    "expected_app_id": 588650,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "rng bad weapon drops ruining runs in dead cells",
+    "expected_app_id": 588650,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "metroidvania rogue-lite frantic 2d platforming dead cells",
+    "expected_app_id": 588650,
+    "expected_field": "summary"
+  },
+  {
+    "query": "farming life and befriending villagers stardew valley",
+    "expected_app_id": 413150,
+    "expected_field": "summary"
+  },
+  {
+    "query": "why is early game stamina and walking so slow in stardew?",
+    "expected_app_id": 413150,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "what makes community center and multiplayer in stardew so relaxing?",
+    "expected_app_id": 413150,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "annoying energy bar depletion in first days of stardew valley",
+    "expected_app_id": 413150,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "endless farm secrets and wholesome cozy gameplay stardew",
+    "expected_app_id": 413150,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "2d sandbox digging caverns and fighting bosses terraria",
+    "expected_app_id": 105600,
+    "expected_field": "summary"
+  },
+  {
+    "query": "no tutorial and confusing progression steps in terraria",
+    "expected_app_id": 105600,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "huge boss variety crafting freedom and tmodloader in terraria",
+    "expected_app_id": 105600,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "hard for beginners to know what to do next in terraria",
+    "expected_app_id": 105600,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "deep crafting depth and endless building freedom terraria",
+    "expected_app_id": 105600,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "madeline climbing celeste mountain precision platformer",
+    "expected_app_id": 504230,
+    "expected_field": "summary"
+  },
+  {
+    "query": "brutal b-sides and farewell chapter screen difficulty in celeste",
+    "expected_app_id": 504230,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "lena raine music instant respawns and mental health story celeste",
+    "expected_app_id": 504230,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "extremely frustrating platforming screens near end of celeste",
+    "expected_app_id": 504230,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "underwater open ocean survival and alien crafting subnautica",
+    "expected_app_id": 264710,
+    "expected_field": "summary"
+  },
+  {
+    "query": "pop-in texture glitches and terror in deep void subnautica",
+    "expected_app_id": 264710,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "cyclops submersible building biome exploration tension subnautica",
+    "expected_app_id": 264710,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "rendering pop-ins breaking immersion subnautica",
+    "expected_app_id": 264710,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "atmospheric deep sea biome sound design subnautica",
+    "expected_app_id": 264710,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "roguelike deckbuilder drafting relic synergies slay the spire",
+    "expected_app_id": 646570,
+    "expected_field": "summary"
+  },
+  {
+    "query": "ascension 20 rng ruining good card decks slay the spire",
+    "expected_app_id": 646570,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "mathematical card balance and distinct character archetypes slay the spire",
+    "expected_app_id": 646570,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "unlucky card draws leading to cheap deaths in slay the spire",
+    "expected_app_id": 646570,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "deep strategic card synergies and replay value slay the spire",
+    "expected_app_id": 646570,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "aperture science portal gun and glados comedic puzzles portal 2",
+    "expected_app_id": 620,
+    "expected_field": "summary"
+  },
+  {
+    "query": "campaign is too short and needs more chambers portal 2",
+    "expected_app_id": 620,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "stephen merchant wheatley dialogue and co-op campaign portal 2",
+    "expected_app_id": 620,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "spatial puzzle mechanics and hilarious valve writing portal 2",
+    "expected_app_id": 620,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "competitive bomb defusal 5v5 tactical round economy csgo",
+    "expected_app_id": 730,
+    "expected_field": "summary"
+  },
+  {
+    "query": "cheaters toxic teammates and smurfs in matchmaking csgo",
+    "expected_app_id": 730,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "crisp gun recoil mechanics esports tournaments csgo",
+    "expected_app_id": 730,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "spinbotters and bad anti-cheat experience csgo",
+    "expected_app_id": 730,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "deep complex 5v5 moba drafting heroes destroy ancient dota 2",
+    "expected_app_id": 570,
+    "expected_field": "summary"
+  },
+  {
+    "query": "impenetrable learning curve and toxic flame in dota 2",
+    "expected_app_id": 570,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "completely free hero pool strategic depth high skill ceiling dota 2",
+    "expected_app_id": 570,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "hostile community towards beginners trying to learn dota 2",
+    "expected_app_id": 570,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "open world night city mercenary dystopian rpg cyberpunk 2077",
+    "expected_app_id": 1091500,
+    "expected_field": "summary"
+  },
+  {
+    "query": "launch bugs vehicle physics and dumb npc crowd ai cyberpunk 2077",
+    "expected_app_id": 1091500,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "johnny silverhand keanu reeves neon graphics 2.0 update cyberpunk 2077",
+    "expected_app_id": 1091500,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "cars sliding around and clunky vehicle driving cyberpunk 2077",
+    "expected_app_id": 1091500,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "cinematic story questlines and incredible ray tracing night city cyberpunk",
+    "expected_app_id": 1091500,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "massive open world souls-like dark fantasy directed by miyazaki elden ring",
+    "expected_app_id": 1245620,
+    "expected_field": "summary"
+  },
+  {
+    "query": "delayed dodge roll inputs boss camera lock and endgame one-shots elden ring",
+    "expected_app_id": 1245620,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "staggering exploration legacy dungeons build variety boss spectacles elden ring",
+    "expected_app_id": 1245620,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "giant boss hitbox issues and camera spinning elden ring",
+    "expected_app_id": 1245620,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "freedom to explore anywhere in the lands between elden ring",
+    "expected_app_id": 1245620,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "party based d&d forgotten realms crpg narrative choices baldurs gate 3",
+    "expected_app_id": 1086940,
+    "expected_field": "summary"
+  },
+  {
+    "query": "act 3 city fps lag and messy inventory management baldurs gate 3",
+    "expected_app_id": 1086940,
+    "expected_field": "complaints"
+  },
+  {
+    "query": "unmatched narrative freedom companion romances tactical turn-based combat bg3",
+    "expected_app_id": 1086940,
+    "expected_field": "loved_features"
+  },
+  {
+    "query": "slow framerates in lower city act 3 baldurs gate 3",
+    "expected_app_id": 1086940,
+    "expected_field": "complaints"
+  }
+]

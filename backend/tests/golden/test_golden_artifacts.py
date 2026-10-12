@@ -11,12 +11,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 from core.config import settings
-from recsys.config import get_recsys_config
 from recsys.inference import RecommenderService
 
 
@@ -42,9 +40,10 @@ def test_golden_artifact_reproducibility():
 
     service = RecommenderService.get_instance()
     assert service is not None
+    service.initialize()
 
     # Deterministic generation of 50 fixed test histories
-    catalog_app_ids = service.catalog_app_ids
+    catalog_app_ids = list(service.app_id_to_idx.keys())
     if len(catalog_app_ids) < 20:
         pytest.skip("Catalog size too small for golden artifact test.")
 
@@ -64,12 +63,13 @@ def test_golden_artifact_reproducibility():
     for h in fixed_histories:
         rec_res = service.recommend(
             liked_app_ids=h,
-            model_name="recsys_two_tower_clean",
+            model="recsys_two_tower_clean",
             k=10,
             explain=False,
         )
-        rec_ids = [it.app_id for it in rec_res.items]
-        rec_scores = [it.score for it in rec_res.items]
+        rec_items = rec_res["items"]
+        rec_ids = [it["app_id"] for it in rec_items]
+        rec_scores = [it["score"] for it in rec_items]
 
         # Top-10 sanity invariants
         assert len(rec_ids) == 10

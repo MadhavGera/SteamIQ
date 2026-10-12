@@ -1,23 +1,24 @@
-2026-10-12T02:57:20 | INFO     | steamiq.jobs.validate_drift_detectors | Starting statistical drift detector validation (trials=100, N=1000)...
-2026-10-12T02:57:21 | INFO     | steamiq.jobs.validate_drift_detectors | Saved monitoring_detector_power report to database.
+﻿============================================================
+DRIFT THRESHOLD DERIVATION (Empirical Null-Resample vs Fixed Standards)
+============================================================
+PSI:  Empirical Null 95% = 0.0636, 99% = 0.0847 | Fixed Warn = 0.1000, Alert = 0.2000
+KS:   Empirical Null 95% = 0.0820, 99% = 0.1000 | Fixed Alpha = 0.0100 (critical stat ~ 0.0730)
+JSD:  Empirical Null 95% = 0.1038, 99% = 0.1157 | Fixed Warn = 0.1500, Alert = 0.3000
 
-# Statistical Drift Detector Power & False-Positive Rate Report
-**Evaluation Setup:** 100 trials, N=1000 per sample | Generated: 2026-10-11 21:27:21 UTC
-
-## 1. Mean Shift Detection Power (Continuous)
-| Shift (Delta * Std) | Type | PSI Power (95% CI) | KS Power (95% CI) | Mean PSI |
-|---|:---:|:---:|:---:|:---:|
-| 0.00 | Null (FPR) | 0.0000 [0.0000, 0.0000] | 0.0200 [0.0000, 0.0552] | 0.0178 |
-| 0.10 | Shift | 0.0000 [0.0000, 0.0000] | 0.2100 [0.1300, 0.2852] | 0.0275 |
-| 0.25 | Shift | 0.1300 [0.0748, 0.2000] | 0.9900 [0.9700, 1.0000] | 0.0766 |
-| 0.50 | Shift | 1.0000 [1.0000, 1.0000] | 1.0000 [1.0000, 1.0000] | 0.2633 |
-| 1.00 | Shift | 1.0000 [1.0000, 1.0000] | 1.0000 [1.0000, 1.0000] | 0.9419 |
-
-## 2. Categorical / Intent Shift Power (JSD)
-| Shift Factor | Type | JSD Power (95% CI) | Mean JSD |
-|---|:---:|:---:|:---:|
-| 0.00 | Null (FPR) | 0.0000 [0.0000, 0.0000] | 0.0484 |
-| 0.10 | Shift | 0.0000 [0.0000, 0.0000] | 0.0575 |
-| 0.25 | Shift | 0.0000 [0.0000, 0.0000] | 0.0936 |
-| 0.50 | Shift | 0.8200 [0.7448, 0.8800] | 0.1630 |
-| 1.00 | Shift | 1.0000 [1.0000, 1.0000] | 0.3052 |
+================================================================================
+STATISTICAL POWER & FALSE POSITIVE RATE (500 trials per shift, N=500 samples)
+================================================================================
+Condition                    | Metric | Detection Rate | 95% Bootstrap CI   | Mean Metric
+------------------------------------------------------------------------------------
+H0: No shift (Null)          | PSI    | 0.0000 (FPR  ) | [0.0000, 0.0000]   | 0.0371
+H0: No shift (Null)          | KS     | 0.0167 (FPR  ) | [0.0033, 0.0300]   | 0.0542
+Shift: Mean (+0.5 sigma)     | PSI    | 1.0000 (Power) | [1.0000, 1.0000]   | 0.2762
+Shift: Mean (+0.5 sigma)     | KS     | 1.0000 (Power) | [1.0000, 1.0000]   | 0.2203
+Shift: Scale (1.5x sigma)    | PSI    | 0.9967 (Power) | [0.9900, 1.0000]   | 0.2293
+Shift: Scale (1.5x sigma)    | KS     | 0.9167 (Power) | [0.8833, 0.9467]   | 0.1251
+Shift: Tail Outliers (20%)   | PSI    | 1.0000 (Power) | [1.0000, 1.0000]   | 0.2455
+Shift: Tail Outliers (20%)   | KS     | 1.0000 (Power) | [1.0000, 1.0000]   | 0.1897
+H0: Intent Null (No shift)   | JSD    | 0.0000 (FPR  ) | [0.0000, 0.0000]   | 0.0764
+Shift: 2x Out-of-Scope volume | JSD    | 0.0133 (Power) | [0.0033, 0.0267]   | 0.1051
+Shift: Severe Category Skew  | JSD    | 1.0000 (Power) | [1.0000, 1.0000]   | 0.4151
+================================================================================

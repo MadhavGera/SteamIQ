@@ -46,11 +46,14 @@ TEST_DATABASE_URL = os.getenv(
 
 
 @pytest.fixture(autouse=True)
-def isolate_recsys_data_dir(tmp_path, monkeypatch):
+def isolate_recsys_data_dir(request, tmp_path, monkeypatch):
     """
     Points settings.recsys_data_dir to tmp_path for all tests,
     preventing any test from modifying or polluting backend/data/recsys.
+    Exempts tests marked with 'artifacts' which explicitly test saved model weights.
     """
+    if request.node.get_closest_marker("artifacts") is not None:
+        return
     from core.config import get_settings, settings
 
     monkeypatch.setattr(settings, "recsys_data_dir", str(tmp_path))

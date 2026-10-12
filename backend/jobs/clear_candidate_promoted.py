@@ -1,7 +1,11 @@
-import sys, asyncio
+import asyncio
+import sys
+
 sys.path.insert(0, 'backend')
 from sqlalchemy import text
+
 from db.base import AsyncSessionLocal
+
 
 async def clear_promoted():
     async with AsyncSessionLocal() as session:

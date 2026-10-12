@@ -23,7 +23,6 @@ import logging
 import pickle
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer

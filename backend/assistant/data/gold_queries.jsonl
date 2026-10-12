@@ -1,0 +1,347 @@
+{"text": "whats hades about?", "intent": "game_overview", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "give me a brief overview of hollow knight", "intent": "game_overview", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "who developed stardew valley and when was it released?", "intent": "game_overview", "game": "Stardew Valley", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "tell me about dead cells genre and tags", "intent": "game_overview", "game": "Dead Cells", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what kind of game is terraria?", "intent": "game_overview", "game": "Terraria", "mode": "player", "verified": false, "source": "generator"}
+{"text": "celeste summary and release info", "intent": "game_overview", "game": "Celeste", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "basic rundown on subnautica gameplay and theme", "intent": "game_overview", "game": "Subnautica", "mode": "player", "verified": false, "source": "generator"}
+{"text": "can u explain what slay the spire is?", "intent": "game_overview", "game": "Slay the Spire", "mode": "player", "verified": false, "source": "generator"}
+{"text": "elden ring game overview and developer", "intent": "game_overview", "game": "Elden Ring", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "general overview for portal 2", "intent": "game_overview", "game": "Portal 2", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is baldur's gate 3 about?", "intent": "game_overview", "game": "Baldur's Gate 3", "mode": "player", "verified": false, "source": "generator"}
+{"text": "cyberpunk 2077 core tags and genre breakdown", "intent": "game_overview", "game": "Cyberpunk 2077", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "explain the premise of dota 2", "intent": "game_overview", "game": "Dota 2", "mode": "player", "verified": false, "source": "generator"}
+{"text": "tell me bout hades release and studio", "intent": "game_overview", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "give an overview for counter-strike global offensive", "intent": "game_overview", "game": "Counter-Strike: Global Offensive", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what style of game is hollow knight?", "intent": "game_overview", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what do players think of hades on steam?", "intent": "review_summary", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "how are the reviews for hollow knight looking?", "intent": "review_summary", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "overall review consensus for stardew valley", "intent": "review_summary", "game": "Stardew Valley", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "do players recommend dead cells?", "intent": "review_summary", "game": "Dead Cells", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the community sentiment for subnautica?", "intent": "review_summary", "game": "Subnautica", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "steam rating breakdown for celeste", "intent": "review_summary", "game": "Celeste", "mode": "player", "verified": false, "source": "generator"}
+{"text": "how well received is slay the spire by customers?", "intent": "review_summary", "game": "Slay the Spire", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "summary of user sentiment for elden ring", "intent": "review_summary", "game": "Elden Ring", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "are people liking baldurs gate 3?", "intent": "review_summary", "game": "Baldur's Gate 3", "mode": "player", "verified": false, "source": "generator"}
+{"text": "review summary on portal 2", "intent": "review_summary", "game": "Portal 2", "mode": "player", "verified": false, "source": "generator"}
+{"text": "community reception of cyberpunk 2077 nowadays", "intent": "review_summary", "game": "Cyberpunk 2077", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what is the general consensus on terraria?", "intent": "review_summary", "game": "Terraria", "mode": "player", "verified": false, "source": "generator"}
+{"text": "how positive are the steam reviews for hades?", "intent": "review_summary", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "player sentiment overview for csgo", "intent": "review_summary", "game": "Counter-Strike: Global Offensive", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "is dota 2 well received by players currently?", "intent": "review_summary", "game": "Dota 2", "mode": "player", "verified": false, "source": "generator"}
+{"text": "give me a review summary of hollow knight", "intent": "review_summary", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what are the main complaints about hades?", "intent": "top_complaints", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "why do people dislike hollow knight?", "intent": "top_complaints", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "top negative review themes for dead cells", "intent": "top_complaints", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what do players hate about elden ring?", "intent": "top_complaints", "game": "Elden Ring", "mode": "player", "verified": false, "source": "generator"}
+{"text": "biggest criticisms and bugs reported in cyberpunk 2077", "intent": "top_complaints", "game": "Cyberpunk 2077", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what are the common complaints for subnautica?", "intent": "top_complaints", "game": "Subnautica", "mode": "player", "verified": false, "source": "generator"}
+{"text": "why do negative reviews criticize stardew valley?", "intent": "top_complaints", "game": "Stardew Valley", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "top issues players mention in slay the spire", "intent": "top_complaints", "game": "Slay the Spire", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what sucks about baldurs gate 3 according to players?", "intent": "top_complaints", "game": "Baldur's Gate 3", "mode": "player", "verified": false, "source": "generator"}
+{"text": "common pain points in celeste reviews", "intent": "top_complaints", "game": "Celeste", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what do people complain about in portal 2?", "intent": "top_complaints", "game": "Portal 2", "mode": "player", "verified": false, "source": "generator"}
+{"text": "main complaints regarding terraria gameplay", "intent": "top_complaints", "game": "Terraria", "mode": "player", "verified": false, "source": "generator"}
+{"text": "churn drivers and complaint clusters for csgo", "intent": "top_complaints", "game": "Counter-Strike: Global Offensive", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what are the worst parts of hades according to negative reviews?", "intent": "top_complaints", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "player frustrations and negative themes in dota 2", "intent": "top_complaints", "game": "Dota 2", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what do critics dislike about hollow knight?", "intent": "top_complaints", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what do players love most about hades?", "intent": "loved_features", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "best features and praise for hollow knight", "intent": "loved_features", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what makes stardew valley so loved by the community?", "intent": "loved_features", "game": "Stardew Valley", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "most praised mechanics in dead cells", "intent": "loved_features", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what do positive reviews highlight in celeste?", "intent": "loved_features", "game": "Celeste", "mode": "player", "verified": false, "source": "generator"}
+{"text": "why do people rave about subnautica's atmosphere?", "intent": "loved_features", "game": "Subnautica", "mode": "player", "verified": false, "source": "generator"}
+{"text": "top praised gameplay elements in slay the spire", "intent": "loved_features", "game": "Slay the Spire", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what are the most loved features in elden ring?", "intent": "loved_features", "game": "Elden Ring", "mode": "player", "verified": false, "source": "generator"}
+{"text": "why do players love baldurs gate 3 so much?", "intent": "loved_features", "game": "Baldur's Gate 3", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what makes portal 2's puzzle design stand out in reviews?", "intent": "loved_features", "game": "Portal 2", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "highlights and positive player quotes for terraria", "intent": "loved_features", "game": "Terraria", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what do fans praise in cyberpunk 2077?", "intent": "loved_features", "game": "Cyberpunk 2077", "mode": "player", "verified": false, "source": "generator"}
+{"text": "core retention drivers praised in hades", "intent": "loved_features", "game": "Hades", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what do players love about csgo gunplay?", "intent": "loved_features", "game": "Counter-Strike: Global Offensive", "mode": "player", "verified": false, "source": "generator"}
+{"text": "most loved aspects of hollow knight art and combat", "intent": "loved_features", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "key praises for stardew valley's farming loop", "intent": "loved_features", "game": "Stardew Valley", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what games are similar to hades?", "intent": "similar_games", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "titles like hollow knight that i can play", "intent": "similar_games", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "who are the top market competitors for dead cells?", "intent": "similar_games", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "games like stardew valley on steam", "intent": "similar_games", "game": "Stardew Valley", "mode": "player", "verified": false, "source": "generator"}
+{"text": "find competitor titles to slay the spire in embedding space", "intent": "similar_games", "game": "Slay the Spire", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "alternatives to subnautica for survival exploration", "intent": "similar_games", "game": "Subnautica", "mode": "player", "verified": false, "source": "generator"}
+{"text": "games comparable to celeste platforming", "intent": "similar_games", "game": "Celeste", "mode": "player", "verified": false, "source": "generator"}
+{"text": "top competitors for elden ring in the souls-like space", "intent": "similar_games", "game": "Elden Ring", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "titles similar in style to terraria", "intent": "similar_games", "game": "Terraria", "mode": "player", "verified": false, "source": "generator"}
+{"text": "games like baldurs gate 3 for crpg fans", "intent": "similar_games", "game": "Baldur's Gate 3", "mode": "player", "verified": false, "source": "generator"}
+{"text": "portal 2 alternatives and puzzle competitors", "intent": "similar_games", "game": "Portal 2", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "cyberpunk 2077 nearest neighbors in catalog", "intent": "similar_games", "game": "Cyberpunk 2077", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what games compete directly with csgo?", "intent": "similar_games", "game": "Counter-Strike: Global Offensive", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what are the closest titles like dota 2?", "intent": "similar_games", "game": "Dota 2", "mode": "player", "verified": false, "source": "generator"}
+{"text": "show me games similar to hades with fast action", "intent": "similar_games", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "competitors for hollow knight on steam", "intent": "similar_games", "game": "Hollow Knight", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "should i buy hades now or wait for a sale?", "intent": "price_advice", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "is hollow knight currently on discount?", "intent": "price_advice", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the historical low price for stardew valley?", "intent": "price_advice", "game": "Stardew Valley", "mode": "player", "verified": false, "source": "generator"}
+{"text": "competitor price positioning analysis for dead cells", "intent": "price_advice", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "should i wait for a sale on elden ring?", "intent": "price_advice", "game": "Elden Ring", "mode": "player", "verified": false, "source": "generator"}
+{"text": "how does celeste's price compare to the genre median?", "intent": "price_advice", "game": "Celeste", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what is the price history and sale advice for subnautica?", "intent": "price_advice", "game": "Subnautica", "mode": "player", "verified": false, "source": "generator"}
+{"text": "is slay the spire worth its current price or should i wait?", "intent": "price_advice", "game": "Slay the Spire", "mode": "player", "verified": false, "source": "generator"}
+{"text": "pricing spectrum and p25/p75 distribution for baldurs gate 3", "intent": "price_advice", "game": "Baldur's Gate 3", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "has cyberpunk 2077 ever been cheaper than its current cost?", "intent": "price_advice", "game": "Cyberpunk 2077", "mode": "player", "verified": false, "source": "generator"}
+{"text": "portal 2 price and discount history", "intent": "price_advice", "game": "Portal 2", "mode": "player", "verified": false, "source": "generator"}
+{"text": "is terraria at its historical lowest price right now?", "intent": "price_advice", "game": "Terraria", "mode": "player", "verified": false, "source": "generator"}
+{"text": "should i buy hades today or is a steam sale coming?", "intent": "price_advice", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "price positioning for hollow knight against competitors", "intent": "price_advice", "game": "Hollow Knight", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "tell me if dead cells is on sale or full price", "intent": "price_advice", "game": "Dead Cells", "mode": "player", "verified": false, "source": "generator"}
+{"text": "pricing intelligence report for stardew valley", "intent": "price_advice", "game": "Stardew Valley", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "is hades right for me?", "intent": "player_match", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "how hard is hollow knight?", "intent": "player_match", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the difficulty rating and combat intensity of dead cells?", "intent": "player_match", "game": "Dead Cells", "mode": "player", "verified": false, "source": "generator"}
+{"text": "does celeste have heavy story weight or is it pure platforming?", "intent": "player_match", "game": "Celeste", "mode": "player", "verified": false, "source": "generator"}
+{"text": "how long are typical sessions in slay the spire?", "intent": "player_match", "game": "Slay the Spire", "mode": "player", "verified": false, "source": "generator"}
+{"text": "6d gameplay intensity profile for elden ring", "intent": "player_match", "game": "Elden Ring", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "would i like subnautica if i hate difficult combat?", "intent": "player_match", "game": "Subnautica", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the match profile for stardew valley?", "intent": "player_match", "game": "Stardew Valley", "mode": "player", "verified": false, "source": "generator"}
+{"text": "is baldurs gate 3 too complex for casual sessions?", "intent": "player_match", "game": "Baldur's Gate 3", "mode": "player", "verified": false, "source": "generator"}
+{"text": "session length and difficulty breakdown for terraria", "intent": "player_match", "game": "Terraria", "mode": "player", "verified": false, "source": "generator"}
+{"text": "how intense is the combat in portal 2?", "intent": "player_match", "game": "Portal 2", "mode": "player", "verified": false, "source": "generator"}
+{"text": "match profile metrics for cyberpunk 2077", "intent": "player_match", "game": "Cyberpunk 2077", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "is hades good for short gameplay sessions?", "intent": "player_match", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "how punishing is hollow knight for new players?", "intent": "player_match", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "6d profile evaluation for dead cells", "intent": "player_match", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "is celeste too hard for casual gamers?", "intent": "player_match", "game": "Celeste", "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the predicted success score for hades?", "intent": "success_score", "game": "Hades", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "show me the shap feature drivers for hollow knight", "intent": "success_score", "game": "Hollow Knight", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what is dead cells' commercial success probability?", "intent": "success_score", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "predictive ml score and feature importance for stardew valley", "intent": "success_score", "game": "Stardew Valley", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what factors drove celeste's predicted success score?", "intent": "success_score", "game": "Celeste", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "model prediction and top shap drivers for subnautica", "intent": "success_score", "game": "Subnautica", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what is the success tier estimation for slay the spire?", "intent": "success_score", "game": "Slay the Spire", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "shap explanation for elden ring's revenue forecast", "intent": "success_score", "game": "Elden Ring", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "predictive probability of success for baldurs gate 3", "intent": "success_score", "game": "Baldur's Gate 3", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "show feature drivers for cyberpunk 2077 model prediction", "intent": "success_score", "game": "Cyberpunk 2077", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what is terraria's model success rating?", "intent": "success_score", "game": "Terraria", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "success score and key positive drivers for portal 2", "intent": "success_score", "game": "Portal 2", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "how does our ml model rate hades' commercial viability?", "intent": "success_score", "game": "Hades", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "predicted success probability for csgo", "intent": "success_score", "game": "Counter-Strike: Global Offensive", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what does the predictive model forecast for hollow knight?", "intent": "success_score", "game": "Hollow Knight", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "shap summary and success score for dead cells", "intent": "success_score", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "how did the latest update affect player sentiment for hades?", "intent": "update_impact", "game": "Hades", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "did hollow knight's recent patch improve review scores?", "intent": "update_impact", "game": "Hollow Knight", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "update impact tracker analysis for dead cells", "intent": "update_impact", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what was the 30-day sentiment delta after stardew valley's update?", "intent": "update_impact", "game": "Stardew Valley", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "did players respond positively to celeste's latest patch?", "intent": "update_impact", "game": "Celeste", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "review volume and sentiment shift following subnautica update", "intent": "update_impact", "game": "Subnautica", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "track update impact for slay the spire", "intent": "update_impact", "game": "Slay the Spire", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "sentiment shift after recent patch for elden ring", "intent": "update_impact", "game": "Elden Ring", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "did baldurs gate 3 hotfix improve review consensus?", "intent": "update_impact", "game": "Baldur's Gate 3", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "analyze patch note reception and trends for cyberpunk 2077", "intent": "update_impact", "game": "Cyberpunk 2077", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "update impact analysis for terraria 1.4", "intent": "update_impact", "game": "Terraria", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "how did portal 2's maintenance patch impact reviews?", "intent": "update_impact", "game": "Portal 2", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "post-update sentiment trajectory for csgo", "intent": "update_impact", "game": "Counter-Strike: Global Offensive", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "dota 2 balance patch sentiment impact report", "intent": "update_impact", "game": "Dota 2", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "did the latest hades update fix player complaints?", "intent": "update_impact", "game": "Hades", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what was the impact of dead cells latest dlc update?", "intent": "update_impact", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what strategic recommendations do you have for hades?", "intent": "recommendations", "game": "Hades", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "how can the developers of hollow knight improve retention?", "intent": "recommendations", "game": "Hollow Knight", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "actionable recommendations to address dead cells review issues", "intent": "recommendations", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what should the stardew valley team prioritize next?", "intent": "recommendations", "game": "Stardew Valley", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "roadmap suggestions and improvements for celeste", "intent": "recommendations", "game": "Celeste", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "strategic advice for subnautica based on competitor gaps", "intent": "recommendations", "game": "Subnautica", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "how can slay the spire developers increase positive reviews?", "intent": "recommendations", "game": "Slay the Spire", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "developer recommendations for elden ring balance", "intent": "recommendations", "game": "Elden Ring", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what fixes should the baldurs gate 3 team prioritize?", "intent": "recommendations", "game": "Baldur's Gate 3", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "strategic recommendations for cyberpunk 2077 future patches", "intent": "recommendations", "game": "Cyberpunk 2077", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what should terraria developers add based on review intelligence?", "intent": "recommendations", "game": "Terraria", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "developer insights for portal 2 level design", "intent": "recommendations", "game": "Portal 2", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "how can the hades team boost player engagement?", "intent": "recommendations", "game": "Hades", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "recommendations for csgo matchmaking improvements", "intent": "recommendations", "game": "Counter-Strike: Global Offensive", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what should hollow knight developers fix in their next update?", "intent": "recommendations", "game": "Hollow Knight", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "strategic recommendations to minimize dead cells churn", "intent": "recommendations", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "where are the best market opportunities on steam right now?", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "which genres have high player demand but low game supply?", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "show me top underserved tags in the market explorer", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "where should our indie studio build our next title?", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what are the white space opportunities in the pc gaming market?", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "market opportunity finder report for roguelike and deckbuilder tags", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "which genre niches have the highest median revenue per game?", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "show market opportunities for coop survival titles", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "find underserved tag combinations with high opportunity scores", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "where are the lowest competition niches on steam?", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "top opportunity scores for simulation and management games", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "market white space analysis for 2026 indie releases", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "which steam tags currently show the greatest revenue gap?", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "market explorer overview of underserved genres", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what genre has the best opportunity score right now?", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "find untapped market niches on steam for new developers", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what games should i play next based on my library?", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "give me personalized recommendations for my steam profile", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "suggest some games i might like based on my played titles", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what should i play tonight?", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "recommend games based on my recent favorite games", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "can you generate recommendations for me from the catalog?", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "personal recommendations based on my library history", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what to play next if i like indie roguelikes?", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "give me a list of game recommendations tailored to me", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "which games in the steam catalog fit my taste best?", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "recommend titles matching my steam preferences", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what should i download next from steam?", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "suggest top picks for me using the two-tower model", "intent": "recommend_for_me", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "personal game recommendations for me please", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what game should i try next based on my library?", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "show me recommendations for my steam account", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "can you write a python script to web scrape steam reviews?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "how do i build a unity game engine shader for water?", "intent": "out_of_scope", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "write an unreal engine 5 c++ character movement component", "intent": "out_of_scope", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what is the best gaming laptop to buy under $1000?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "why is my nvidia graphics card overheating while playing games?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "can you crack the steam drm for elden ring?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "write a review of the super mario bros movie", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "how do i fix a blue screen of death error on windows 11?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the playstation 5 pro hardware specification?", "intent": "out_of_scope", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "how much money did nintendo make on the switch console?", "intent": "out_of_scope", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "can you code a discord bot in javascript for game alerts?", "intent": "out_of_scope", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what are the cheat codes for gta san andreas?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "who is the voice actor for kratos in god of war?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "how do i set up a minecraft server on linux?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "write a fantasy story about a rogue fighting goblins", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the weather in seattle tomorrow?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "who was the 16th president of the united states?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "how do you make authentic italian carbonara?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the capital city of australia?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "explain quantum computing in simple words", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "who won the best picture oscar in 2024?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "how many ounces are in a pound?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "tell me a funny joke about programmer life", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what are the symptoms of seasonal allergies?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "write an email asking for a meeting with my professor", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the speed of sound in air?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "how do i brew cold brew coffee at home?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "who invented the telephone?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the stock price of valve corporation?", "intent": "out_of_scope", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "how do i change the oil in a honda civic?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the highest mountain in south america?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "can you solve this calculus integral for me?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the history of the roman colosseum?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "recommend a good book on world war 2", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "how do solar panels generate electricity?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what are the rules of chess?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "translate 'good morning' into japanese", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "how do airplanes stay in the air?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the difference between a virus and a bacteria?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "tell me about the deep sea creatures in the marianas trench", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the current population of tokyo?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "how do i train for a half marathon?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "who directed the movie inception?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "what is the chemical formula for caffeine?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "write a resume summary for a software engineer", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "wuts hades about tho?", "intent": "game_overview", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "is hollow knite worth it??", "intent": "price_advice", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "tell me why pple hate dead cells", "intent": "top_complaints", "game": "Dead Cells", "mode": "player", "verified": false, "source": "generator"}
+{"text": "r people still playin terraria?", "intent": "game_overview", "game": "Terraria", "mode": "player", "verified": false, "source": "generator"}
+{"text": "subnautica reviews kinda mixed or good?", "intent": "review_summary", "game": "Subnautica", "mode": "player", "verified": false, "source": "generator"}
+{"text": "hades sale price when??", "intent": "price_advice", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "games like eldn ring but easier", "intent": "similar_games", "game": "Elden Ring", "mode": "player", "verified": false, "source": "generator"}
+{"text": "is celeste 2 hard for me?", "intent": "player_match", "game": "Celeste", "mode": "player", "verified": false, "source": "generator"}
+{"text": "wut do fans luv in stardew?", "intent": "loved_features", "game": "Stardew Valley", "mode": "player", "verified": false, "source": "generator"}
+{"text": "slay spire alternatives pc", "intent": "similar_games", "game": "Slay the Spire", "mode": "player", "verified": false, "source": "generator"}
+{"text": "baldurs gate 3 reviews summary pls", "intent": "review_summary", "game": "Baldur's Gate 3", "mode": "player", "verified": false, "source": "generator"}
+{"text": "wher r the market gaps on steam?", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "rec me some games 2 play", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "whats the weather like outside lol", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "hades 6d difficulty rating", "intent": "player_match", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "how much is hollow knight rite now", "intent": "price_advice", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "cyberpunk 2077 bugs fixed yet?", "intent": "top_complaints", "game": "Cyberpunk 2077", "mode": "player", "verified": false, "source": "generator"}
+{"text": "why do reviews praise portal 2 so much?", "intent": "loved_features", "game": "Portal 2", "mode": "player", "verified": false, "source": "generator"}
+{"text": "elden ring competitors in market explorer", "intent": "similar_games", "game": "Elden Ring", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "dead cells succsess score model prediction", "intent": "success_score", "game": "Dead Cells", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "did that recent update break csgo?", "intent": "update_impact", "game": "Counter-Strike: Global Offensive", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "wut shud devs fix in subnautica?", "intent": "recommendations", "game": "Subnautica", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "tell me market oppurtunity tags", "intent": "market_opportunity", "game": null, "mode": "developer", "verified": false, "source": "generator"}
+{"text": "what game shuld i get next on steam?", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "who is elon musk?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "is hades combat too fast paced for beginners?", "intent": "player_match", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "hollow knite main complaints from reviews", "intent": "top_complaints", "game": "Hollow Knight", "mode": "player", "verified": false, "source": "generator"}
+{"text": "stardew vally price discount tracker", "intent": "price_advice", "game": "Stardew Valley", "mode": "player", "verified": false, "source": "generator"}
+{"text": "slay the spire shap driver explanation", "intent": "success_score", "game": "Slay the Spire", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "did terraria player sentiment drop after patch?", "intent": "update_impact", "game": "Terraria", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "strategic advice for indie deckbuilders", "intent": "recommendations", "game": "Slay the Spire", "mode": "developer", "verified": false, "source": "generator"}
+{"text": "recommendations 4 me based on my history", "intent": "recommend_for_me", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "can u write my college essay?", "intent": "out_of_scope", "game": null, "mode": "player", "verified": false, "source": "generator"}
+{"text": "how long does a run take in hades?", "intent": "player_match", "game": "Hades", "mode": "player", "verified": false, "source": "generator"}
+{"text": "give me the review breakdown for dead cells", "intent": "review_summary", "game": "Dead Cells", "mode": "player", "verified": false, "source": "generator"}
+{"text": "yo whats hades all about anyway?", "intent": "game_overview", "game": "Hades", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "gimme the run down on hollow nite", "intent": "game_overview", "game": "Hollow Knight", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "is dead cell a roguelike or metroidvania?", "intent": "game_overview", "game": "Dead Cells", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "who made celeste and when did it drop?", "intent": "game_overview", "game": "Celeste", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "tell me bout stardew valley genre tags", "intent": "game_overview", "game": "Stardew Valley", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "are players diggin elden ring on steam?", "intent": "review_summary", "game": "Elden Ring", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "do reviews say cyberpunk is actually good now?", "intent": "review_summary", "game": "Cyberpunk 2077", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "hows the general consensus on portal 2?", "intent": "review_summary", "game": "Portal 2", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "are steam peeps happy with subnautica?", "intent": "review_summary", "game": "Subnautica", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "whats the community verdict on baldurs gate 3?", "intent": "review_summary", "game": "Baldur's Gate 3", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "why do gamers rage quit hollow knight?", "intent": "top_complaints", "game": "Hollow Knight", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "whats the worst bug people hate in cyberpunk?", "intent": "top_complaints", "game": "Cyberpunk 2077", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "main gripes people have with slay the spier", "intent": "top_complaints", "game": "Slay the Spire", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "tell me what players bitch about in deadcells", "intent": "top_complaints", "game": "Dead Cells", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "biggest pet peeves in hades negative reviews", "intent": "top_complaints", "game": "Hades", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "what makes hollow knight music so epic?", "intent": "loved_features", "game": "Hollow Knight", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "why do peeps love stardew valley farming loop?", "intent": "loved_features", "game": "Stardew Valley", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "best parts of hades according to positive reviews", "intent": "loved_features", "game": "Hades", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "what do players praise most in dead cells combat?", "intent": "loved_features", "game": "Dead Cells", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "what makes portal 2 co-op so much fun?", "intent": "loved_features", "game": "Portal 2", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "got anything that feels like hollow knight?", "intent": "similar_games", "game": "Hollow Knight", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "games that scratch the stardew valley itch", "intent": "similar_games", "game": "Stardew Valley", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "alternatives to dead cells with pixel art", "intent": "similar_games", "game": "Dead Cells", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "what plays like slay the spire on pc?", "intent": "similar_games", "game": "Slay the Spire", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "games similar to hades but turn based", "intent": "similar_games", "game": "Hades", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "is elden ring worth sixty bucks?", "intent": "price_advice", "game": "Elden Ring", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "should i buy hades now or wait for winter sale?", "intent": "price_advice", "game": "Hades", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "has stardew vally ever had a 50% discount?", "intent": "price_advice", "game": "Stardew Valley", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "is hollow knight a steal at fifteen dollars?", "intent": "price_advice", "game": "Hollow Knight", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "is cyberpunk price dropping anytime soon?", "intent": "price_advice", "game": "Cyberpunk 2077", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "will i hate celeste if i suck at platformers?", "intent": "player_match", "game": "Celeste", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "is hades too fast twitch for casual players?", "intent": "player_match", "game": "Hades", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "does elden ring have easy mode for noobs?", "intent": "player_match", "game": "Elden Ring", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "is subnautica too terrifying if i have thalassophobia?", "intent": "player_match", "game": "Subnautica", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "how hard is dead cells on keyboard and mouse?", "intent": "player_match", "game": "Dead Cells", "mode": "player", "source": "hand_written", "verified": true}
+{"text": "what does the ml model predict for hades revenue?", "intent": "success_score", "game": "Hades", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "whats the success score forecast for dead cells?", "intent": "success_score", "game": "Dead Cells", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "breakdown of shap drivers for slay the spire success", "intent": "success_score", "game": "Slay the Spire", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "commercial potential rating for hollow knight", "intent": "success_score", "game": "Hollow Knight", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "will an indie roguelike succeed according to your model?", "intent": "success_score", "game": null, "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "did the latest patch hurt review scores for terraria?", "intent": "update_impact", "game": "Terraria", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "how did players react to the new csgo update?", "intent": "update_impact", "game": "Counter-Strike: Global Offensive", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "sentiment change after the latest dead cells dlc", "intent": "update_impact", "game": "Dead Cells", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "did negative reviews spike after the recent elden ring patch?", "intent": "update_impact", "game": "Elden Ring", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "track patch notes reception for cyberpunk", "intent": "update_impact", "game": "Cyberpunk 2077", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "what should the devs fix next in subnautica?", "intent": "recommendations", "game": "Subnautica", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "actionable roadmap ideas to boost hollow knight retention", "intent": "recommendations", "game": "Hollow Knight", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "competitor gap suggestions for dead cells studio", "intent": "recommendations", "game": "Dead Cells", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "how can hades developers reduce player churn?", "intent": "recommendations", "game": "Hades", "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "what features should an indie dev prioritize based on reviews?", "intent": "recommendations", "game": null, "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "where is the whitespace for roguelike deckbuilders?", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "what genre tags are high revenue but low competition?", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "undeserved niches on steam for indie studios", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "where should our team invest for our next steam game?", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "top market gaps in turn based strategy", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": true}
+{"text": "recommend me something good to play tonight", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "what should i boot up based on what i played?", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "pick a new game for me please", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "got any bangers for me based on my history?", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "suggest a hidden gem from the catalog", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "can you write python code to scrape metacritic?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "how do i overclock my ryzen cpu for gaming?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "who won the premier league in 2023?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "how do you make beef wellington from scratch?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "write a poem about dragons and knights", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "is the steam deck oled screen worth upgrading to?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "what is the current price of bitcoin in usd?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "can you teach me how to speak conversational french?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "how does a 4-stroke internal combustion engine work?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "what are the best graphics settings for warzone?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "who is the current prime minister of the uk?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "why is my hdmi monitor displaying no signal?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "what is the capital of new zealand?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "solve for x in the equation 3x + 15 = 45", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}
+{"text": "write a polite cover letter for a data scientist job", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true}

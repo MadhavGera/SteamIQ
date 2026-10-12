@@ -37,6 +37,7 @@ mlruns/
 backend/mlruns/
 backend/data/
 data/
+!backend/assistant/data/
 
 # ─── Database dumps ───────────────────────────────────────────────────────────
 *.sql

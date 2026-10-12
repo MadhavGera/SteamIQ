@@ -12,7 +12,6 @@ flow dynamically from persisted leaderboard and evaluation reports.
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
 import logging
 from datetime import UTC, datetime
@@ -203,10 +202,7 @@ Evaluated across 5,000 held-out evaluation users with 95% bootstrap confidence i
         lb = assistant_reports.get("assistant_leaderboard", {})
         models = lb.get("models", {})
         headline_key = lb.get("headline_model", "minilm_logistic")
-        if isinstance(headline_key, dict):
-            headline = headline_key
-        else:
-            headline = models.get(headline_key, {})
+        headline = headline_key if isinstance(headline_key, dict) else models.get(headline_key, {})
         tfidf = models.get("tfidf", {})
         keyword = models.get("keyword", {})
 
@@ -309,7 +305,7 @@ Evaluated on gold domain queries:
 
 def main():
     parser = argparse.ArgumentParser(description="Generate SteamIQ Model Cards")
-    args = parser.parse_args()
+    parser.parse_args()
 
     job = GenerateModelCardsJob()
     job.execute()

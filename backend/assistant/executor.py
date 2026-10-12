@@ -13,6 +13,7 @@ Key requirements:
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 from dataclasses import dataclass, field
 from typing import Any
@@ -74,10 +75,8 @@ def build_structured_call_args(
     liked_ids: list[int] = []
     if isinstance(liked_raw, list):
         for lid in liked_raw:
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 liked_ids.append(int(lid))
-            except (ValueError, TypeError):
-                pass
 
     return StructuredCallArgs(
         intent=intent,
@@ -241,7 +240,7 @@ def execute_template(
         if not loved:
             answer = f"No specific praised features have been isolated for **{title}**."
         else:
-            items_str = "\n".join([f"- **{l.get('feature', 'Highlight')}**: {l.get('praise', l.get('text', ''))}" for l in loved[:4]])
+            items_str = "\n".join([f"- **{feat.get('feature', 'Highlight')}**: {feat.get('praise', feat.get('text', ''))}" for feat in loved[:4]])
             if is_player:
                 answer = f"What players love most about **{title}**:\n{items_str}"
             else:

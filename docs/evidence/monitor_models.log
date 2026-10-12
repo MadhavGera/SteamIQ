@@ -1,10 +1,9 @@
-2026-10-12T02:57:30 | INFO     | steamiq.jobs.monitor_models | Executing model drift monitoring job...
-2026-10-12T02:57:30 | INFO     | steamiq.recsys.data | Loading RecsysData from D:\Coding\SteamIQ\backend\data\recsys (dataset_version=c662b8232dc0)...
-2026-10-12T02:57:30 | INFO     | steamiq.jobs.monitor_models | Saved monitoring report to D:\Coding\SteamIQ\backend\data\recsys\reports\monitoring.json
-2026-10-12T02:57:30 | INFO     | steamiq.jobs.monitor_models | Successfully upserted 'monitoring' report to serving_rec_reports.
+﻿2026-10-12T08:33:00 | INFO     | steamiq.jobs.monitor_models | Executing model drift monitoring job...
+2026-10-12T08:33:00 | INFO     | steamiq.recsys.data | Loading RecsysData from D:\Coding\SteamIQ\backend\data\recsys (dataset_version=c662b8232dc0)...
+2026-10-12T08:33:00 | INFO     | steamiq.jobs.monitor_models | Saved monitoring report to D:\Coding\SteamIQ\backend\data\recsys\reports\monitoring.json
 
 # SteamIQ Model Drift Monitoring Report
-**Generated:** 2026-10-11T21:27:30.779485+00:00 | **Dataset Version:** `c662b8232dc0`
+**Generated:** 2026-10-12T03:03:00.236333+00:00 | **Dataset Version:** `c662b8232dc0`
 **Overall Status:** `no live data`
 
 > No live serving inference traffic captured in bounded telemetry buffer. All online drift detectors are in standby mode.

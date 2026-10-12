@@ -7,10 +7,6 @@ Runs completely offline without external databases or pre-existing artifacts.
 """
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from typing import Any
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -18,7 +14,6 @@ import scipy.sparse as sp
 import torch
 
 from recsys.data import RecsysData
-from recsys.models.als import ALSRecommender
 from recsys.models.content import ContentRecommender
 from recsys.models.itemknn import ItemKNNRecommender
 from recsys.models.popularity import PopularityRecommender

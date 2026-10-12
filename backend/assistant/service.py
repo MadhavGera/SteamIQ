@@ -20,11 +20,8 @@ import numpy as np
 
 from assistant.calibration import TemperatureCalibrator
 from assistant.entity_resolver import EntityResolver
-from assistant.executor import build_structured_call_args, execute_template
+from assistant.executor import execute_template
 from assistant.intents import (
-    ALL_INTENTS,
-    DEV_ONLY_INTENTS,
-    GAME_SPECIFIC_INTENTS,
     Intent,
 )
 from assistant.retrieval import PassageIndex
@@ -185,6 +182,7 @@ class AssistantService:
         if db_session is not None and app_id is not None:
             try:
                 from sqlalchemy import select
+
                 from db.models import MartGameOverview, MartReviewIntelligence, ServingSimilarGame
 
                 if intent in {Intent.GAME_OVERVIEW.value, Intent.PRICE_ADVICE.value}:

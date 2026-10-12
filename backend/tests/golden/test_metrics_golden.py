@@ -14,6 +14,7 @@ hand-calculated analytical ground truths:
 from __future__ import annotations
 
 import math
+
 import numpy as np
 import pytest
 
@@ -21,8 +22,6 @@ from recsys.metrics import (
     catalog_coverage_at_k,
     compute_ranks,
     diversity_at_k,
-    get_top_k_indices,
-    head_share_at_k,
     hit_rate_at_k,
     mrr_at_k,
     ndcg_at_k,

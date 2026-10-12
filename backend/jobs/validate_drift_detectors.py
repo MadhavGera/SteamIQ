@@ -17,7 +17,6 @@ import asyncio
 import json
 import logging
 import random
-import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -80,7 +79,7 @@ class ValidateDriftDetectorsJob(BaseJob):
             psi_values = []
             ks_values = []
 
-            for trial in range(self.n_trials):
+            for _trial in range(self.n_trials):
                 ref_sample = np.random.choice(ref_population, size=self.sample_size, replace=True)
                 curr_sample = np.random.choice(ref_population, size=self.sample_size, replace=True) + (delta * pop_std)
 
@@ -118,7 +117,7 @@ class ValidateDriftDetectorsJob(BaseJob):
             psi_detections = []
             ks_detections = []
 
-            for trial in range(self.n_trials):
+            for _trial in range(self.n_trials):
                 ref_sample = np.random.choice(ref_population, size=self.sample_size, replace=True)
                 # Scale variance around mean
                 curr_sample = pop_mean + (np.random.choice(ref_population, size=self.sample_size, replace=True) - pop_mean) * (1.0 + delta)
@@ -152,7 +151,7 @@ class ValidateDriftDetectorsJob(BaseJob):
             jsd_detections = []
             jsd_values = []
 
-            for trial in range(self.n_trials):
+            for _trial in range(self.n_trials):
                 ref_counts = np.random.multinomial(self.sample_size, ref_cat_probs)
 
                 # Perturb probabilities by concentrating mass onto first category

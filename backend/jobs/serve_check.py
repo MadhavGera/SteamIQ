@@ -314,7 +314,7 @@ class ServeCheckJob(BaseJob):
 
         # Build 100 distinct user histories from catalog interactions
         distinct_histories: list[list[int]] = []
-        for u_int, pos in user_train_pos.items():
+        for _u_int, pos in user_train_pos.items():
             if len(pos) >= 3:
                 h_apps = [int(service.idx_to_app_id[idx]) for idx in pos[-10:] if idx in service.idx_to_app_id]
                 if h_apps and h_apps not in distinct_histories:

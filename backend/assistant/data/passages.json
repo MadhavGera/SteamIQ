@@ -1,0 +1,296 @@
+[
+  {
+    "passage_id": 1,
+    "app_id": 1145360,
+    "game_title": "Hades",
+    "field": "summary",
+    "text": "Hades combines fast-paced hack-and-slash action with rich character storytelling in Greek mythology."
+  },
+  {
+    "passage_id": 2,
+    "app_id": 1145360,
+    "game_title": "Hades",
+    "field": "complaints",
+    "text": "Some players complain about repetitive boss fights across extended playthroughs and finger strain."
+  },
+  {
+    "passage_id": 3,
+    "app_id": 1145360,
+    "game_title": "Hades",
+    "field": "loved_features",
+    "text": "Players praise the god boon combinations, voice acting, dynamic dialogue, and polished soundtrack."
+  },
+  {
+    "passage_id": 4,
+    "app_id": 367520,
+    "game_title": "Hollow Knight",
+    "field": "summary",
+    "text": "A vast, atmospheric 2D metroidvania set in the ruined bug kingdom of Hallownest."
+  },
+  {
+    "passage_id": 5,
+    "app_id": 367520,
+    "game_title": "Hollow Knight",
+    "field": "complaints",
+    "text": "Critics and negative reviews point out punishing corpse-run walkbacks and lack of early direction."
+  },
+  {
+    "passage_id": 6,
+    "app_id": 367520,
+    "game_title": "Hollow Knight",
+    "field": "loved_features",
+    "text": "Praised for intricate map exploration, tight nail combat, deep lore, and gorgeous hand-drawn art."
+  },
+  {
+    "passage_id": 7,
+    "app_id": 588650,
+    "game_title": "Dead Cells",
+    "field": "summary",
+    "text": "A rogue-lite, metroidvania-inspired action-platformer featuring frantic 2D combat and procedural levels."
+  },
+  {
+    "passage_id": 8,
+    "app_id": 588650,
+    "game_title": "Dead Cells",
+    "field": "complaints",
+    "text": "Players note severe difficulty spikes on higher Boss Stem Cell levels and RNG weapon dependency."
+  },
+  {
+    "passage_id": 9,
+    "app_id": 588650,
+    "game_title": "Dead Cells",
+    "field": "loved_features",
+    "text": "Celebrated for lightning-fast responsive dodge rolls, weapon synergy diversity, and regular content updates."
+  },
+  {
+    "passage_id": 10,
+    "app_id": 413150,
+    "game_title": "Stardew Valley",
+    "field": "summary",
+    "text": "Peaceful open-ended country-life RPG where players build their farm, raise animals, and befriend villagers."
+  },
+  {
+    "passage_id": 11,
+    "app_id": 413150,
+    "game_title": "Stardew Valley",
+    "field": "complaints",
+    "text": "Complaints mention slow early-game walking speed and stamina constraints during initial days."
+  },
+  {
+    "passage_id": 12,
+    "app_id": 413150,
+    "game_title": "Stardew Valley",
+    "field": "loved_features",
+    "text": "Beloved for wholesome relaxing loop, endless secrets, community center milestones, and multiplayer."
+  },
+  {
+    "passage_id": 13,
+    "app_id": 105600,
+    "game_title": "Terraria",
+    "field": "summary",
+    "text": "2D sandbox adventure digging, building, and battling countless monsters across sprawling caverns."
+  },
+  {
+    "passage_id": 14,
+    "app_id": 105600,
+    "game_title": "Terraria",
+    "field": "complaints",
+    "text": "Beginners struggle with the lack of an in-game tutorial and finding required progression guide steps."
+  },
+  {
+    "passage_id": 15,
+    "app_id": 105600,
+    "game_title": "Terraria",
+    "field": "loved_features",
+    "text": "Famed for immense depth of boss progression, limitless crafting freedom, and deep modding community."
+  },
+  {
+    "passage_id": 16,
+    "app_id": 504230,
+    "game_title": "Celeste",
+    "field": "summary",
+    "text": "A precision platformer about climbing Madeline's inner turmoil and the mystical Celeste Mountain."
+  },
+  {
+    "passage_id": 17,
+    "app_id": 504230,
+    "game_title": "Celeste",
+    "field": "complaints",
+    "text": "Players find late-game B-sides and Farewell chapter screens extraordinarily punishing."
+  },
+  {
+    "passage_id": 18,
+    "app_id": 504230,
+    "game_title": "Celeste",
+    "field": "loved_features",
+    "text": "Acclaimed for Lena Raine's emotional soundtrack, instant respawns, empathetic mental health narrative, and assist mode."
+  },
+  {
+    "passage_id": 19,
+    "app_id": 264710,
+    "game_title": "Subnautica",
+    "field": "summary",
+    "text": "An underwater open-world adventure game of oceanic exploration, survival craft, and alien ecology."
+  },
+  {
+    "passage_id": 20,
+    "app_id": 264710,
+    "game_title": "Subnautica",
+    "field": "complaints",
+    "text": "Common complaints include pop-in rendering bugs and extreme thalassophobia when entering the Void."
+  },
+  {
+    "passage_id": 21,
+    "app_id": 264710,
+    "game_title": "Subnautica",
+    "field": "loved_features",
+    "text": "Universally praised for atmospheric tension, deep submersible crafting, biome design, and discovery."
+  },
+  {
+    "passage_id": 22,
+    "app_id": 646570,
+    "game_title": "Slay the Spire",
+    "field": "summary",
+    "text": "A genre-defining roguelike deckbuilder where players draft relic synergies to defeat the Spire's heart."
+  },
+  {
+    "passage_id": 23,
+    "app_id": 646570,
+    "game_title": "Slay the Spire",
+    "field": "complaints",
+    "text": "Negative reviews lament harsh RNG card reward droughts on Ascension 20 runs."
+  },
+  {
+    "passage_id": 24,
+    "app_id": 646570,
+    "game_title": "Slay the Spire",
+    "field": "loved_features",
+    "text": "Praised for mathematical balance, distinct character archetypes, emergent card synergies, and infinite replayability."
+  },
+  {
+    "passage_id": 25,
+    "app_id": 620,
+    "game_title": "Portal 2",
+    "field": "summary",
+    "text": "A hilarious first-person puzzle adventure featuring Aperture Science's portal gun and GLaDOS."
+  },
+  {
+    "passage_id": 26,
+    "app_id": 620,
+    "game_title": "Portal 2",
+    "field": "complaints",
+    "text": "Some users feel the single-player campaign ends too quickly and desire more test chambers."
+  },
+  {
+    "passage_id": 27,
+    "app_id": 620,
+    "game_title": "Portal 2",
+    "field": "loved_features",
+    "text": "Renowned for Stephen Merchant and Ellen McLain's comedic writing, inventive cooperative campaign, and spatial puzzles."
+  },
+  {
+    "passage_id": 28,
+    "app_id": 730,
+    "game_title": "Counter-Strike: Global Offensive",
+    "field": "summary",
+    "text": "A tactical multiplayer first-person shooter centered on bomb defusal and competitive round economy."
+  },
+  {
+    "passage_id": 29,
+    "app_id": 730,
+    "game_title": "Counter-Strike: Global Offensive",
+    "field": "complaints",
+    "text": "Frequent complaints cite cheaters, toxic matchmaking teammates, and smurfing in lower ranks."
+  },
+  {
+    "passage_id": 30,
+    "app_id": 730,
+    "game_title": "Counter-Strike: Global Offensive",
+    "field": "loved_features",
+    "text": "Celebrated for crisp gun mechanics, tactical team communication, tournament esports scene, and skin trading."
+  },
+  {
+    "passage_id": 31,
+    "app_id": 570,
+    "game_title": "Dota 2",
+    "field": "summary",
+    "text": "A deeply complex 5v5 competitive MOBA where teams draft unique heroes to destroy the Ancient."
+  },
+  {
+    "passage_id": 32,
+    "app_id": 570,
+    "game_title": "Dota 2",
+    "field": "complaints",
+    "text": "Criticized for an impenetrable new-player learning curve and severe teammate hostility."
+  },
+  {
+    "passage_id": 33,
+    "app_id": 570,
+    "game_title": "Dota 2",
+    "field": "loved_features",
+    "text": "Lauded for completely free unmonetized hero roster, tactical strategic depth, and high skill ceiling."
+  },
+  {
+    "passage_id": 34,
+    "app_id": 1091500,
+    "game_title": "Cyberpunk 2077",
+    "field": "summary",
+    "text": "An open-world action-adventure RPG set in the dystopian megalopolis of Night City as mercenary V."
+  },
+  {
+    "passage_id": 35,
+    "app_id": 1091500,
+    "game_title": "Cyberpunk 2077",
+    "field": "complaints",
+    "text": "Historical launch glitches, pedestrian AI quirks, and vehicular handling received player criticism."
+  },
+  {
+    "passage_id": 36,
+    "app_id": 1091500,
+    "game_title": "Cyberpunk 2077",
+    "field": "loved_features",
+    "text": "Adored for breathtaking neon visuals, Keanu Reeves as Johnny Silverhand, cinematic storytelling, and 2.0 perk overhaul."
+  },
+  {
+    "passage_id": 37,
+    "app_id": 1245620,
+    "game_title": "Elden Ring",
+    "field": "summary",
+    "text": "A massive open-world souls-like action RPG directed by Hidetaka Miyazaki with worldbuilding by George R. R. Martin."
+  },
+  {
+    "passage_id": 38,
+    "app_id": 1245620,
+    "game_title": "Elden Ring",
+    "field": "complaints",
+    "text": "Players criticize delayed attack inputs, camera tracking on giant bosses, and late-game damage spikes."
+  },
+  {
+    "passage_id": 39,
+    "app_id": 1245620,
+    "game_title": "Elden Ring",
+    "field": "loved_features",
+    "text": "Praised for staggering freedom of exploration, build variety, memorable legacy dungeons, and boss spectacle."
+  },
+  {
+    "passage_id": 40,
+    "app_id": 1086940,
+    "game_title": "Baldur's Gate 3",
+    "field": "summary",
+    "text": "A story-rich party-based CRPG set in the D&D Forgotten Realms where player choices dictate fate."
+  },
+  {
+    "passage_id": 41,
+    "app_id": 1086940,
+    "game_title": "Baldur's Gate 3",
+    "field": "complaints",
+    "text": "Act 3 performance drops in the lower city and party inventory management clunkiness."
+  },
+  {
+    "passage_id": 42,
+    "app_id": 1086940,
+    "game_title": "Baldur's Gate 3",
+    "field": "loved_features",
+    "text": "Hailed for unmatched narrative agency, rich companion romances, tactile turn-based combat, and voice acting."
+  }
+]

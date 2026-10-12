@@ -214,6 +214,7 @@ class EntityResolver:
         fn = 0  # Expected unknown, resolver resolved to some app_id (false acceptance)
         tn = 0  # Expected known, resolver resolved to expected_app_id
 
+        known_vec = []
         for item in labeled_queries:
             text = item.get("text") or item.get("query", "")
             exp_id = item.get("expected_app_id")
@@ -224,8 +225,10 @@ class EntityResolver:
                 known_total += 1
                 if resolved_id == exp_id:
                     known_correct += 1
+                    known_vec.append(1.0)
                     tn += 1
                 else:
+                    known_vec.append(0.0)
                     fp += 1
             else:
                 if resolved_id is None:
@@ -238,8 +241,18 @@ class EntityResolver:
         rec = float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0
         f1 = (2 * prec * rec) / (prec + rec) if (prec + rec) > 0 else 0.0
 
+        ci = [top1_acc, top1_acc]
+        if known_vec:
+            arr = np.array(known_vec, dtype=float)
+            rng = np.random.default_rng(42)
+            means = [float(np.mean(rng.choice(arr, size=len(arr), replace=True))) for _ in range(1000)]
+            ci = [round(float(np.percentile(means, 2.5)), 4), round(float(np.percentile(means, 97.5)), 4)]
+
         return {
+            "n_total": len(labeled_queries),
+            "n_known": known_total,
             "top1_accuracy": round(top1_acc, 4),
+            "top1_accuracy_ci": ci,
             "unknown_rejection_precision": round(prec, 4),
             "unknown_rejection_recall": round(rec, 4),
             "unknown_rejection_f1": round(f1, 4),

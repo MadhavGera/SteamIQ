@@ -15,14 +15,12 @@ import pytest
 from core.cache import ResponseCache
 from jobs.retrain_gate import evaluate_gate_decision
 from mlops.drift import (
-    calculate_js_distance,
     calculate_ks,
     calculate_psi,
     evaluate_categorical_drift,
     evaluate_distribution_drift,
 )
 from mlops.telemetry import TelemetryRegistry
-
 
 # ─── 1. Statistical Drift Detector Tests ──────────────────────────────────────
 
@@ -106,7 +104,7 @@ def test_telemetry_registry_privacy_preservation():
         if isinstance(val, list):
             # Elements must strictly be numeric scalars
             for elem in val:
-                assert isinstance(elem, (int, float, np.number))
+                assert isinstance(elem, int | float | np.number)
 
     prom_text = reg.render_prometheus_text()
     assert "steamiq_recsys_requests_total" in prom_text

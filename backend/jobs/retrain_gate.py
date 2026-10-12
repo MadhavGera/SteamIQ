@@ -136,10 +136,11 @@ class RetrainGateJob(BaseJob):
         if leaderboard_file.exists():
             try:
                 lb_data = json.loads(leaderboard_file.read_text(encoding="utf-8"))
-                dataset_version = lb_data.get("dataset_version", "unknown")
+                dataset_version = lb_data.get("metadata", {}).get("dataset_version", lb_data.get("dataset_version", "unknown"))
                 for m in lb_data.get("models", []):
                     if m.get("model_name") == champion_model:
-                        champion_val_ndcg = float(m.get("val_ndcg_at_10", 0.0))
+                        val_m = m.get("val_metrics", {})
+                        champion_val_ndcg = float(val_m.get("ndcg_at_10", m.get("val_ndcg_at_10", 0.0)))
                         break
             except Exception as e:
                 self.logger.warning("Could not read leaderboard: %s", e)
@@ -150,7 +151,9 @@ class RetrainGateJob(BaseJob):
             dry_run_payload = {
                 "decision": "DRY_RUN",
                 "mode": "dry_run",
-                "explanation": "Dry-run execution only. Pass --execute to run multi-seed training and gate evaluation.",
+                "training_executed": False,
+                "seed_artifacts_saved": [],
+                "explanation": "Dry-run execution only. Pass --execute to run multi-seed training and gate evaluation. No model was trained and zero seed artifacts were written.",
                 "dataset_version": dataset_version,
                 "champion": {
                     "model_name": champion_model,
@@ -179,22 +182,45 @@ class RetrainGateJob(BaseJob):
         data = RecsysData.load(self.data_dir)
         n_users = min(1000, len(data.val_df))
 
-        # Evaluate seeds (using existing evaluated seed results or simulated variations)
-        # Seed results for candidate family across seeds
-        rng = np.random.default_rng(self.seeds[0])
-        sim_shift = float(15) / 10000.0
-        sim_scale = float(10) / 10000.0
-        simulated_seed_ndcgs = [
-            champion_val_ndcg + float(rng.normal(loc=sim_shift, scale=sim_scale))
-            for _ in self.seeds
-        ]
+        # Train and save >= 3 challenger seeds
+        challenger_seed_ndcgs = []
+        challenger_user_score_runs = []
+        seed_artifact_root = self.data_dir / "artifacts" / self.challenger_family
+        seed_artifact_root.mkdir(parents=True, exist_ok=True)
 
-        champion_user_scores = rng.normal(loc=champion_val_ndcg, scale=0.05, size=n_users)
-        challenger_user_scores = champion_user_scores + rng.normal(loc=sim_shift, scale=0.02, size=n_users)
+        from recsys.evaluate import evaluate_model
+        from recsys.ranker import RankerConfig, train_ranker
+
+        for s in self.seeds:
+            self.logger.info("Executing training for challenger seed %d...", s)
+            cfg = RankerConfig(
+                seed=s,
+                n_estimators=100,
+                learning_rate=0.05,
+                train_stats_only=True,
+            )
+            trained_model = train_ranker(data=data, config=cfg)
+            seed_dir = seed_artifact_root / f"seed_{s}"
+            seed_dir.mkdir(parents=True, exist_ok=True)
+            trained_model.save(seed_dir)
+
+            res = evaluate_model(
+                model=trained_model,
+                data=data,
+                split="val",
+                max_users=n_users,
+                seed=s,
+                allow_small_user_set=True,
+            )
+            challenger_seed_ndcgs.append(res.metrics["ndcg_at_10"])
+            challenger_user_score_runs.append(res.per_user["ndcg_at_10"])
+
+        challenger_user_scores = np.mean(challenger_user_score_runs, axis=0)
+        champion_user_scores = np.full(len(challenger_user_scores), champion_val_ndcg)
 
         gate_eval = evaluate_gate_decision(
             champion_val_ndcg=champion_val_ndcg,
-            challenger_seed_ndcgs=simulated_seed_ndcgs,
+            challenger_seed_ndcgs=challenger_seed_ndcgs,
             challenger_user_metrics=challenger_user_scores,
             champion_user_metrics=champion_user_scores,
         )
@@ -202,6 +228,8 @@ class RetrainGateJob(BaseJob):
         decision_payload = {
             **gate_eval,
             "mode": "executed",
+            "training_executed": True,
+            "seed_artifacts_saved": [str(seed_artifact_root / f"seed_{s}") for s in self.seeds],
             "champion_model": champion_model,
             "challenger_family": self.challenger_family,
             "dataset_version": data.dataset_version,
