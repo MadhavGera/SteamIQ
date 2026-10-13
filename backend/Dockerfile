@@ -2,6 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1 \
+    HF_HOME=/home/steamiq/.cache/huggingface
+
 # Install system deps needed for psycopg2 build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
@@ -9,14 +13,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up user and HuggingFace cache directory
-ENV HF_HOME=/home/steamiq/.cache/huggingface
 RUN adduser --disabled-password --gecos "" steamiq && \
     mkdir -p /home/steamiq/.cache/huggingface && \
     chown -R steamiq:steamiq /home/steamiq /app
 
+# Upgrade build tools and install CPU-only torch first to prevent PyPI timeouts / hash mismatches
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir --retries 5 --timeout 300 --index-url https://download.pytorch.org/whl/cpu torch
+
 # Copy and install Python deps from pyproject.toml first (layer cache)
 COPY pyproject.toml README.md ./
-RUN pip install --default-timeout=120 --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu .
+RUN pip install --no-cache-dir --retries 5 --timeout 300 .
 
 # Pre-download sentence transformer model into HF_HOME
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')" && \

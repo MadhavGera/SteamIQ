@@ -363,6 +363,30 @@ async def test_get_market_intelligence_not_found(client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
+async def test_get_market_opportunities_endpoint(client: AsyncClient) -> None:
+    """Test GET /api/v1/market/opportunities endpoint."""
+    resp = await client.get("/api/v1/market/opportunities?limit=10")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    assert isinstance(body["data"], list)
+    if body["data"]:
+        first = body["data"][0]
+        assert "opportunity_score" in first
+        assert "genre_or_tag" in first
+
+
+@pytest.mark.anyio
+async def test_get_market_trends_endpoint(client: AsyncClient) -> None:
+    """Test GET /api/v1/market/trends endpoint."""
+    resp = await client.get("/api/v1/market/trends?limit=10")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    assert isinstance(body["data"], list)
+
+
+@pytest.mark.anyio
 async def test_golden_rule_no_raw_reads_in_apis() -> None:
     """
     Permanent Architectural Guardrail:

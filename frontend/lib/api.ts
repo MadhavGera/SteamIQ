@@ -121,6 +121,38 @@ export interface MarketIntelligence {
   recent_price_snapshots: PriceSnapshotItem[];
 }
 
+export interface MarketOpportunityScore {
+  id: number;
+  genre_or_tag: string;
+  entity_type: "genre" | "tag" | string;
+  opportunity_score: number;
+  demand_score: number;
+  saturation_score: number;
+  sentiment_gap_score: number;
+  monetization_score: number;
+  game_count: number;
+  median_price_usd: number | null;
+  avg_review_score: number | null;
+  top_complaint_themes: string[] | Record<string, number> | null;
+  top_loved_themes: string[] | Record<string, number> | null;
+  recommended_features: string[] | Record<string, string> | null;
+  materialized_at: string | null;
+}
+
+export interface MarketTrendPoint {
+  id: number;
+  app_id: number | null;
+  trend_type: string;
+  category: string | null;
+  recorded_date: string;
+  metric_name: string;
+  metric_value: number;
+  change_pct_7d: number | null;
+  change_pct_30d: number | null;
+  metadata_payload: Record<string, unknown> | null;
+  materialized_at: string | null;
+}
+
 // ─── Update Impact Tracker Types (Phase 5 — Tab 6) ────────────────────────────
 
 export interface UpdateImpactItem {
@@ -613,6 +645,36 @@ export const api = {
    */
   async getMarket(appId: number): Promise<MarketIntelligence> {
     return apiFetch<MarketIntelligence>(`/api/v1/games/${appId}/market`);
+  },
+
+  /**
+   * Get pre-materialized Market Opportunity scores (Phase 5 / Roadmap §2).
+   * GET /api/v1/market/opportunities
+   */
+  async getMarketOpportunities(
+    entityType?: "genre" | "tag",
+    limit = 50
+  ): Promise<MarketOpportunityScore[]> {
+    const params = new URLSearchParams();
+    if (entityType) params.set("entity_type", entityType);
+    params.set("limit", String(limit));
+    return apiFetch<MarketOpportunityScore[]>(`/api/v1/market/opportunities?${params}`);
+  },
+
+  /**
+   * Get pre-materialized Market Trends (Phase 5 / Roadmap §2).
+   * GET /api/v1/market/trends
+   */
+  async getMarketTrends(
+    trendType?: string,
+    category?: string,
+    limit = 100
+  ): Promise<MarketTrendPoint[]> {
+    const params = new URLSearchParams();
+    if (trendType) params.set("trend_type", trendType);
+    if (category) params.set("category", category);
+    params.set("limit", String(limit));
+    return apiFetch<MarketTrendPoint[]>(`/api/v1/market/trends?${params}`);
   },
 
   /**

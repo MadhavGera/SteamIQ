@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-steamiq}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5434}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -62,7 +62,7 @@ services:
     volumes:
       # Mount source for hot-reload in development
       - ./backend:/app
-      - ./backend/data/recsys/artifacts:/app/data/recsys/artifacts:ro
+      - ./backend/data/recsys/artifacts:/app/data/recsys/artifacts
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 30s

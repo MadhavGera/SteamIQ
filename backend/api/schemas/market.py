@@ -65,3 +65,41 @@ class MarketIntelligenceSchema(BaseModel):
     market_opportunity: MarketOpportunitySummarySchema | None = Field(default=None, description="Market opportunity metrics for genre")
 
     model_config = {"from_attributes": True}
+
+
+class OpportunityScoreItemSchema(BaseModel):
+    """Pre-materialized genre or tag market opportunity score item."""
+    id: int = Field(..., description="Opportunity score record ID")
+    genre_or_tag: str = Field(..., description="Genre or tag cluster identifier")
+    entity_type: str = Field(..., description="Entity classification ('genre' or 'tag')")
+    opportunity_score: float = Field(..., description="Weighted market opportunity score [0-100]")
+    demand_score: float = Field(..., description="Demand index [0-100]")
+    saturation_score: float = Field(..., description="Market saturation index [0-100]")
+    sentiment_gap_score: float = Field(..., description="Sentiment gap / complaint headroom [0-100]")
+    monetization_score: float = Field(..., description="Monetization index [0-100]")
+    game_count: int = Field(default=0, description="Total game count in cluster")
+    median_price_usd: float | None = Field(default=None, description="Median list price in USD")
+    avg_review_score: float | None = Field(default=None, description="Average review score [0-100]")
+    top_complaint_themes: list[str] | dict | None = Field(default=None, description="Top negative review themes")
+    top_loved_themes: list[str] | dict | None = Field(default=None, description="Top positive review themes")
+    recommended_features: list[str] | dict | None = Field(default=None, description="Recommended feature signals")
+    materialized_at: datetime | None = Field(default=None, description="Timestamp of mart calculation")
+
+    model_config = {"from_attributes": True}
+
+
+class MarketTrendPointSchema(BaseModel):
+    """Pre-materialized market or platform trend data point."""
+    id: int = Field(..., description="Trend record ID")
+    app_id: int | None = Field(default=None, description="Associated Steam App ID if game-specific")
+    trend_type: str = Field(..., description="Trend category (e.g. 'platform', 'genre', 'patch_impact')")
+    category: str | None = Field(default=None, description="Sub-category or genre name")
+    recorded_date: datetime = Field(..., description="Time point of observation")
+    metric_name: str = Field(..., description="Metric name (e.g. 'avg_sentiment', 'avg_ccu')")
+    metric_value: float = Field(..., description="Numeric value of metric")
+    change_pct_7d: float | None = Field(default=None, description="7-day percentage change")
+    change_pct_30d: float | None = Field(default=None, description="30-day percentage change")
+    metadata_payload: dict | None = Field(default=None, description="Additional context payload")
+    materialized_at: datetime | None = Field(default=None, description="Timestamp of mart calculation")
+
+    model_config = {"from_attributes": True}

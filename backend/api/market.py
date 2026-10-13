@@ -14,26 +14,28 @@ from __future__ import annotations
 import time
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.market import (
     MarketIntelligenceSchema,
     MarketOpportunitySummarySchema,
+    MarketTrendPointSchema,
+    OpportunityScoreItemSchema,
     PriceHistoryPointSchema,
     PricingSpectrumSchema,
 )
 from core.errors import GameNotFoundError
 from core.response import ApiResponse, ResponseMeta
 from db.base import get_db
-from db.models import MartGameOverview, MartOpportunityScore
+from db.models import MartGameOverview, MartOpportunityScore, MartTrend
 
-router = APIRouter(prefix="/games", tags=["market"])
+router = APIRouter(tags=["market"])
 
 
 @router.get(
-    "/{app_id}/market",
+    "/games/{app_id}/market",
     response_model=ApiResponse[MarketIntelligenceSchema],
     summary="Get Market & Pricing Intelligence for a game",
     description=(
@@ -128,3 +130,109 @@ async def get_market_intelligence(
         data=data,
         meta=ResponseMeta(took_ms=round(took_ms, 2)),
     )
+
+
+@router.get(
+    "/market/opportunities",
+    response_model=ApiResponse[list[OpportunityScoreItemSchema]],
+    summary="List Pre-Materialized Market Opportunity Scores",
+    description=(
+        "Returns pre-materialized opportunity scores across genres and tags from "
+        "mart_opportunity_scores. Strictly zero live aggregation (ADR 0001, Decision 2)."
+    ),
+)
+async def get_market_opportunities(
+    entity_type: Annotated[str | None, Query(description="Filter by 'genre' or 'tag'")] = None,
+    limit: Annotated[int, Query(description="Maximum results to return", ge=1, le=100)] = 50,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,  # type: ignore[assignment]
+) -> ApiResponse[list[OpportunityScoreItemSchema]]:
+    start = time.perf_counter()
+
+    stmt = select(MartOpportunityScore).order_by(MartOpportunityScore.opportunity_score.desc())
+    if entity_type:
+        stmt = stmt.where(MartOpportunityScore.entity_type == entity_type)
+    stmt = stmt.limit(limit)
+
+    res = await db.execute(stmt)
+    rows = res.scalars().all()
+
+    data = [
+        OpportunityScoreItemSchema(
+            id=r.id,
+            genre_or_tag=r.genre_or_tag,
+            entity_type=r.entity_type,
+            opportunity_score=float(r.opportunity_score),
+            demand_score=float(r.demand_score),
+            saturation_score=float(r.saturation_score),
+            sentiment_gap_score=float(r.sentiment_gap_score),
+            monetization_score=float(r.monetization_score),
+            game_count=r.game_count,
+            median_price_usd=float(r.median_price_usd) if r.median_price_usd is not None else None,
+            avg_review_score=float(r.avg_review_score) if r.avg_review_score is not None else None,
+            top_complaint_themes=r.top_complaint_themes if isinstance(r.top_complaint_themes, list | dict) else None,
+            top_loved_themes=r.top_loved_themes if isinstance(r.top_loved_themes, list | dict) else None,
+            recommended_features=r.recommended_features if isinstance(r.recommended_features, list | dict) else None,
+            materialized_at=r.materialized_at,
+        )
+        for r in rows
+    ]
+
+    took_ms = (time.perf_counter() - start) * 1000
+    return ApiResponse(
+        success=True,
+        data=data,
+        meta=ResponseMeta(took_ms=round(took_ms, 2)),
+    )
+
+
+@router.get(
+    "/market/trends",
+    response_model=ApiResponse[list[MarketTrendPointSchema]],
+    summary="List Pre-Materialized Market Trends",
+    description=(
+        "Returns pre-materialized market and platform trends from mart_trends. "
+        "Strictly zero live aggregation (ADR 0001, Decision 2)."
+    ),
+)
+async def get_market_trends(
+    trend_type: Annotated[str | None, Query(description="Filter by trend_type (e.g. 'platform', 'genre')")] = None,
+    category: Annotated[str | None, Query(description="Filter by category or genre name")] = None,
+    limit: Annotated[int, Query(description="Maximum results to return", ge=1, le=500)] = 100,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,  # type: ignore[assignment]
+) -> ApiResponse[list[MarketTrendPointSchema]]:
+    start = time.perf_counter()
+
+    stmt = select(MartTrend).order_by(MartTrend.recorded_date.desc())
+    if trend_type:
+        stmt = stmt.where(MartTrend.trend_type == trend_type)
+    if category:
+        stmt = stmt.where(MartTrend.category == category)
+    stmt = stmt.limit(limit)
+
+    res = await db.execute(stmt)
+    rows = res.scalars().all()
+
+    data = [
+        MarketTrendPointSchema(
+            id=r.id,
+            app_id=r.app_id,
+            trend_type=r.trend_type,
+            category=r.category,
+            recorded_date=r.recorded_date,
+            metric_name=r.metric_name,
+            metric_value=float(r.metric_value),
+            change_pct_7d=float(r.change_pct_7d) if r.change_pct_7d is not None else None,
+            change_pct_30d=float(r.change_pct_30d) if r.change_pct_30d is not None else None,
+            metadata_payload=r.metadata_payload if isinstance(r.metadata_payload, dict) else None,
+            materialized_at=r.materialized_at,
+        )
+        for r in rows
+    ]
+
+    took_ms = (time.perf_counter() - start) * 1000
+    return ApiResponse(
+        success=True,
+        data=data,
+        meta=ResponseMeta(took_ms=round(took_ms, 2)),
+    )
+
