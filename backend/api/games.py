@@ -68,15 +68,19 @@ async def fetch_steam_search(query: str) -> list[dict[str, Any]]:
     ),
 )
 async def search_games(
-    q: Annotated[str, Query(min_length=1, max_length=200, description="Game name search term")],
+    q: Annotated[str, Query(min_length=0, max_length=200, description="Game name search term")] = "",
     page: Annotated[int, Query(ge=1, description="Page number")] = 1,
-    page_size: Annotated[int, Query(ge=1, le=50, description="Results per page")] = 20,
+    page_size: Annotated[int, Query(ge=1, le=100, description="Results per page")] = 20,
     db: Annotated[AsyncSession, Depends(get_db)] = None,  # type: ignore[assignment]
 ) -> ApiResponse[GameSearchResultSchema]:
     start = time.perf_counter()
 
-    like_pattern = f"%{q}%"
-    base_query = select(MartGameOverview).where(MartGameOverview.name.ilike(like_pattern))
+    trimmed_q = q.strip()
+    if trimmed_q:
+        like_pattern = f"%{trimmed_q}%"
+        base_query = select(MartGameOverview).where(MartGameOverview.name.ilike(like_pattern))
+    else:
+        base_query = select(MartGameOverview)
 
     # Count total matches
     count_query = select(func.count()).select_from(base_query.subquery())
@@ -92,8 +96,8 @@ async def search_games(
     # Track which app_ids are in the local database matches
     local_app_ids = {g.app_id for g in db_games}
     
-    # Fetch from Steam API (only realistically needed for the first page)
-    steam_items = await fetch_steam_search(q) if page == 1 else []
+    # Fetch from Steam API (only realistically needed for the first page with a search term)
+    steam_items = await fetch_steam_search(trimmed_q) if (page == 1 and trimmed_q) else []
     
     merged_games = [GameSummarySchema.model_validate(g) for g in db_games]
     

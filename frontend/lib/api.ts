@@ -799,6 +799,16 @@ export const api = {
   },
 
   /**
+   * Materialize and synchronize recommender evidence reports.
+   * POST /api/v1/ops/materialize-reports
+   */
+  async materializeReports(): Promise<{ reports_count: number; dataset_version: string }> {
+    return apiFetch<{ reports_count: number; dataset_version: string }>("/api/v1/ops/materialize-reports", {
+      method: "POST",
+    });
+  },
+
+  /**
    * Health check.
    * GET /health
    */

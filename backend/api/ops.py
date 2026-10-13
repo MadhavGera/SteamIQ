@@ -10,16 +10,35 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+import time
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Depends, Response
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from core.response import ApiResponse
+from db.base import get_db
 from mlops.telemetry import TelemetryRegistry
 
 logger = logging.getLogger("steamiq.api.ops")
 router = APIRouter(prefix="/ops", tags=["ops"])
+
+
+@router.post(
+    "/materialize-reports",
+    summary="Materialize & Synchronize RecSys Evidence Reports",
+    description="Loads precomputed reports from disk and synchronizes them into PostgreSQL serving_rec_reports.",
+)
+async def materialize_reports(
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ApiResponse[dict[str, Any]]:
+    start = time.perf_counter()
+    from jobs.generate_reports import GenerateReportsJob
+    job = GenerateReportsJob()
+    result = await job._run_async(session=db)
+    took_ms = (time.perf_counter() - start) * 1000
+    return ApiResponse.ok(data=result, took_ms=round(took_ms, 2))
 
 
 @router.get(

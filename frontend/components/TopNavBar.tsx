@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserModeToggle } from "@/components/UserModeToggle";
@@ -8,6 +9,8 @@ import { useUserMode } from "@/lib/UserModeContext";
 export function TopNavBar() {
   const pathname = usePathname();
   const { isDeveloper } = useUserMode();
+  const [devMenuOpen, setDevMenuOpen] = useState(false);
+  const devMenuRef = useRef<HTMLDivElement>(null);
 
   const isSearchLanding = pathname === "/dashboard";
   const isForYou = pathname === "/";
@@ -17,6 +20,37 @@ export function TopNavBar() {
   const isCompare = pathname.startsWith("/compare");
   const isMarketExplorer = pathname.startsWith("/market-explorer");
   const isGameIntelligence = pathname.startsWith("/games");
+
+  const isDevSectionActive =
+    isMarketExplorer || isModelLab || isEmbeddingMap || (isDeveloper && isForYou);
+
+  // Close dropdown on outside click or escape key
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (devMenuRef.current && !devMenuRef.current.contains(event.target as Node)) {
+        setDevMenuOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setDevMenuOpen(false);
+      }
+    }
+
+    if (devMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [devMenuOpen]);
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setDevMenuOpen(false);
+  }, [pathname]);
 
   return (
     <nav className="stitch-nav">
@@ -65,18 +99,7 @@ export function TopNavBar() {
             Compare Games
           </Link>
 
-          {/* 4. Market Explorer (Developer Mode Only per Roadmap §2) */}
-          {isDeveloper && (
-            <Link
-              href="/market-explorer"
-              className={`stitch-nav__link ${isMarketExplorer ? "stitch-nav__link--active" : ""}`}
-              id="nav-market-explorer"
-            >
-              Market Explorer
-            </Link>
-          )}
-
-          {/* 5. Ask SteamIQ with AI Badge Pill */}
+          {/* 4. Ask SteamIQ with AI Badge Pill */}
           <Link
             href="/ask"
             className={`stitch-nav__link ${isAsk ? "stitch-nav__link--active" : ""}`}
@@ -86,34 +109,105 @@ export function TopNavBar() {
             <span className="stitch-nav__badge-ai">AI</span>
           </Link>
 
-          {/* Developer Tools (Dev Mode Only) */}
+          {/* 5. Developer Tools Dropdown (Dev Mode Only - keeps navbar sleek & uncluttered) */}
           {isDeveloper && (
-            <>
-              <Link
-                href="/"
-                className={`stitch-nav__link ${isForYou ? "stitch-nav__link--active" : ""}`}
-                id="nav-for-you"
-                title="RecSys For You Feed"
+            <div className="stitch-nav__dropdown" ref={devMenuRef}>
+              <button
+                type="button"
+                onClick={() => setDevMenuOpen((prev) => !prev)}
+                className={`stitch-nav__link stitch-nav__dropdown-toggle ${isDevSectionActive ? "stitch-nav__link--active" : ""}`}
+                id="nav-dev-tools-toggle"
+                aria-expanded={devMenuOpen}
+                aria-haspopup="true"
               >
-                For You
-              </Link>
-              <Link
-                href="/model-lab"
-                className={`stitch-nav__link ${isModelLab ? "stitch-nav__link--active" : ""}`}
-                id="nav-model-lab"
-                title="ML / Model Evaluation Lab"
-              >
-                Model Lab
-              </Link>
-              <Link
-                href="/embedding-map"
-                className={`stitch-nav__link ${isEmbeddingMap ? "stitch-nav__link--active" : ""}`}
-                id="nav-embedding-map"
-                title="UMAP Semantic Embedding Map"
-              >
-                Embedding Map
-              </Link>
-            </>
+                <span className="material-symbols-outlined" style={{ fontSize: "15px" }}>
+                  terminal
+                </span>
+                <span>Dev Tools</span>
+                <span
+                  className="material-symbols-outlined"
+                  style={{
+                    fontSize: "16px",
+                    transform: devMenuOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.2s ease",
+                  }}
+                >
+                  expand_more
+                </span>
+              </button>
+
+              {devMenuOpen && (
+                <div className="stitch-nav__dropdown-menu" role="menu">
+                  <Link
+                    href="/market-explorer"
+                    className={`stitch-nav__dropdown-item ${isMarketExplorer ? "stitch-nav__dropdown-item--active" : ""}`}
+                    role="menuitem"
+                    id="nav-market-explorer"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: "18px", color: "var(--accent-cyan)" }}>
+                      insights
+                    </span>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>Market Explorer</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        Demand matrix & trends
+                      </div>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/model-lab"
+                    className={`stitch-nav__dropdown-item ${isModelLab ? "stitch-nav__dropdown-item--active" : ""}`}
+                    role="menuitem"
+                    id="nav-model-lab"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: "18px", color: "var(--accent-primary)" }}>
+                      science
+                    </span>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>Model Lab</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        Benchmarks & ablations
+                      </div>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/embedding-map"
+                    className={`stitch-nav__dropdown-item ${isEmbeddingMap ? "stitch-nav__dropdown-item--active" : ""}`}
+                    role="menuitem"
+                    id="nav-embedding-map"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: "18px", color: "#10b981" }}>
+                      hub
+                    </span>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>Embedding Map</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        2D UMAP latent space
+                      </div>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/"
+                    className={`stitch-nav__dropdown-item ${isForYou ? "stitch-nav__dropdown-item--active" : ""}`}
+                    role="menuitem"
+                    id="nav-for-you"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: "18px", color: "#f59e0b" }}>
+                      recommend
+                    </span>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>RecSys Feed</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        Two-Tower candidate stream
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
         </div>
 

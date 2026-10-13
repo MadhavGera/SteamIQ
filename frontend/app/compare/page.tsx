@@ -34,8 +34,8 @@ export default function ComparePage() {
       setError(null);
       try {
         const [searchRes, modelsRes, catalogRes] = await Promise.all([
-          api.searchGames("", 1, 60),
-          api.recsysModels(),
+          api.searchGames("", 1, 50).catch(() => ({ games: [], total: 0, page: 1, page_size: 50, query: "" })),
+          api.recsysModels().catch(() => []),
           api.searchRecsysItems("", 10).catch(() => null),
         ]);
         if (isMounted) {

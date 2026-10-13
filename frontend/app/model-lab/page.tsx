@@ -44,35 +44,29 @@ export default function ModelLabPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("leaderboard");
   const [reports, setReports] = useState<Record<string, RecsysReport>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  const loadReports = React.useCallback(async () => {
+    const fetched: Record<string, RecsysReport> = {};
+
+    await Promise.all(
+      REPORT_KEYS.map(async (key) => {
+        try {
+          const rep = await api.recsysReport(key);
+          fetched[key] = rep;
+        } catch {
+          // Gracefully ignore missing reports; tabs will render their respective empty states
+        }
+      })
+    );
+
+    setReports(fetched);
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadReports() {
-      const fetched: Record<string, RecsysReport> = {};
-
-      await Promise.all(
-        REPORT_KEYS.map(async (key) => {
-          try {
-            const rep = await api.recsysReport(key);
-            fetched[key] = rep;
-          } catch {
-            // Gracefully ignore missing reports; tabs will render their respective empty states
-          }
-        })
-      );
-
-      if (isMounted) {
-        setReports(fetched);
-        setIsLoading(false);
-      }
-    }
-
     loadReports();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  }, [loadReports]);
 
   const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
     { key: "leaderboard", label: "Leaderboard", icon: "leaderboard" },
@@ -120,6 +114,32 @@ export default function ModelLabPage() {
             Comprehensive offline evaluation metrics, paired statistical tests, fairness diagnostics, and TreeSHAP explainability.
             Headline production champion: <strong style={{ color: "var(--accent-primary)" }}>recsys_two_tower_clean</strong>. With train-only item stats there is no evidence of gain (CI includes 0); the all-time-stats gain is leakage-confounded.
           </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button
+            type="button"
+            onClick={async () => {
+              setIsSyncing(true);
+              try {
+                await api.materializeReports();
+                await loadReports();
+              } finally {
+                setIsSyncing(false);
+              }
+            }}
+            disabled={isSyncing}
+            className="btn btn--secondary"
+            style={{ fontSize: "13px", padding: "8px 16px", display: "flex", alignItems: "center", gap: "6px" }}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: "16px", animation: isSyncing ? "spin 1s linear infinite" : "none" }}
+            >
+              refresh
+            </span>
+            {isSyncing ? "Syncing..." : "Sync Benchmarks"}
+          </button>
         </div>
       </div>
 
