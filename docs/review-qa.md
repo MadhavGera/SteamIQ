@@ -183,12 +183,12 @@ With train-only item stats, there is no evidence of gain (CI includes 0: $+0.002
 
 ### Q27: How does Ask SteamIQ fulfill conversational assistance without LLM hallucinations or data leakage?
 **Answer:** Ask SteamIQ (Phase 6, ADR 0006) completely avoids free-text LLM generation. Instead, ML is confined to:
-1. **Query Intent Classification:** `all-MiniLM-L6-v2` embeddings + calibrated logistic regression routes user questions to 12 domain intents (Accuracy 91.54% [0.8860, 0.9485], ECE 0.0400).
-2. **Selective Abstention:** Threshold $\tau = 0.10$ and Temperature Scaling ($T=0.210$) abstain when confidence is insufficient.
-3. **Entity Resolution:** Hybrid exact/fuzzy/semantic matcher links mentioned titles to catalog `app_id` (86.1% accuracy).
+1. **Query Intent Classification:** `all-MiniLM-L6-v2` embeddings + calibrated logistic regression routes user questions to 12 domain intents (Accuracy 92.22% [0.8933, 0.9481], ECE 0.0298).
+2. **Selective Abstention:** Threshold $\tau = 0.100$ and Temperature Scaling ($T=0.170$) abstain when confidence is insufficient.
+3. **Entity Resolution:** Hybrid exact/fuzzy/semantic matcher links mentioned titles to catalog `app_id` (84.68% [0.8000, 0.8936] accuracy).
 4. **Deterministic SQL Execution:** Resolved queries execute parameterized SQL lookups strictly against precomputed `mart_*` and `serving_*` tables. Answers are populated into deterministic markdown templates.
-5. **Extractive Passage Retrieval:** Out-of-scope or unmapped queries fall back to dense retrieval of unedited quoted excerpts from verified player reviews (Recall@3 = 83.33%, MRR = 0.5278).  
-**Evidence:** [`backend/assistant/`](backend/assistant/), [`backend/jobs/train_assistant.py`](backend/jobs/train_assistant.py), [`docs/steamiq-0006-assistant-inference.md`](docs/steamiq-0006-assistant-inference.md).
+5. **Extractive Passage Retrieval:** Out-of-scope or unmapped queries fall back to dense retrieval of unedited quoted excerpts from verified player reviews (Recall@3 = 81.54%, MRR = 0.7133 [0.6210, 0.8056]).  
+Evidence: [`backend/assistant/`](backend/assistant/), [`backend/jobs/train_assistant.py`](backend/jobs/train_assistant.py), [`docs/steamiq-0006-assistant-inference.md`](docs/steamiq-0006-assistant-inference.md).
 
 ---
 

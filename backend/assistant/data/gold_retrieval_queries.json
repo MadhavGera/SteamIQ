@@ -1,327 +1,392 @@
 [
   {
-    "query": "why do players get frustrated with hades boss runs?",
-    "expected_app_id": 1145360,
-    "expected_field": "complaints"
+    "query": "why is elden ring stuttering so much on pc?",
+    "expected_app_id": 1245620,
+    "expected_field": "complaints",
+    "written_by": "user"
   },
   {
-    "query": "what god boons and dialogue make hades so popular?",
-    "expected_app_id": 1145360,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "what kind of game is hades in greek mythology?",
-    "expected_app_id": 1145360,
-    "expected_field": "summary"
-  },
-  {
-    "query": "repetitive boss fights and finger strain in hades",
-    "expected_app_id": 1145360,
-    "expected_field": "complaints"
-  },
-  {
-    "query": "soundtrack and voice acting praise in hades",
-    "expected_app_id": 1145360,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "tell me about hallownest and the hollow knight setting",
+    "query": "what do players love about hallownest atmosphere?",
     "expected_app_id": 367520,
-    "expected_field": "summary"
+    "expected_field": "loved_features",
+    "written_by": "user"
   },
   {
-    "query": "why do people criticize hollow knight corpse run walkbacks?",
+    "query": "is hollow knight too difficult for casual gamers?",
     "expected_app_id": 367520,
-    "expected_field": "complaints"
+    "expected_field": "summary",
+    "written_by": "user"
   },
   {
-    "query": "what makes the nail combat and art in hollow knight so good?",
-    "expected_app_id": 367520,
-    "expected_field": "loved_features"
+    "query": "do players complain about mouse and keyboard controls in hades?",
+    "expected_app_id": 1145360,
+    "expected_field": "complaints",
+    "written_by": "user"
   },
   {
-    "query": "lack of map direction and dying far from bench in hollow knight",
-    "expected_app_id": 367520,
-    "expected_field": "complaints"
-  },
-  {
-    "query": "deep lore and hand drawn metroidvania map exploration hollow knight",
-    "expected_app_id": 367520,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "how does the combat loop work in dead cells?",
+    "query": "why do people praise the music and art in dead cells?",
     "expected_app_id": 588650,
-    "expected_field": "summary"
+    "expected_field": "loved_features",
+    "written_by": "user"
   },
   {
-    "query": "why are boss stem cells so frustratingly hard in dead cells?",
-    "expected_app_id": 588650,
-    "expected_field": "complaints"
+    "query": "what are the main criticisms of cyberpunk performance?",
+    "expected_app_id": 1091500,
+    "expected_field": "complaints",
+    "written_by": "user"
   },
   {
-    "query": "responsive dodge rolling and weapon synergies in dead cells",
-    "expected_app_id": 588650,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "rng bad weapon drops ruining runs in dead cells",
-    "expected_app_id": 588650,
-    "expected_field": "complaints"
-  },
-  {
-    "query": "metroidvania rogue-lite frantic 2d platforming dead cells",
-    "expected_app_id": 588650,
-    "expected_field": "summary"
-  },
-  {
-    "query": "farming life and befriending villagers stardew valley",
+    "query": "how relaxing is the farming gameplay loop in stardew valley?",
     "expected_app_id": 413150,
-    "expected_field": "summary"
+    "expected_field": "loved_features",
+    "written_by": "user"
   },
   {
-    "query": "why is early game stamina and walking so slow in stardew?",
-    "expected_app_id": 413150,
-    "expected_field": "complaints"
+    "query": "what are the biggest balance complaints in slay the spire?",
+    "expected_app_id": 646570,
+    "expected_field": "complaints",
+    "written_by": "user"
   },
   {
-    "query": "what makes community center and multiplayer in stardew so relaxing?",
-    "expected_app_id": 413150,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "annoying energy bar depletion in first days of stardew valley",
-    "expected_app_id": 413150,
-    "expected_field": "complaints"
-  },
-  {
-    "query": "endless farm secrets and wholesome cozy gameplay stardew",
-    "expected_app_id": 413150,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "2d sandbox digging caverns and fighting bosses terraria",
-    "expected_app_id": 105600,
-    "expected_field": "summary"
-  },
-  {
-    "query": "no tutorial and confusing progression steps in terraria",
-    "expected_app_id": 105600,
-    "expected_field": "complaints"
-  },
-  {
-    "query": "huge boss variety crafting freedom and tmodloader in terraria",
-    "expected_app_id": 105600,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "hard for beginners to know what to do next in terraria",
-    "expected_app_id": 105600,
-    "expected_field": "complaints"
-  },
-  {
-    "query": "deep crafting depth and endless building freedom terraria",
-    "expected_app_id": 105600,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "madeline climbing celeste mountain precision platformer",
+    "query": "what is the general player consensus on celeste on steam?",
     "expected_app_id": 504230,
-    "expected_field": "summary"
+    "expected_field": "summary",
+    "written_by": "user"
   },
   {
-    "query": "brutal b-sides and farewell chapter screen difficulty in celeste",
+    "query": "what do reviewers say about fluid combat in hades?",
+    "expected_app_id": 1145360,
+    "expected_field": "loved_features",
+    "written_by": "user"
+  },
+  {
+    "query": "why do people get frustrated with difficulty spikes in dead cells?",
+    "expected_app_id": 588650,
+    "expected_field": "complaints",
+    "written_by": "user"
+  },
+  {
+    "query": "is terraria overwhelming for beginners with no guide?",
+    "expected_app_id": 105600,
+    "expected_field": "complaints",
+    "written_by": "user"
+  },
+  {
+    "query": "what makes the exploration and map design in hollow knight so good?",
+    "expected_app_id": 367520,
+    "expected_field": "loved_features",
+    "written_by": "user"
+  },
+  {
+    "query": "how positive are the steam review scores for portal 2?",
+    "expected_app_id": 400,
+    "expected_field": "summary",
+    "written_by": "user"
+  },
+  {
+    "query": "why are players angry about camera angles in elden ring bosses?",
+    "expected_app_id": 1245620,
+    "expected_field": "complaints",
+    "written_by": "user"
+  },
+  {
+    "query": "what do fans praise most about stardew valley community?",
+    "expected_app_id": 413150,
+    "expected_field": "loved_features",
+    "written_by": "user"
+  },
+  {
+    "query": "how do people feel about the story and lore in elden ring?",
+    "expected_app_id": 1245620,
+    "expected_field": "loved_features",
+    "written_by": "user"
+  },
+  {
+    "query": "are there input latency or controller lag issues in celeste?",
     "expected_app_id": 504230,
-    "expected_field": "complaints"
+    "expected_field": "complaints",
+    "written_by": "user"
   },
   {
-    "query": "lena raine music instant respawns and mental health story celeste",
+    "query": "what kind of game experience is minecraft dungeons according to reviews?",
+    "expected_app_id": 1672970,
+    "expected_field": "summary",
+    "written_by": "user"
+  },
+  {
+    "query": "why do negative reviews complain about repetitiveness in hades runs?",
+    "expected_app_id": 1145360,
+    "expected_field": "complaints",
+    "written_by": "user"
+  },
+  {
+    "query": "what makes the soundtrack in celeste so memorable?",
     "expected_app_id": 504230,
-    "expected_field": "loved_features"
+    "expected_field": "loved_features",
+    "written_by": "user"
   },
   {
-    "query": "extremely frustrating platforming screens near end of celeste",
+    "query": "why do players dislike the grinding in minecraft dungeons?",
+    "expected_app_id": 1672970,
+    "expected_field": "complaints",
+    "written_by": "user"
+  },
+  {
+    "query": "what is the community verdict on terraria replay value?",
+    "expected_app_id": 105600,
+    "expected_field": "summary",
+    "written_by": "user"
+  },
+  {
+    "query": "what do players love about combat pacing in dead cells?",
+    "expected_app_id": 588650,
+    "expected_field": "loved_features",
+    "written_by": "user"
+  },
+  {
+    "query": "are there bugs or glitch issues reported in dota 2?",
+    "expected_app_id": 570,
+    "expected_field": "complaints",
+    "written_by": "user"
+  },
+  {
+    "query": "why do competitive players praise csgo gunplay mechanics?",
+    "expected_app_id": 730,
+    "expected_field": "loved_features",
+    "written_by": "user"
+  },
+  {
+    "query": "how do reviews summarize sleeping dogs definitive edition?",
+    "expected_app_id": 307690,
+    "expected_field": "summary",
+    "written_by": "user"
+  },
+  {
+    "query": "what are the main complaints about team fortress 2 bot issues?",
+    "expected_app_id": 440,
+    "expected_field": "complaints",
+    "written_by": "user"
+  },
+  {
+    "query": "why do players love left 4 dead 2 co op campaign?",
+    "expected_app_id": 550,
+    "expected_field": "loved_features",
+    "written_by": "user"
+  },
+  {
+    "query": "how is the overall review consensus for slay the spire deckbuilder?",
+    "expected_app_id": 646570,
+    "expected_field": "summary",
+    "written_by": "user"
+  },
+  {
+    "query": "extractive summary of player consensus for hollow knight",
+    "expected_app_id": 367520,
+    "expected_field": "summary",
+    "written_by": "agent"
+  },
+  {
+    "query": "technical performance and frame pacing criticisms in elden ring",
+    "expected_app_id": 1245620,
+    "expected_field": "complaints",
+    "written_by": "agent"
+  },
+  {
+    "query": "retention drivers and praised mechanics in hades",
+    "expected_app_id": 1145360,
+    "expected_field": "loved_features",
+    "written_by": "agent"
+  },
+  {
+    "query": "input responsiveness and difficulty spikes in celeste",
     "expected_app_id": 504230,
-    "expected_field": "complaints"
+    "expected_field": "complaints",
+    "written_by": "agent"
   },
   {
-    "query": "underwater open ocean survival and alien crafting subnautica",
-    "expected_app_id": 264710,
-    "expected_field": "summary"
+    "query": "audio design and atmosphere retention drivers in hollow knight",
+    "expected_app_id": 367520,
+    "expected_field": "loved_features",
+    "written_by": "agent"
   },
   {
-    "query": "pop-in texture glitches and terror in deep void subnautica",
-    "expected_app_id": 264710,
-    "expected_field": "complaints"
+    "query": "overall sentiment and positive rating overview for dead cells",
+    "expected_app_id": 588650,
+    "expected_field": "summary",
+    "written_by": "agent"
   },
   {
-    "query": "cyclops submersible building biome exploration tension subnautica",
-    "expected_app_id": 264710,
-    "expected_field": "loved_features"
+    "query": "stardew valley player complaints regarding progression friction",
+    "expected_app_id": 413150,
+    "expected_field": "complaints",
+    "written_by": "agent"
   },
   {
-    "query": "rendering pop-ins breaking immersion subnautica",
-    "expected_app_id": 264710,
-    "expected_field": "complaints"
+    "query": "worldbuilding and environmental storytelling praise in elden ring",
+    "expected_app_id": 1245620,
+    "expected_field": "loved_features",
+    "written_by": "agent"
   },
   {
-    "query": "atmospheric deep sea biome sound design subnautica",
-    "expected_app_id": 264710,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "roguelike deckbuilder drafting relic synergies slay the spire",
+    "query": "steam customer consensus and positive ratio for slay the spire",
     "expected_app_id": 646570,
-    "expected_field": "summary"
+    "expected_field": "summary",
+    "written_by": "agent"
   },
   {
-    "query": "ascension 20 rng ruining good card decks slay the spire",
-    "expected_app_id": 646570,
-    "expected_field": "complaints"
+    "query": "pacing and repetitive encounter criticisms for hades",
+    "expected_app_id": 1145360,
+    "expected_field": "complaints",
+    "written_by": "agent"
   },
   {
-    "query": "mathematical card balance and distinct character archetypes slay the spire",
-    "expected_app_id": 646570,
-    "expected_field": "loved_features"
+    "query": "combat fluidity praise and encounter depth in dead cells",
+    "expected_app_id": 588650,
+    "expected_field": "loved_features",
+    "written_by": "agent"
   },
   {
-    "query": "unlucky card draws leading to cheap deaths in slay the spire",
-    "expected_app_id": 646570,
-    "expected_field": "complaints"
+    "query": "terraria review consensus and community reception overview",
+    "expected_app_id": 105600,
+    "expected_field": "summary",
+    "written_by": "agent"
   },
   {
-    "query": "deep strategic card synergies and replay value slay the spire",
-    "expected_app_id": 646570,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "aperture science portal gun and glados comedic puzzles portal 2",
-    "expected_app_id": 620,
-    "expected_field": "summary"
-  },
-  {
-    "query": "campaign is too short and needs more chambers portal 2",
-    "expected_app_id": 620,
-    "expected_field": "complaints"
-  },
-  {
-    "query": "stephen merchant wheatley dialogue and co-op campaign portal 2",
-    "expected_app_id": 620,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "spatial puzzle mechanics and hilarious valve writing portal 2",
-    "expected_app_id": 620,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "competitive bomb defusal 5v5 tactical round economy csgo",
-    "expected_app_id": 730,
-    "expected_field": "summary"
-  },
-  {
-    "query": "cheaters toxic teammates and smurfs in matchmaking csgo",
-    "expected_app_id": 730,
-    "expected_field": "complaints"
-  },
-  {
-    "query": "crisp gun recoil mechanics esports tournaments csgo",
-    "expected_app_id": 730,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "spinbotters and bad anti-cheat experience csgo",
-    "expected_app_id": 730,
-    "expected_field": "complaints"
-  },
-  {
-    "query": "deep complex 5v5 moba drafting heroes destroy ancient dota 2",
+    "query": "player criticisms of dota 2 matchmaking and balance friction",
     "expected_app_id": 570,
-    "expected_field": "summary"
+    "expected_field": "complaints",
+    "written_by": "agent"
   },
   {
-    "query": "impenetrable learning curve and toxic flame in dota 2",
-    "expected_app_id": 570,
-    "expected_field": "complaints"
+    "query": "hand drawn art and audio atmosphere in hollow knight",
+    "expected_app_id": 367520,
+    "expected_field": "loved_features",
+    "written_by": "agent"
   },
   {
-    "query": "completely free hero pool strategic depth high skill ceiling dota 2",
-    "expected_app_id": 570,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "hostile community towards beginners trying to learn dota 2",
-    "expected_app_id": 570,
-    "expected_field": "complaints"
-  },
-  {
-    "query": "open world night city mercenary dystopian rpg cyberpunk 2077",
+    "query": "cyberpunk 2077 player sentiment overview and positive ratio",
     "expected_app_id": 1091500,
-    "expected_field": "summary"
+    "expected_field": "summary",
+    "written_by": "agent"
   },
   {
-    "query": "launch bugs vehicle physics and dumb npc crowd ai cyberpunk 2077",
-    "expected_app_id": 1091500,
-    "expected_field": "complaints"
+    "query": "controller responsiveness complaints in dead cells",
+    "expected_app_id": 588650,
+    "expected_field": "complaints",
+    "written_by": "agent"
   },
   {
-    "query": "johnny silverhand keanu reeves neon graphics 2.0 update cyberpunk 2077",
-    "expected_app_id": 1091500,
-    "expected_field": "loved_features"
+    "query": "relaxing country life farming loop retention drivers in stardew valley",
+    "expected_app_id": 413150,
+    "expected_field": "loved_features",
+    "written_by": "agent"
   },
   {
-    "query": "cars sliding around and clunky vehicle driving cyberpunk 2077",
-    "expected_app_id": 1091500,
-    "expected_field": "complaints"
+    "query": "player feedback on early progression curve in terraria",
+    "expected_app_id": 105600,
+    "expected_field": "complaints",
+    "written_by": "agent"
   },
   {
-    "query": "cinematic story questlines and incredible ray tracing night city cyberpunk",
-    "expected_app_id": 1091500,
-    "expected_field": "loved_features"
+    "query": "deckbuilder card synergy and replayability praised in slay the spire",
+    "expected_app_id": 646570,
+    "expected_field": "loved_features",
+    "written_by": "agent"
   },
   {
-    "query": "massive open world souls-like dark fantasy directed by miyazaki elden ring",
+    "query": "overall sentiment and positive rating overview for hades",
+    "expected_app_id": 1145360,
+    "expected_field": "summary",
+    "written_by": "agent"
+  },
+  {
+    "query": "criticisms regarding server lag and netcode in counter strike",
+    "expected_app_id": 730,
+    "expected_field": "complaints",
+    "written_by": "agent"
+  },
+  {
+    "query": "co-op multiplayer mechanics and level design praise in portal",
+    "expected_app_id": 400,
+    "expected_field": "loved_features",
+    "written_by": "agent"
+  },
+  {
+    "query": "overall review overview for team fortress 2 on steam",
+    "expected_app_id": 440,
+    "expected_field": "summary",
+    "written_by": "agent"
+  },
+  {
+    "query": "criticisms regarding repetitive level design in minecraft dungeons",
+    "expected_app_id": 1672970,
+    "expected_field": "complaints",
+    "written_by": "agent"
+  },
+  {
+    "query": "martial arts hand to hand combat praise in sleeping dogs",
+    "expected_app_id": 307690,
+    "expected_field": "loved_features",
+    "written_by": "agent"
+  },
+  {
+    "query": "left 4 dead 2 overall customer rating and positive ratio",
+    "expected_app_id": 550,
+    "expected_field": "summary",
+    "written_by": "agent"
+  },
+  {
+    "query": "player complaints regarding boss fight camera tracking in elden ring",
     "expected_app_id": 1245620,
-    "expected_field": "summary"
+    "expected_field": "complaints",
+    "written_by": "agent"
   },
   {
-    "query": "delayed dodge roll inputs boss camera lock and endgame one-shots elden ring",
+    "query": "celeste platforming controls and movement physics praised by players",
+    "expected_app_id": 504230,
+    "expected_field": "loved_features",
+    "written_by": "agent"
+  },
+  {
+    "query": "overall player consensus for elden ring on steam catalog",
     "expected_app_id": 1245620,
-    "expected_field": "complaints"
+    "expected_field": "summary",
+    "written_by": "agent"
   },
   {
-    "query": "staggering exploration legacy dungeons build variety boss spectacles elden ring",
-    "expected_app_id": 1245620,
-    "expected_field": "loved_features"
+    "query": "criticisms of weapon rng and item drop rate in dead cells",
+    "expected_app_id": 588650,
+    "expected_field": "complaints",
+    "written_by": "agent"
   },
   {
-    "query": "giant boss hitbox issues and camera spinning elden ring",
-    "expected_app_id": 1245620,
-    "expected_field": "complaints"
+    "query": "crafting depth and subterranean exploration loved in terraria",
+    "expected_app_id": 105600,
+    "expected_field": "loved_features",
+    "written_by": "agent"
   },
   {
-    "query": "freedom to explore anywhere in the lands between elden ring",
-    "expected_app_id": 1245620,
-    "expected_field": "loved_features"
+    "query": "player complaints regarding inventory management in stardew valley",
+    "expected_app_id": 413150,
+    "expected_field": "complaints",
+    "written_by": "agent"
   },
   {
-    "query": "party based d&d forgotten realms crpg narrative choices baldurs gate 3",
-    "expected_app_id": 1086940,
-    "expected_field": "summary"
+    "query": "soundtrack composition and dynamic boss audio in hades",
+    "expected_app_id": 1145360,
+    "expected_field": "loved_features",
+    "written_by": "agent"
   },
   {
-    "query": "act 3 city fps lag and messy inventory management baldurs gate 3",
-    "expected_app_id": 1086940,
-    "expected_field": "complaints"
+    "query": "overall player rating and review breakdown for stardew valley",
+    "expected_app_id": 413150,
+    "expected_field": "summary",
+    "written_by": "agent"
   },
   {
-    "query": "unmatched narrative freedom companion romances tactical turn-based combat bg3",
-    "expected_app_id": 1086940,
-    "expected_field": "loved_features"
-  },
-  {
-    "query": "slow framerates in lower city act 3 baldurs gate 3",
-    "expected_app_id": 1086940,
-    "expected_field": "complaints"
+    "query": "criticisms regarding corpse run penalty and map bench distance in hollow knight",
+    "expected_app_id": 367520,
+    "expected_field": "complaints",
+    "written_by": "agent"
   }
 ]

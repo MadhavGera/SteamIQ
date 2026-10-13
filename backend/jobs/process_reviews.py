@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import re
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -150,8 +151,8 @@ class ProcessReviewsJob(BaseJob):
                 )
             )
 
-            # Monthly buckets (simulated / parsed from available signals or created sequentially)
-            monthly_buckets = self._generate_monthly_timeline(pos_count, neg_count, net_pct)
+            # Monthly buckets (computed from actual review timestamps)
+            monthly_buckets = self._generate_monthly_timeline(reviews)
             for m in monthly_buckets:
                 session.add(
                     FeatureReviewSentiment(
@@ -222,25 +223,35 @@ class ProcessReviewsJob(BaseJob):
             await session.commit()
             self.logger.info("Successfully persisted feature_* tables for app_id=%s", app_id)
 
-    def _generate_monthly_timeline(self, pos: int, neg: int, net: float) -> list[dict[str, Any]]:
-        # Generates realistic monthly trend over the last 6 months
-        months = ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06"]
-        timeline = []
-        base_pos = max(1, pos // 6)
-        base_neg = max(0, neg // 6)
+    def _generate_monthly_timeline(self, reviews: list[RawReview]) -> list[dict[str, Any]]:
+        # Compute monthly trend from actual review creation timestamps
+        monthly_counts: dict[str, dict[str, int]] = {}
+        for r in reviews:
+            if not r.review_created_at:
+                continue
+            try:
+                m_str = datetime.fromtimestamp(r.review_created_at, tz=UTC).strftime("%Y-%m")
+            except Exception:
+                continue
+            if m_str not in monthly_counts:
+                monthly_counts[m_str] = {"pos": 0, "neg": 0}
+            if r.voted_up:
+                monthly_counts[m_str]["pos"] += 1
+            else:
+                monthly_counts[m_str]["neg"] += 1
 
-        for i, m in enumerate(months):
-            noise = (i - 2.5) * 0.02
-            m_pos = max(1, int(base_pos * (1.0 + noise)))
-            m_neg = max(0, int(base_neg * (1.0 - noise)))
-            m_tot = m_pos + m_neg
-            m_pct = round(m_pos / m_tot * 100, 1) if m_tot > 0 else net
-            timeline.append({"month": m, "pos": m_pos, "neg": m_neg, "net_pct": m_pct})
+        timeline = []
+        for m in sorted(monthly_counts.keys()):
+            pos_c = monthly_counts[m]["pos"]
+            neg_c = monthly_counts[m]["neg"]
+            tot_c = pos_c + neg_c
+            net_pct = round(pos_c / tot_c * 100.0, 1) if tot_c > 0 else 0.0
+            timeline.append({"month": m, "pos": pos_c, "neg": neg_c, "net_pct": net_pct})
         return timeline
 
     def _extract_topics(self, reviews: list[RawReview]) -> list[dict[str, Any]]:
-        # Fast semantic token scoring across review corpus
-        corpus = " ".join([r.review_text or "" for r in reviews]).lower()
+        if not reviews:
+            return []
         topic_defs = [
             {"label": "Combat & Boss Encounters", "keys": ["boss", "fight", "combat", "attack", "pattern", "challenge"]},
             {"label": "World Atmosphere & Lore", "keys": ["world", "lore", "story", "atmosphere", "music", "art"]},
@@ -250,9 +261,15 @@ class ProcessReviewsJob(BaseJob):
         ]
         results = []
         for t in topic_defs:
-            matches = sum(corpus.count(k) for k in t["keys"])
-            cnt = max(12, min(len(reviews), matches))
-            score = 0.92 if "Performance" not in t["label"] else 0.78
+            matching_reviews = [
+                r for r in reviews
+                if any(k in (r.review_text or "").lower() for k in t["keys"])
+            ]
+            cnt = len(matching_reviews)
+            if cnt == 0:
+                continue
+            pos_cnt = sum(1 for r in matching_reviews if r.voted_up)
+            score = round(pos_cnt / cnt, 4)
             results.append({
                 "label": t["label"],
                 "count": cnt,
@@ -262,49 +279,60 @@ class ProcessReviewsJob(BaseJob):
         return results
 
     def _extract_complaints(self, neg_reviews: list[RawReview]) -> list[dict[str, Any]]:
+        if not neg_reviews:
+            return []
         results = []
+        total_neg = len(neg_reviews)
         for tax in COMPLAINT_TAXONOMY:
             cat = tax["category"]
             matched_snippets = []
+            matching_count = 0
             for r in neg_reviews:
                 text = (r.review_text or "").strip()
                 if not text:
                     continue
-                for pat in tax["patterns"]:
-                    if re.search(r"\b" + pat, text, re.IGNORECASE):
+                matched = any(re.search(r"\b" + pat, text, re.IGNORECASE) for pat in tax["patterns"])
+                if matched:
+                    matching_count += 1
+                    if len(matched_snippets) < 3:
                         snippet = text[:180] + ("..." if len(text) > 180 else "")
                         if snippet not in matched_snippets:
                             matched_snippets.append(snippet)
-                        break
-                if len(matched_snippets) >= 3:
-                    break
 
-            # If not enough real snippets found, provide high-quality context snippets
-            if len(matched_snippets) < 2:
-                matched_snippets = [
-                    f"Noticeable friction reported in {cat.lower()} during intense encounters.",
-                    f"A subset of players noted that {cat.lower()} could benefit from further tuning.",
-                    "Occasional frame drops or controller responsiveness issues reported on specific hardware.",
-                ]
+            if matching_count == 0:
+                continue
 
-            vol_pct = 34.5 if "Performance" in cat else (22.0 if "Controls" in cat else 14.2)
+            vol_pct = round((matching_count / total_neg) * 100.0, 1)
             results.append({
                 "category": cat,
                 "volume_pct": vol_pct,
                 "severity": tax["severity"],
-                "snippets": matched_snippets[:3],
+                "snippets": matched_snippets,
             })
         return results
 
     def _extract_loved_features(self, pos_reviews: list[RawReview]) -> list[dict[str, Any]]:
+        if not pos_reviews:
+            return []
         results = []
-        for idx, tax in enumerate(LOVED_TAXONOMY):
+        total_pos = len(pos_reviews)
+        for tax in LOVED_TAXONOMY:
             name = tax["feature"]
-            intensity = 96 - (idx * 4)
-            mentions = max(45, len(pos_reviews) // (idx + 2))
+            matching_count = 0
+            for r in pos_reviews:
+                text = (r.review_text or "").strip()
+                if not text:
+                    continue
+                if any(re.search(r"\b" + pat, text, re.IGNORECASE) for pat in tax["patterns"]):
+                    matching_count += 1
+
+            if matching_count == 0:
+                continue
+
+            intensity = round((matching_count / total_pos) * 100.0, 1)
             results.append({
                 "feature": name,
-                "mentions": mentions,
+                "mentions": matching_count,
                 "intensity": intensity,
             })
         return results
@@ -313,27 +341,25 @@ class ProcessReviewsJob(BaseJob):
         self, game: RawGame, pos: list[RawReview], neg: list[RawReview], loved: list[dict], complaints: list[dict]
     ) -> dict[str, list[str]]:
         strengths = [
-            f"Universally acclaimed for pristine {loved[0]['feature'].lower() if loved else 'audio-visual presentation'} and rich world atmosphere.",
-            "Highly rewarding combat loop with deep mastery curve and memorable boss encounters.",
-            "Polished art direction and soundtrack praised consistently across player cohorts.",
-        ]
+            f"Frequently praised for {f['feature']} ({f['mentions']} mentions, {f['intensity']}% praise frequency)."
+            for f in loved
+            if f.get("mentions", 0) > 0
+        ][:3]
         pain_points = [
-            "Early-game difficulty spike and steep learning curve catch some casual players off guard.",
-            f"Occasional reports of {complaints[0]['category'].lower() if complaints else 'input latency'} on non-standard controller setups.",
-        ]
-        requests = [
-            "Players frequently request a dedicated Boss Rush / challenge gauntlet mode.",
-            "Desire for expanded map marking features and custom accessibility toggles.",
-        ]
-        return {"strengths": strengths, "pain_points": pain_points, "feature_requests": requests}
+            f"Player criticism concentrated on {c['category']} ({c['volume_pct']}% of negative reviews)."
+            for c in complaints
+            if c.get("volume_pct", 0) > 0
+        ][:3]
+        # Feature requests are not extracted via NLP model; return empty list honestly
+        return {"strengths": strengths, "pain_points": pain_points, "feature_requests": []}
 
     async def _synthesize_fallback_features(self, session: AsyncSession, game: RawGame) -> None:
-        """Derive initial high-quality feature rows from game metadata when raw_reviews are empty."""
+        """Derive initial baseline features from game metadata when raw_reviews are empty. Detail NLP fields left empty."""
         app_id = game.app_id
-        tot = game.positive_reviews + game.negative_reviews
-        pos = game.positive_reviews
-        neg = game.negative_reviews
-        net_pct = round(pos / tot * 100, 1) if tot > 0 else 92.0
+        tot = (game.positive_reviews or 0) + (game.negative_reviews or 0)
+        pos = game.positive_reviews or 0
+        neg = game.negative_reviews or 0
+        net_pct = round(pos / tot * 100.0, 1) if tot > 0 else 0.0
 
         if not self.dry_run:
             session.add(
@@ -347,64 +373,17 @@ class ProcessReviewsJob(BaseJob):
                     sentiment_score=round(net_pct / 100.0, 4),
                 )
             )
-
-            for m in self._generate_monthly_timeline(pos, neg, net_pct):
-                session.add(
-                    FeatureReviewSentiment(
-                        app_id=app_id,
-                        month=m["month"],
-                        positive_count=m["pos"],
-                        negative_count=m["neg"],
-                        total_count=m["pos"] + m["neg"],
-                        net_positive_pct=m["net_pct"],
-                        sentiment_score=round(m["net_pct"] / 100.0, 4),
-                    )
-                )
-
-            for idx, t in enumerate(self._extract_topics([])):
-                session.add(
-                    FeatureReviewTopic(
-                        app_id=app_id,
-                        topic_id=idx + 1,
-                        topic_label=t["label"],
-                        review_count=max(25, pos // (idx + 3)),
-                        sentiment_score=t["score"],
-                        keywords=t["keywords"],
-                    )
-                )
-
-            for c in self._extract_complaints([]):
-                session.add(
-                    FeatureReviewComplaint(
-                        app_id=app_id,
-                        category=c["category"],
-                        volume_pct=c["volume_pct"],
-                        severity=c["severity"],
-                        representative_snippets=c["snippets"],
-                    )
-                )
-
-            for f in self._extract_loved_features([]):
-                session.add(
-                    FeatureReviewFeature(
-                        app_id=app_id,
-                        feature_name=f["feature"],
-                        mention_count=max(50, pos // 4),
-                        praise_intensity=f["intensity"],
-                    )
-                )
-
-            summary = self._generate_review_summary(game, [], [], self._extract_loved_features([]), self._extract_complaints([]))
+            # Empty detail tables - zero synthesized/placeholder rows
             session.add(
                 FeatureReviewSummary(
                     app_id=app_id,
-                    core_strengths=summary["strengths"],
-                    pain_points=summary["pain_points"],
-                    feature_requests=summary["feature_requests"],
+                    core_strengths=[],
+                    pain_points=[],
+                    feature_requests=[],
                 )
             )
             await session.commit()
-            self.logger.info("Synthesized fallback feature_* tables for app_id=%s", app_id)
+            self.logger.info("Persisted clean baseline feature rows for app_id=%s (no review details)", app_id)
 
 
 def main() -> None:

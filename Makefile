@@ -192,6 +192,12 @@ retrain-gate: ## Evaluate champion/challenger retraining gate (dry-run by defaul
 model-cards: ## Render standardized markdown model cards for production & candidate models
 	cd $(BACKEND) && $(PYTHON) -m jobs.generate_model_cards
 
+cold-latency-benchmark: ## Run recsys cold vs warm latency benchmark
+	$(PYTHON) scripts/benchmark_cold_latency.py
+
+golden-update: ## Update golden artifact snapshot regression fixture and display diff
+	$(PYTHON) scripts/update_golden_fixtures.py
+
 ci: ## Run complete local continuous integration pipeline
 	cd $(BACKEND) && ruff check .
 	cd $(BACKEND) && pytest tests/ -v -m "not artifacts"

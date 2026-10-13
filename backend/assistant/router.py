@@ -246,6 +246,7 @@ class MiniLMLogisticRouter(BaseIntentRouter):
         super().__init__(classes)
         self.model_name = model_name
         self._embedder = None
+        self.class_centroids: dict[str, np.ndarray] = {}
         self.classifier = LogisticRegression(
             C=1.0,
             max_iter=1000,
@@ -277,7 +278,48 @@ class MiniLMLogisticRouter(BaseIntentRouter):
         features = self.encode(texts)
         self.classifier.fit(features, labels)
         self.is_fitted = True
+
+        # Compute normalized class centroid embeddings
+        self.class_centroids = {}
+        for cls_name in set(labels):
+            idxs = [i for i, lbl in enumerate(labels) if lbl == cls_name]
+            if idxs:
+                centroid = np.mean(features[idxs], axis=0)
+                norm = np.linalg.norm(centroid)
+                if norm > 0:
+                    centroid = centroid / norm
+                self.class_centroids[cls_name] = centroid.astype(np.float32)
         return self
+
+    def compute_ood_scores(
+        self,
+        texts: list[str],
+        in_domain_classes: list[str] | None = None,
+    ) -> np.ndarray:
+        """
+        Computes embedding-distance OOD score: 1.0 - max cosine similarity to in-domain centroids.
+        Higher score means more likely out-of-scope / out-of-distribution.
+        """
+        if not texts:
+            return np.empty(0, dtype=np.float64)
+        if not self.class_centroids:
+            return np.zeros(len(texts), dtype=np.float64)
+
+        features = self.encode(texts)
+        if in_domain_classes is None:
+            in_domain_classes = [c for c in self.class_centroids if c != "out_of_scope"]
+
+        valid_centroids = [
+            self.class_centroids[c] for c in in_domain_classes if c in self.class_centroids
+        ]
+        if not valid_centroids:
+            return np.zeros(len(texts), dtype=np.float64)
+
+        centroids_matrix = np.vstack(valid_centroids)
+        sims = np.dot(features, centroids_matrix.T)
+        max_sims = np.max(sims, axis=1)
+        ood_scores = 1.0 - max_sims
+        return ood_scores.astype(np.float64)
 
     def predict_proba(self, texts: list[str]) -> np.ndarray:
         if not texts:
@@ -296,6 +338,8 @@ class MiniLMLogisticRouter(BaseIntentRouter):
         (p / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
         with (p / "classifier.pkl").open("wb") as f:
             pickle.dump(self.classifier, f)
+        if self.class_centroids:
+            np.save(str(p / "class_centroids.npy"), self.class_centroids)
 
     @classmethod
     def load(cls, path: Path | str) -> MiniLMLogisticRouter:
@@ -304,6 +348,9 @@ class MiniLMLogisticRouter(BaseIntentRouter):
         router = cls(classes=meta["classes"], model_name=meta.get("model_name", "all-MiniLM-L6-v2"))
         with (p / "classifier.pkl").open("rb") as f:
             router.classifier = pickle.load(f)
+        centroids_path = p / "class_centroids.npy"
+        if centroids_path.exists():
+            router.class_centroids = np.load(str(centroids_path), allow_pickle=True).item()
         router.is_fitted = True
         return router
 

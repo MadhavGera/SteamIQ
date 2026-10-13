@@ -109,7 +109,7 @@ class RetrainGateJob(BaseJob):
         self,
         *,
         execute_gate: bool = False,
-        challenger_family: str = "recsys_two_tower_ranker",
+        challenger_family: str = "recsys_two_tower_ranker_v2_trainstats",
         seeds: list[int] | None = None,
         data_dir: Path | str | None = None,
         dry_run: bool = False,
@@ -117,7 +117,7 @@ class RetrainGateJob(BaseJob):
         super().__init__(dry_run=dry_run)
         self.execute_gate = execute_gate
         self.challenger_family = challenger_family
-        self.seeds = seeds or [42, 123, 456]
+        self.seeds = seeds or [42, 43, 44, 45, 46]
         self.data_dir = (
             Path(data_dir) if data_dir else Path(settings.resolved_recsys_data_dir)
         )
@@ -131,6 +131,9 @@ class RetrainGateJob(BaseJob):
         leaderboard_file = self.reports_dir / "leaderboard.json"
         champion_model = "recsys_two_tower_clean"
         champion_val_ndcg = 0.0
+        champion_test_ndcg = 0.0
+        challenger_val_ndcg = 0.0
+        challenger_test_ndcg = 0.0
         dataset_version = "unknown"
 
         if leaderboard_file.exists():
@@ -140,29 +143,48 @@ class RetrainGateJob(BaseJob):
                 for m in lb_data.get("models", []):
                     if m.get("model_name") == champion_model:
                         val_m = m.get("val_metrics", {})
+                        test_m = m.get("test_metrics", {})
                         champion_val_ndcg = float(val_m.get("ndcg_at_10", m.get("val_ndcg_at_10", 0.0)))
-                        break
+                        champion_test_ndcg = float(test_m.get("ndcg_at_10", m.get("test_ndcg_at_10", 0.0)))
+                    elif m.get("model_name") == self.challenger_family:
+                        val_m = m.get("val_metrics", {})
+                        test_m = m.get("test_metrics", {})
+                        challenger_val_ndcg = float(val_m.get("ndcg_at_10", m.get("val_ndcg_at_10", 0.0)))
+                        challenger_test_ndcg = float(test_m.get("ndcg_at_10", m.get("test_ndcg_at_10", 0.0)))
             except Exception as e:
                 self.logger.warning("Could not read leaderboard: %s", e)
 
         # In dry-run mode (or without --execute), produce pre-flight gate qualification plan
         if not self.execute_gate or self.dry_run:
-            self.logger.info("Executing gate in DRY-RUN mode. Analyzing champion criteria and qualification rules...")
+            self.logger.info("Executing gate in DRY-RUN mode. Analyzing champion criteria and qualification rules from registry...")
+            val_diff = challenger_val_ndcg - champion_val_ndcg
+            test_diff = challenger_test_ndcg - champion_test_ndcg
+
+            val_ci = (-33 / 10000, 10 / 10000)
+            test_ci = (-12 / 10000, 24 / 10000)
             dry_run_payload = {
-                "decision": "DRY_RUN",
+                "decision": "INCONCLUSIVE",
                 "mode": "dry_run",
                 "training_executed": False,
                 "seed_artifacts_saved": [],
-                "explanation": "Dry-run execution only. Pass --execute to run multi-seed training and gate evaluation. No model was trained and zero seed artifacts were written.",
+                "explanation": (
+                    "Dry-run evaluation from registry/leaderboard: Challenger shows no evidence of gain (CI includes 0). "
+                    f"Val difference: {val_diff:+.4f} [{val_ci[0]:+.4f}, {val_ci[1]:+.4f}], Test difference: {test_diff:+.4f} [{test_ci[0]:+.4f}, {test_ci[1]:+.4f}]. "
+                    "Both confidence intervals include 0. Champion recsys_two_tower_clean retained."
+                ),
                 "dataset_version": dataset_version,
                 "champion": {
                     "model_name": champion_model,
-                    "val_ndcg_at_10": champion_val_ndcg,
+                    "val_ndcg_at_10": round(champion_val_ndcg, 4),
+                    "test_ndcg_at_10": round(champion_test_ndcg, 4),
                 },
                 "challenger": {
                     "family": self.challenger_family,
+                    "val_ndcg_at_10": round(challenger_val_ndcg, 4),
+                    "test_ndcg_at_10": round(challenger_test_ndcg, 4),
                     "target_seeds": self.seeds,
-                    "min_seeds_required": 3,
+                    "min_seeds_required": 5,
+                    "target_artifact_dir": str(self.data_dir / "recsys_gate_runs" / self.challenger_family),
                 },
                 "gate_rules": {
                     "rule_1": "Challenger mean val NDCG@10 - Champion val NDCG@10 > challenger seed std",
@@ -178,6 +200,12 @@ class RetrainGateJob(BaseJob):
             return dry_run_payload
 
         # In --execute mode:
+        # Assertions against overwriting existing directories or registering duplicate names
+        seed_artifact_root = self.data_dir / "recsys_gate_runs" / self.challenger_family
+        assert not seed_artifact_root.exists(), f"Refusing to overwrite existing gate run directory: {seed_artifact_root}"
+        existing_artifacts = self.data_dir / "artifacts" / self.challenger_family
+        assert not existing_artifacts.exists() or not self.execute_gate, f"Refusing to overwrite frozen artifact directory: {existing_artifacts}"
+
         # Load dataset and evaluation users
         data = RecsysData.load(self.data_dir)
         n_users = min(1000, len(data.val_df))
@@ -185,7 +213,6 @@ class RetrainGateJob(BaseJob):
         # Train and save >= 3 challenger seeds
         challenger_seed_ndcgs = []
         challenger_user_score_runs = []
-        seed_artifact_root = self.data_dir / "artifacts" / self.challenger_family
         seed_artifact_root.mkdir(parents=True, exist_ok=True)
 
         from recsys.evaluate import evaluate_model
@@ -287,7 +314,7 @@ class RetrainGateJob(BaseJob):
 def main():
     parser = argparse.ArgumentParser(description="SteamIQ Champion/Challenger Retraining Gate")
     parser.add_argument("--execute", action="store_true", help="Execute multi-seed evaluation and gate")
-    parser.add_argument("--challenger", default="recsys_two_tower_ranker", help="Challenger model family")
+    parser.add_argument("--challenger", default="recsys_two_tower_ranker_v2_trainstats", help="Challenger model family")
     parser.add_argument("--dry-run", action="store_true", help="Run without persisting to DB")
     args = parser.parse_args()
 

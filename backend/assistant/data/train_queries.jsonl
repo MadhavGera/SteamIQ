@@ -963,3 +963,43 @@
 {"text": "Can you check: Underserved niches and genre trends. right now.", "intent": "market_opportunity", "game": null, "app_id": null, "mode": "developer", "source": "synthetic_template"}
 {"text": "What games should I play based on my library? please.", "intent": "recommend_for_me", "game": null, "app_id": null, "mode": "player", "source": "synthetic_template"}
 {"text": "How does our ML model evaluate Hades's commercial potential? thanks!", "intent": "success_score", "game": "Hades", "app_id": 1145360, "mode": "player", "source": "synthetic_template"}
+{"text": "What is Nvidia's stock price today?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_prices"}
+{"text": "Should I buy Bitcoin or Ethereum right now?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_prices"}
+{"text": "Tesla stock quarterly earnings report forecast", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_prices"}
+{"text": "What is the spot price of gold per ounce today?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_prices"}
+{"text": "AMD share price target for Q4 2026", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_prices"}
+{"text": "Current market cap of Apple and Microsoft", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_prices"}
+{"text": "How much is one Solana token worth right now?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_prices"}
+{"text": "Crude oil barrel price trends this week", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_prices"}
+{"text": "Will the Federal Reserve cut interest rates next month?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_prices"}
+{"text": "S&P 500 index closing value today", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_prices"}
+{"text": "Is an RTX 4070 Ti powerful enough for 4K 144Hz gaming?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_hardware"}
+{"text": "Which thermal paste is best for Ryzen AM5 processors?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_hardware"}
+{"text": "What wattage power supply do I need for RTX 4080 and i7-14700K?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_hardware"}
+{"text": "DDR5 vs DDR4 latency gaming benchmarks comparison", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_hardware"}
+{"text": "Best budget B650 motherboard for Ryzen 7800X3D", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_hardware"}
+{"text": "How to fix blue screen watchdog error on Windows 11", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_hardware"}
+{"text": "Recommend a good 1440p 240Hz OLED gaming monitor", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_hardware"}
+{"text": "Should I upgrade my GTX 1080 to an RTX 4060?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_hardware"}
+{"text": "What is the best mechanical keyboard switch for typing?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_hardware"}
+{"text": "How do I update the BIOS on an ASUS ROG motherboard?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_hardware"}
+{"text": "Who won the Premier League match between Arsenal and City?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_news"}
+{"text": "Latest polls and forecast for the presidential election", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_news"}
+{"text": "Formula 1 qualifying results for the Monaco Grand Prix", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_news"}
+{"text": "Champions League final kickoff time and TV channel", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_news"}
+{"text": "World news summary on United Nations climate summit", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_news"}
+{"text": "Who won the NBA Finals MVP trophy this year?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_news"}
+{"text": "Latest headlines on the municipal transit strike", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_news"}
+{"text": "Who won the men's singles Wimbledon final?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_news"}
+{"text": "Olympic 100 meter sprint gold medal winner", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_news"}
+{"text": "Super Bowl kickoff time and halftime show performer", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_news"}
+{"text": "Find discount coupon promo codes for Nike shoes", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
+{"text": "Which air fryer brand is most reliable for home cooking?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
+{"text": "Best deal on cordless Dyson vacuums during Prime Day", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
+{"text": "Compare prices for Herman Miller Aeron vs Embody office chairs", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
+{"text": "Where can I buy cheap replacement water filters for Brita?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
+{"text": "Is Costco membership worth it for a single person?", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
+{"text": "Best espresso machine for beginners under ", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
+{"text": "Top rated winter waterproof jackets on Amazon", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
+{"text": "Discount codes for food delivery on DoorDash", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
+{"text": "Cheapest flights from New York to London in November", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}

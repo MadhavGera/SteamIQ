@@ -140,7 +140,7 @@ class PassageIndex:
                 "tfidf": {f"recall_at_{k}": 0.0 for k in k_vals} | {"mrr": 0.0},
             }
 
-        def eval_method(method: str) -> dict[str, Any]:
+        def eval_method(method: str) -> tuple[dict[str, Any], dict[int, np.ndarray], np.ndarray]:
             n_queries = len(gold_queries)
             hit_k_vecs = {k: np.zeros(n_queries, dtype=float) for k in k_vals}
             rr_vec = np.zeros(n_queries, dtype=float)
@@ -184,12 +184,57 @@ class PassageIndex:
 
             metrics["mrr"] = round(float(np.mean(rr_vec)), 4)
             metrics["mrr_ci"] = _boot(rr_vec)
-            return metrics
+            return metrics, hit_k_vecs, rr_vec
+
+        dense_metrics, dense_hits, dense_rr = eval_method("dense")
+        tfidf_metrics, tfidf_hits, tfidf_rr = eval_method("tfidf")
+
+        def _boot_diff(arr: np.ndarray) -> list[float]:
+            if len(arr) == 0:
+                return [0.0, 0.0]
+            rng = np.random.default_rng(42)
+            means = [float(np.mean(rng.choice(arr, size=len(arr), replace=True))) for _ in range(1000)]
+            return [round(float(np.percentile(means, 2.5)), 4), round(float(np.percentile(means, 97.5)), 4)]
+
+        paired_diffs: dict[str, Any] = {}
+        for k in k_vals:
+            diff_hit = dense_hits[k] - tfidf_hits[k]
+            paired_diffs[f"delta_recall_at_{k}"] = round(float(np.mean(diff_hit)), 4)
+            paired_diffs[f"delta_recall_at_{k}_ci"] = _boot_diff(diff_hit)
+
+        diff_rr = dense_rr - tfidf_rr
+        paired_diffs["delta_mrr"] = round(float(np.mean(diff_rr)), 4)
+        paired_diffs["delta_mrr_ci"] = _boot_diff(diff_rr)
+        dense_beats_tfidf = bool(paired_diffs["delta_mrr_ci"][0] > 0.0)
+        paired_diffs["dense_beats_tfidf"] = dense_beats_tfidf
+        paired_diffs["claim"] = (
+            "Dense MiniLM significantly outperforms TF-IDF (95% CI excludes 0)"
+            if dense_beats_tfidf
+            else "No evidence that dense retrieval outperforms TF-IDF (95% CI includes 0)"
+        )
+
+        user_idxs = [i for i, g in enumerate(gold_queries) if g.get("written_by") == "user"]
+        user_subset_metrics = None
+        if user_idxs:
+            u_dense_rr = dense_rr[user_idxs]
+            u_tfidf_rr = tfidf_rr[user_idxs]
+            u_diff_rr = u_dense_rr - u_tfidf_rr
+            user_subset_metrics = {
+                "n_queries": len(user_idxs),
+                "dense_mrr": round(float(np.mean(u_dense_rr)), 4),
+                "dense_mrr_ci": _boot_diff(u_dense_rr),
+                "tfidf_mrr": round(float(np.mean(u_tfidf_rr)), 4),
+                "tfidf_mrr_ci": _boot_diff(u_tfidf_rr),
+                "delta_mrr": round(float(np.mean(u_diff_rr)), 4),
+                "delta_mrr_ci": _boot_diff(u_diff_rr),
+            }
 
         return {
             "n_queries": len(gold_queries),
-            "dense": eval_method("dense"),
-            "tfidf": eval_method("tfidf"),
+            "dense": dense_metrics,
+            "tfidf": tfidf_metrics,
+            "paired_difference": paired_diffs,
+            "user_written_subset": user_subset_metrics,
         }
 
     def save(self, path: Path | str) -> None:

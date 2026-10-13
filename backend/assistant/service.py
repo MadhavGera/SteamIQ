@@ -174,16 +174,17 @@ class AssistantService:
         Fetches structured record strictly from mart_*/serving_* tables or catalog cache.
         Adheres strictly to the Golden Rule (no raw_*/feature_* reads).
         """
-        # If in-memory catalog store has the record, use it directly (fastest sub-millisecond path)
-        if app_id is not None and app_id in self.catalog_data:
-            return dict(self.catalog_data[app_id])
-
-        # If db_session provided, query appropriate mart/serving table
+        # If db_session provided, query appropriate mart/serving table (pure mart read)
         if db_session is not None and app_id is not None:
             try:
                 from sqlalchemy import select
 
-                from db.models import MartGameOverview, MartReviewIntelligence, ServingSimilarGame
+                from db.models import (
+                    MartGameOverview,
+                    MartReviewIntelligence,
+                    RawGame,
+                    ServingSimilarGame,
+                )
 
                 if intent in {Intent.GAME_OVERVIEW.value, Intent.PRICE_ADVICE.value}:
                     res = await db_session.execute(
@@ -211,11 +212,24 @@ class AssistantService:
                     )
                     row = res.scalar_one_or_none()
                     if row:
+                        game_row = (await db_session.execute(select(RawGame.name).where(RawGame.app_id == app_id))).scalar_one_or_none()
+                        summary_dict = row.summary or {}
+                        summary_parts = []
+                        if summary_dict.get("strengths"):
+                            summary_parts.append("Strengths: " + "; ".join(summary_dict["strengths"]))
+                        if summary_dict.get("pain_points"):
+                            summary_parts.append("Criticisms: " + "; ".join(summary_dict["pain_points"]))
+                        summary_text = " | ".join(summary_parts)
+                        sent_ov = row.sentiment_overview or {}
                         return {
-                            "title": f"Game #{app_id}",
-                            "summary_text": row.summary_text,
+                            "title": game_row or f"Game #{app_id}",
+                            "summary_text": summary_text,
+                            "review_score_desc": sent_ov.get("sentiment_label", "Positive"),
+                            "positive_ratio": sent_ov.get("positive_pct", 0.0),
+                            "user_reviews": sent_ov.get("total_count", 0),
                             "complaints": row.complaints or [],
                             "loved_features": row.loved_features or [],
+                            "summary": summary_dict,
                             "tables_read": ["mart_review_intelligence"],
                             "materialized_at": str(row.materialized_at or ""),
                         }
@@ -245,6 +259,10 @@ class AssistantService:
                         }
             except Exception as e:
                 logger.debug("Database read in AssistantService: %s", e)
+
+        # Fallback to in-memory catalog store if available (offline unit test mode)
+        if app_id is not None and app_id in self.catalog_data:
+            return dict(self.catalog_data[app_id])
 
         return {}
 

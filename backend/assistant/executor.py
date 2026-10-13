@@ -207,28 +207,49 @@ def execute_template(
         title = data.get("title", game_title)
         sentiment_label = data.get("review_score_desc", "Positive")
         pos_ratio = data.get("positive_ratio", "--")
-        summary_text = data.get("summary_text", "Players enjoy the core gameplay mechanics and design.")
+        summary_text = (data.get("summary_text") or "").strip()
 
         if is_player:
-            answer = (
-                f"Player consensus for **{title}** is **{sentiment_label}** ({pos_ratio}% positive). "
-                f"Summary: {summary_text}"
-            )
+            if summary_text:
+                answer = (
+                    f"Player consensus for **{title}** is **{sentiment_label}** ({pos_ratio}% positive). "
+                    f"{summary_text}"
+                )
+            else:
+                answer = (
+                    f"Player consensus for **{title}** is **{sentiment_label}** ({pos_ratio}% positive). "
+                    "No structured NLP review summary is currently available for this title."
+                )
         else:
             rev_count = data.get("user_reviews", "--")
-            answer = (
-                f"Review Intelligence for **{title}**: Sentiment is **{sentiment_label}** "
-                f"({pos_ratio}% positive over {rev_count} verified reviews). "
-                f"Extracted NLP Summary: {summary_text}"
-            )
+            if summary_text:
+                answer = (
+                    f"Review Intelligence for **{title}**: Sentiment is **{sentiment_label}** "
+                    f"({pos_ratio}% positive over {rev_count} verified reviews). "
+                    f"Extracted NLP Summary: {summary_text}"
+                )
+            else:
+                answer = (
+                    f"Review Intelligence for **{title}**: Sentiment is **{sentiment_label}** "
+                    f"({pos_ratio}% positive over {rev_count} verified reviews). "
+                    "Extracted NLP Summary: None materialized."
+                )
 
     elif intent == Intent.TOP_COMPLAINTS.value:
         title = data.get("title", game_title)
         complaints = data.get("complaints", [])
         if not complaints:
-            answer = f"No significant recurring player complaints have been flagged for **{title}**."
+            answer = f"No significant recurring player complaints have been recorded for **{title}**."
         else:
-            items_str = "\n".join([f"- **{c.get('category', 'Issue')}**: {c.get('summary', c.get('text', ''))}" for c in complaints[:4]])
+            comp_lines = []
+            for c in complaints[:4]:
+                cat = c.get("category", "Issue")
+                vol = c.get("volume_pct", 0.0)
+                sev = c.get("severity", "moderate")
+                snips = c.get("representative_snippets", [])
+                snip_str = f' — e.g. "{snips[0]}"' if snips else ""
+                comp_lines.append(f"- **{cat}** ({vol}% of negative reviews, severity: {sev}){snip_str}")
+            items_str = "\n".join(comp_lines)
             if is_player:
                 answer = f"Here are the top player complaints for **{title}**:\n{items_str}"
             else:
@@ -240,7 +261,13 @@ def execute_template(
         if not loved:
             answer = f"No specific praised features have been isolated for **{title}**."
         else:
-            items_str = "\n".join([f"- **{feat.get('feature', 'Highlight')}**: {feat.get('praise', feat.get('text', ''))}" for feat in loved[:4]])
+            loved_lines = []
+            for feat in loved[:4]:
+                name = feat.get("feature_name", feat.get("feature", "Highlight"))
+                mentions = feat.get("mention_count", feat.get("mentions", 0))
+                intensity = feat.get("praise_intensity", feat.get("intensity", 0))
+                loved_lines.append(f"- **{name}** ({intensity}% praise frequency, {mentions} positive mentions)")
+            items_str = "\n".join(loved_lines)
             if is_player:
                 answer = f"What players love most about **{title}**:\n{items_str}"
             else:

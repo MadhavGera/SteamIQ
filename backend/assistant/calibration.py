@@ -266,6 +266,41 @@ def compute_coverage_accuracy_curve(
     return curve
 
 
+def compute_nll(probs: np.ndarray, true_indices: np.ndarray) -> float:
+    """Computes Multi-Class Negative Log-Likelihood (NLL)."""
+    if len(probs) == 0:
+        return 0.0
+    clipped = np.clip(probs, 1e-12, 1.0 - 1e-12)
+    p = clipped / np.sum(clipped, axis=1, keepdims=True)
+    n = len(true_indices)
+    return float(-np.mean(np.log(p[np.arange(n), true_indices])))
+
+
+def evaluate_ood_scores(
+    scores: np.ndarray,
+    is_ood: np.ndarray,
+) -> dict[str, float]:
+    """
+    Evaluates arbitrary OOD scores where higher score indicates OOD.
+    Returns AUROC and FPR @ 95% TPR.
+    """
+    binary_gt = np.asarray(is_ood, dtype=int)
+    n_pos = int(np.sum(binary_gt == 1))
+    n_neg = int(np.sum(binary_gt == 0))
+    if n_pos == 0 or n_neg == 0:
+        return {"auroc": 1.0, "fpr_at_95_tpr": 0.0}
+
+    auroc = float(roc_auc_score(binary_gt, scores))
+    pos_scores = scores[binary_gt == 1]
+    neg_scores = scores[binary_gt == 0]
+    tpr95_threshold = float(np.percentile(pos_scores, 5.0))
+    fpr = float(np.mean(neg_scores >= tpr95_threshold))
+    return {
+        "auroc": round(auroc, 4),
+        "fpr_at_95_tpr": round(fpr, 4),
+    }
+
+
 def evaluate_out_of_scope_detection(
     probs: np.ndarray,
     classes: list[str],
@@ -283,22 +318,4 @@ def evaluate_out_of_scope_detection(
     oos_scores = probs[:, oos_idx]
     binary_ground_truth = np.array([1 if lab == oos_intent else 0 for lab in true_labels], dtype=int)
 
-    n_pos = int(np.sum(binary_ground_truth == 1))
-    n_neg = int(np.sum(binary_ground_truth == 0))
-
-    if n_pos == 0 or n_neg == 0:
-        return {"auroc": 1.0, "fpr_at_95_tpr": 0.0}
-
-    auroc = float(roc_auc_score(binary_ground_truth, oos_scores))
-
-    # FPR @ 95% TPR
-    pos_scores = oos_scores[binary_ground_truth == 1]
-    neg_scores = oos_scores[binary_ground_truth == 0]
-
-    tpr95_threshold = float(np.percentile(pos_scores, 5.0))  # 95% of positive scores are >= this
-    fpr = float(np.mean(neg_scores >= tpr95_threshold))
-
-    return {
-        "auroc": round(auroc, 4),
-        "fpr_at_95_tpr": round(fpr, 4),
-    }
+    return evaluate_ood_scores(oos_scores, binary_ground_truth)

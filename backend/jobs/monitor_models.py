@@ -141,15 +141,20 @@ class MonitorModelsJob(BaseJob):
         # 5. Component C: Assistant Intent Distribution (Categorical JSD)
         if sum(curr_intents.values()) >= self.min_samples and ref_intent_counts:
             intent_drift = evaluate_categorical_drift(ref_intent_counts, curr_intents)
+            intent_drift["note"] = (
+                "JSD has low statistical power for detecting subtle volume shifts in tail categories "
+                "(such as out_of_scope queries) when overall distribution mass is dominated by frequent head intents."
+            )
             components["assistant_intents"] = intent_drift
             if intent_drift["status"] == "ALERT":
-                alerts.append("Assistant intent distribution shifted significantly (JSD >= 0.30)")
+                alerts.append("Assistant intent distribution shifted significantly (JSD >= 0.22)")
             elif intent_drift["status"] == "WARN":
-                warnings.append("Assistant intent distribution moderate shift (JSD >= 0.15)")
+                warnings.append("Assistant intent distribution moderate shift (JSD >= 0.1157)")
         else:
             components["assistant_intents"] = {
                 "status": "no live data",
                 "details": f"Observed {sum(curr_intents.values())} intent requests (minimum required: {self.min_samples})",
+                "note": "JSD has low statistical power for detecting subtle volume shifts in tail categories (e.g. out_of_scope).",
                 "curr_samples": sum(curr_intents.values()),
                 "ref_categories": len(ref_intent_counts),
             }
@@ -172,17 +177,11 @@ class MonitorModelsJob(BaseJob):
             }
 
         # 7. Component E: Item Catalog Features (Static reference sanity)
-        if len(ref_prices) > 0:
-            components["item_catalog_features"] = {
-                "status": "PASS",
-                "details": "Catalog reference stable. No un-indexed price or review volume drift.",
-                "total_items": len(ref_prices),
-            }
-        else:
-            components["item_catalog_features"] = {
-                "status": "PASS",
-                "details": "Item catalog features static baseline.",
-            }
+        components["item_catalog_features"] = {
+            "status": "no live data",
+            "details": "No live streaming catalog feature ingestion currently connected in online serving buffer.",
+            "total_reference_items": len(ref_prices),
+        }
 
         # Determine overall status
         has_any_live_data = (

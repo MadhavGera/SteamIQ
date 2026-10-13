@@ -1,296 +1,422 @@
 [
   {
     "passage_id": 1,
-    "app_id": 1145360,
-    "game_title": "Hades",
+    "app_id": 367520,
+    "game_title": "Hollow Knight",
     "field": "summary",
-    "text": "Hades combines fast-paced hack-and-slash action with rich character storytelling in Greek mythology."
+    "text": "Overall player consensus for Hollow Knight is Overwhelmingly Positive with 96.57% positive ratings. Frequently praised for Atmosphere & Worldbuilding (169 mentions, 7.7% praise frequency). Frequently praised for Fluid Combat Mechanics (259 mentions, 11.8% praise frequency). Player criticism concentrated on Controls & Input Latency (6.4% of negative reviews). Player criticism concentrated on Difficulty Spike & Balance (19.2% of negative reviews)."
   },
   {
     "passage_id": 2,
-    "app_id": 1145360,
-    "game_title": "Hades",
+    "app_id": 367520,
+    "game_title": "Hollow Knight",
     "field": "complaints",
-    "text": "Some players complain about repetitive boss fights across extended playthroughs and finger strain."
+    "text": "Top recorded criticisms and complaints for Hollow Knight: Controls & Input Latency (6.4% of negative feedback). Quoted player feedback: \"[h3]I liked Hollow Knight and I can't recommend it.[/h3]\r\n\r\nAfter more than 50 hours, I think Hollow Knight is not a bad game. I enjoyed exploring Hallownest, discovering new areas...\" | Difficulty Spike & Balance (19.2% of negative feedback). Quoted player feedback: \"[h3]I liked Hollow Knight and I can't recommend it.[/h3]\r\n\r\nAfter more than 50 hours, I think Hollow Knight is not a bad game. I enjoyed exploring Hallownest, discovering new areas...\" | Camera & Visual Readability (3.8% of negative feedback). Quoted player feedback: \"game has too many bugs. you got stag beetles, mantises, spiders. its too much to handle\""
   },
   {
     "passage_id": 3,
-    "app_id": 1145360,
-    "game_title": "Hades",
+    "app_id": 367520,
+    "game_title": "Hollow Knight",
     "field": "loved_features",
-    "text": "Players praise the god boon combinations, voice acting, dynamic dialogue, and polished soundtrack."
+    "text": "Core praised aspects and retention drivers for Hollow Knight: Atmosphere & Worldbuilding (7% praise frequency across 169 mentions); Fluid Combat Mechanics (11% praise frequency across 259 mentions); Soundtrack & Audio Design (8% praise frequency across 180 mentions)."
   },
   {
     "passage_id": 4,
-    "app_id": 367520,
-    "game_title": "Hollow Knight",
+    "app_id": 1245620,
+    "game_title": "ELDEN RING",
     "field": "summary",
-    "text": "A vast, atmospheric 2D metroidvania set in the ruined bug kingdom of Hallownest."
+    "text": "Overall player consensus for ELDEN RING is Very Positive with 86.76% positive ratings. Frequently praised for Atmosphere & Worldbuilding (148 mentions, 7.7% praise frequency). Frequently praised for Fluid Combat Mechanics (144 mentions, 7.5% praise frequency). Player criticism concentrated on Performance & Frame Drops (7.5% of negative reviews). Player criticism concentrated on Controls & Input Latency (5.4% of negative reviews)."
   },
   {
     "passage_id": 5,
-    "app_id": 367520,
-    "game_title": "Hollow Knight",
+    "app_id": 1245620,
+    "game_title": "ELDEN RING",
     "field": "complaints",
-    "text": "Critics and negative reviews point out punishing corpse-run walkbacks and lack of early direction."
+    "text": "Top recorded criticisms and complaints for ELDEN RING: Performance & Frame Drops (7.5% of negative feedback). Quoted player feedback: \"unbelievable amounts of stuttering.\" | Controls & Input Latency (5.4% of negative feedback). Quoted player feedback: \"It's a game that delights in its own obscurity. That suits the world beautifully but makes for a clunky, frustrating UI. The player animations feel cheap and awkward, so the moveme...\" | Difficulty Spike & Balance (14.3% of negative feedback). Quoted player feedback: \"Well, the flanderization of Souls is complete\n\nHope you like memorizing roll timings while fighting copy pasted bosses, with the same \u2665\u2665\u2665\u2665\u2665\u2665 camera since Demon's Souls, and a barel...\""
   },
   {
     "passage_id": 6,
-    "app_id": 367520,
-    "game_title": "Hollow Knight",
+    "app_id": 1245620,
+    "game_title": "ELDEN RING",
     "field": "loved_features",
-    "text": "Praised for intricate map exploration, tight nail combat, deep lore, and gorgeous hand-drawn art."
+    "text": "Core praised aspects and retention drivers for ELDEN RING: Atmosphere & Worldbuilding (7% praise frequency across 148 mentions); Fluid Combat Mechanics (7% praise frequency across 144 mentions); Soundtrack & Audio Design (1% praise frequency across 30 mentions)."
   },
   {
     "passage_id": 7,
-    "app_id": 588650,
-    "game_title": "Dead Cells",
+    "app_id": 413150,
+    "game_title": "Stardew Valley",
     "field": "summary",
-    "text": "A rogue-lite, metroidvania-inspired action-platformer featuring frantic 2D combat and procedural levels."
+    "text": "Overall player consensus for Stardew Valley is Overwhelmingly Positive with 98.56% positive ratings. Frequently praised for Atmosphere & Worldbuilding (82 mentions, 3.7% praise frequency). Frequently praised for Fluid Combat Mechanics (106 mentions, 4.8% praise frequency). Player criticism concentrated on Performance & Frame Drops (3.1% of negative reviews). Player criticism concentrated on Controls & Input Latency (3.1% of negative reviews)."
   },
   {
     "passage_id": 8,
-    "app_id": 588650,
-    "game_title": "Dead Cells",
+    "app_id": 413150,
+    "game_title": "Stardew Valley",
     "field": "complaints",
-    "text": "Players note severe difficulty spikes on higher Boss Stem Cell levels and RNG weapon dependency."
+    "text": "Top recorded criticisms and complaints for Stardew Valley: Performance & Frame Drops (3.1% of negative feedback). Quoted player feedback: \"Game does seem really cozy and beautiful looking. Unfortunately I can't really experience it to the fullest due to having VRAM memory leaks eventually causing crashes and being una...\" | Controls & Input Latency (3.1% of negative feedback). Quoted player feedback: \"Better on other platforms as I'm left handed and not being able to change the mouse key funtions is an absolute pain in the arse. Don't bother if you're lefty, it's clunky as hell\" | Difficulty Spike & Balance (12.5% of negative feedback). Quoted player feedback: \"Too grindy and boring. Extremely slow pace and unclear progression system. Not for everyone...\""
   },
   {
     "passage_id": 9,
-    "app_id": 588650,
-    "game_title": "Dead Cells",
+    "app_id": 413150,
+    "game_title": "Stardew Valley",
     "field": "loved_features",
-    "text": "Celebrated for lightning-fast responsive dodge rolls, weapon synergy diversity, and regular content updates."
+    "text": "Core praised aspects and retention drivers for Stardew Valley: Atmosphere & Worldbuilding (3% praise frequency across 82 mentions); Fluid Combat Mechanics (4% praise frequency across 106 mentions); Soundtrack & Audio Design (2% praise frequency across 57 mentions)."
   },
   {
     "passage_id": 10,
-    "app_id": 413150,
-    "game_title": "Stardew Valley",
+    "app_id": 105600,
+    "game_title": "Terraria",
     "field": "summary",
-    "text": "Peaceful open-ended country-life RPG where players build their farm, raise animals, and befriend villagers."
+    "text": "Overall player consensus for Terraria is Overwhelmingly Positive with 96.22% positive ratings. Frequently praised for Atmosphere & Worldbuilding (50 mentions, 2.3% praise frequency). Frequently praised for Fluid Combat Mechanics (109 mentions, 5.1% praise frequency). Player criticism concentrated on Controls & Input Latency (2.4% of negative reviews). Player criticism concentrated on Difficulty Spike & Balance (10.7% of negative reviews)."
   },
   {
     "passage_id": 11,
-    "app_id": 413150,
-    "game_title": "Stardew Valley",
+    "app_id": 105600,
+    "game_title": "Terraria",
     "field": "complaints",
-    "text": "Complaints mention slow early-game walking speed and stamina constraints during initial days."
+    "text": "Top recorded criticisms and complaints for Terraria: Controls & Input Latency (2.4% of negative feedback). Quoted player feedback: \"Well, there is always this one game everyone loves and you can't get simply into it. I really wanted to love Terraria - its fanbase is very dedicated and massive. However, after tr...\" | Difficulty Spike & Balance (10.7% of negative feedback). Quoted player feedback: \"Firstly let me say, I know Terraria is one of the best games to be available on Steam and I know the endgame is extremely rewarding, you become something like a living god. I know ...\" | Pacing & Content Repetition (8.3% of negative feedback). Quoted player feedback: \"boring game .\""
   },
   {
     "passage_id": 12,
-    "app_id": 413150,
-    "game_title": "Stardew Valley",
+    "app_id": 105600,
+    "game_title": "Terraria",
     "field": "loved_features",
-    "text": "Beloved for wholesome relaxing loop, endless secrets, community center milestones, and multiplayer."
+    "text": "Core praised aspects and retention drivers for Terraria: Atmosphere & Worldbuilding (2% praise frequency across 50 mentions); Fluid Combat Mechanics (5% praise frequency across 109 mentions); Soundtrack & Audio Design (1% praise frequency across 30 mentions)."
   },
   {
     "passage_id": 13,
-    "app_id": 105600,
-    "game_title": "Terraria",
+    "app_id": 1091500,
+    "game_title": "Cyberpunk 2077",
     "field": "summary",
-    "text": "2D sandbox adventure digging, building, and battling countless monsters across sprawling caverns."
+    "text": "Overall player consensus for Cyberpunk 2077 is Very Positive with 95.09% positive ratings. Frequently praised for Atmosphere & Worldbuilding (268 mentions, 12.8% praise frequency). Frequently praised for Fluid Combat Mechanics (232 mentions, 11.1% praise frequency). Player criticism concentrated on Performance & Frame Drops (12.0% of negative reviews). Player criticism concentrated on Controls & Input Latency (5.6% of negative reviews)."
   },
   {
     "passage_id": 14,
-    "app_id": 105600,
-    "game_title": "Terraria",
+    "app_id": 1091500,
+    "game_title": "Cyberpunk 2077",
     "field": "complaints",
-    "text": "Beginners struggle with the lack of an in-game tutorial and finding required progression guide steps."
+    "text": "Top recorded criticisms and complaints for Cyberpunk 2077: Performance & Frame Drops (12.0% of negative feedback). Quoted player feedback: \"Played once, saved. Wanted to load my save, keeps crashing after every time I load my save. Zero mods installed. Takes a solid 2 minutes to boot every single time.\" | Controls & Input Latency (5.6% of negative feedback). Quoted player feedback: \"I've put 7 hours into Cyberpunk 2077, roughly 4 of which have been unskippable FMV and dialogue rather than actual gameplay. The combat is crappy bullet-sponge and unsatisfying, th...\" | Difficulty Spike & Balance (7.4% of negative feedback). Quoted player feedback: \"They forgot to put the game in Cyberpunk.\n\nI've been playing through the story for about six hours now, and I think I've seen half an hour of actual gameplay.\nThe rest of the time ...\""
   },
   {
     "passage_id": 15,
-    "app_id": 105600,
-    "game_title": "Terraria",
+    "app_id": 1091500,
+    "game_title": "Cyberpunk 2077",
     "field": "loved_features",
-    "text": "Famed for immense depth of boss progression, limitless crafting freedom, and deep modding community."
+    "text": "Core praised aspects and retention drivers for Cyberpunk 2077: Atmosphere & Worldbuilding (12% praise frequency across 268 mentions); Fluid Combat Mechanics (11% praise frequency across 232 mentions); Soundtrack & Audio Design (3% praise frequency across 75 mentions)."
   },
   {
     "passage_id": 16,
-    "app_id": 504230,
-    "game_title": "Celeste",
+    "app_id": 1145360,
+    "game_title": "Hades",
     "field": "summary",
-    "text": "A precision platformer about climbing Madeline's inner turmoil and the mystical Celeste Mountain."
+    "text": "Overall player consensus for Hades is Overwhelmingly Positive with 96.6% positive ratings. Frequently praised for Atmosphere & Worldbuilding (71 mentions, 3.4% praise frequency). Frequently praised for Fluid Combat Mechanics (441 mentions, 21.0% praise frequency). Player criticism concentrated on Performance & Frame Drops (4.1% of negative reviews). Player criticism concentrated on Controls & Input Latency (5.4% of negative reviews)."
   },
   {
     "passage_id": 17,
-    "app_id": 504230,
-    "game_title": "Celeste",
+    "app_id": 1145360,
+    "game_title": "Hades",
     "field": "complaints",
-    "text": "Players find late-game B-sides and Farewell chapter screens extraordinarily punishing."
+    "text": "Top recorded criticisms and complaints for Hades: Performance & Frame Drops (4.1% of negative feedback). Quoted player feedback: \"Quite possibly the worst 9/10 game in the world.\n20 hours in, and I love everything about it, but I am unable to proceed.\nI get a perfect run, get to the minotaur+thesus boss fight...\" | Controls & Input Latency (5.4% of negative feedback). Quoted player feedback: \"Dont play the game with mouse and keyboard. It has a big bug where you miss the target most of the time. \r\nWhen i switched to controller it was suddenly easy and i went through the...\" | Difficulty Spike & Balance (32.4% of negative feedback). Quoted player feedback: \"it just feels like a tedious mobile slasher game with no deeper purpose. every level is the same but with different enemies. i wish i could enjoy playing this but nah.\""
   },
   {
     "passage_id": 18,
-    "app_id": 504230,
-    "game_title": "Celeste",
+    "app_id": 1145360,
+    "game_title": "Hades",
     "field": "loved_features",
-    "text": "Acclaimed for Lena Raine's emotional soundtrack, instant respawns, empathetic mental health narrative, and assist mode."
+    "text": "Core praised aspects and retention drivers for Hades: Atmosphere & Worldbuilding (3% praise frequency across 71 mentions); Fluid Combat Mechanics (21% praise frequency across 441 mentions); Soundtrack & Audio Design (7% praise frequency across 165 mentions)."
   },
   {
     "passage_id": 19,
-    "app_id": 264710,
-    "game_title": "Subnautica",
+    "app_id": 588650,
+    "game_title": "Dead Cells",
     "field": "summary",
-    "text": "An underwater open-world adventure game of oceanic exploration, survival craft, and alien ecology."
+    "text": "Overall player consensus for Dead Cells is Overwhelmingly Positive with 95.7% positive ratings. Frequently praised for Atmosphere & Worldbuilding (47 mentions, 2.5% praise frequency). Frequently praised for Fluid Combat Mechanics (278 mentions, 14.5% praise frequency). Player criticism concentrated on Performance & Frame Drops (2.3% of negative reviews). Player criticism concentrated on Controls & Input Latency (5.8% of negative reviews)."
   },
   {
     "passage_id": 20,
-    "app_id": 264710,
-    "game_title": "Subnautica",
+    "app_id": 588650,
+    "game_title": "Dead Cells",
     "field": "complaints",
-    "text": "Common complaints include pop-in rendering bugs and extreme thalassophobia when entering the Void."
+    "text": "Top recorded criticisms and complaints for Dead Cells: Performance & Frame Drops (2.3% of negative feedback). Quoted player feedback: \"Worst main menu I've seen in a while. I especially like the completely ugly and unnecessary leaderboard that covers half the screen showing me a variety of Chinese characters and s...\" | Controls & Input Latency (5.8% of negative feedback). Quoted player feedback: \"I feel this game is trying to be Symphony of the night, Binding of Isaac and Dark Souls inside a 90\u2019s platformer (Wonder boy 3/Aladdin etc) without really standing out as its own g...\" | Difficulty Spike & Balance (24.4% of negative feedback). Quoted player feedback: \"Im a huge roguelike fan, but i honestly would never recommend it for myself\n\ni gave it a fair 24hour shot and bought all the DLCs, i was so convinced i was gonna love it at some po...\""
   },
   {
     "passage_id": 21,
-    "app_id": 264710,
-    "game_title": "Subnautica",
+    "app_id": 588650,
+    "game_title": "Dead Cells",
     "field": "loved_features",
-    "text": "Universally praised for atmospheric tension, deep submersible crafting, biome design, and discovery."
+    "text": "Core praised aspects and retention drivers for Dead Cells: Atmosphere & Worldbuilding (2% praise frequency across 47 mentions); Fluid Combat Mechanics (14% praise frequency across 278 mentions); Soundtrack & Audio Design (4% praise frequency across 79 mentions)."
   },
   {
     "passage_id": 22,
-    "app_id": 646570,
-    "game_title": "Slay the Spire",
+    "app_id": 504230,
+    "game_title": "Celeste",
     "field": "summary",
-    "text": "A genre-defining roguelike deckbuilder where players draft relic synergies to defeat the Spire's heart."
+    "text": "Overall player consensus for Celeste is Overwhelmingly Positive with 97.0% positive ratings. Frequently praised for Atmosphere & Worldbuilding (36 mentions, 1.9% praise frequency). Frequently praised for Fluid Combat Mechanics (256 mentions, 13.2% praise frequency). Player criticism concentrated on Performance & Frame Drops (1.7% of negative reviews). Player criticism concentrated on Controls & Input Latency (18.3% of negative reviews)."
   },
   {
     "passage_id": 23,
-    "app_id": 646570,
-    "game_title": "Slay the Spire",
+    "app_id": 504230,
+    "game_title": "Celeste",
     "field": "complaints",
-    "text": "Negative reviews lament harsh RNG card reward droughts on Ascension 20 runs."
+    "text": "Top recorded criticisms and complaints for Celeste: Performance & Frame Drops (1.7% of negative feedback). Quoted player feedback: \"who in the world decided making 2 bugs into features on an fps capped game was a remotley good idea\" | Controls & Input Latency (18.3% of negative feedback). Quoted player feedback: \"Hate the controls\" | Difficulty Spike & Balance (6.7% of negative feedback). Quoted player feedback: \"No secondary system (loadout, resource management, combat options) to engage with alongside the movement itself. Ended up feeling too simple and understimulating\r\nMany rooms lock y...\""
   },
   {
     "passage_id": 24,
-    "app_id": 646570,
-    "game_title": "Slay the Spire",
+    "app_id": 504230,
+    "game_title": "Celeste",
     "field": "loved_features",
-    "text": "Praised for mathematical balance, distinct character archetypes, emergent card synergies, and infinite replayability."
+    "text": "Core praised aspects and retention drivers for Celeste: Atmosphere & Worldbuilding (1% praise frequency across 36 mentions); Fluid Combat Mechanics (13% praise frequency across 256 mentions); Soundtrack & Audio Design (11% praise frequency across 227 mentions)."
   },
   {
     "passage_id": 25,
-    "app_id": 620,
-    "game_title": "Portal 2",
+    "app_id": 1672970,
+    "game_title": "Minecraft Dungeons",
     "field": "summary",
-    "text": "A hilarious first-person puzzle adventure featuring Aperture Science's portal gun and GLaDOS."
+    "text": "Overall player consensus for Minecraft Dungeons is Very Positive with 88.6% positive ratings. Frequently praised for Atmosphere & Worldbuilding (46 mentions, 2.6% praise frequency). Frequently praised for Fluid Combat Mechanics (154 mentions, 8.7% praise frequency). Player criticism concentrated on Performance & Frame Drops (5.7% of negative reviews). Player criticism concentrated on Controls & Input Latency (14.9% of negative reviews)."
   },
   {
     "passage_id": 26,
-    "app_id": 620,
-    "game_title": "Portal 2",
+    "app_id": 1672970,
+    "game_title": "Minecraft Dungeons",
     "field": "complaints",
-    "text": "Some users feel the single-player campaign ends too quickly and desire more test chambers."
+    "text": "Top recorded criticisms and complaints for Minecraft Dungeons: Performance & Frame Drops (5.7% of negative feedback). Quoted player feedback: \"With how repetitive, clunky and simple this game is, 40\u20ac for the ultimate edition is way too much, yet it is the only way to get the intended full experience and to get all the ach...\" | Controls & Input Latency (14.9% of negative feedback). Quoted player feedback: \"ubisoft, a billion dollar corporation that can't be bothered to add proper wasd movement to their games just because it was mainly meant for controller\" | Difficulty Spike & Balance (11.4% of negative feedback). Quoted player feedback: \"I guess I wouldn't recommend this one, even though it's kinda mid.\r\nMusic is forgettable, sound effects are fitting and sometimes satisfying.\r\nGameplay is just... weird. I much pre...\""
   },
   {
     "passage_id": 27,
-    "app_id": 620,
-    "game_title": "Portal 2",
+    "app_id": 1672970,
+    "game_title": "Minecraft Dungeons",
     "field": "loved_features",
-    "text": "Renowned for Stephen Merchant and Ellen McLain's comedic writing, inventive cooperative campaign, and spatial puzzles."
+    "text": "Core praised aspects and retention drivers for Minecraft Dungeons: Atmosphere & Worldbuilding (2% praise frequency across 46 mentions); Fluid Combat Mechanics (8% praise frequency across 154 mentions); Soundtrack & Audio Design (2% praise frequency across 37 mentions)."
   },
   {
     "passage_id": 28,
-    "app_id": 730,
-    "game_title": "Counter-Strike: Global Offensive",
+    "app_id": 307690,
+    "game_title": "Sleeping Dogs: Definitive Edition",
     "field": "summary",
-    "text": "A tactical multiplayer first-person shooter centered on bomb defusal and competitive round economy."
+    "text": "Overall player consensus for Sleeping Dogs: Definitive Edition is Overwhelmingly Positive with 97.0% positive ratings. Frequently praised for Atmosphere & Worldbuilding (267 mentions, 13.8% praise frequency). Frequently praised for Fluid Combat Mechanics (501 mentions, 25.8% praise frequency). Player criticism concentrated on Performance & Frame Drops (10.0% of negative reviews). Player criticism concentrated on Controls & Input Latency (21.7% of negative reviews)."
   },
   {
     "passage_id": 29,
-    "app_id": 730,
-    "game_title": "Counter-Strike: Global Offensive",
+    "app_id": 307690,
+    "game_title": "Sleeping Dogs: Definitive Edition",
     "field": "complaints",
-    "text": "Frequent complaints cite cheaters, toxic matchmaking teammates, and smurfing in lower ranks."
+    "text": "Top recorded criticisms and complaints for Sleeping Dogs: Definitive Edition: Performance & Frame Drops (10.0% of negative feedback). Quoted player feedback: \"People gave this game very high reviews and i cannot figure out why, literally the slowest most \u2665\u2665\u2665\u2665 content boring piece of garbage non working mess of a port. Animations are \u2665\u2665\u2665\u2665...\" | Controls & Input Latency (21.7% of negative feedback). Quoted player feedback: \"Had to uninstall less than 20 minutes after installing.  Game seems to run fine, and it looks pretty good for its age.  Unfortunately, the tutorial quests in the beginning seem hig...\" | Difficulty Spike & Balance (5.0% of negative feedback). Quoted player feedback: \"This is like one of the most hard games ever to be played and it is not a nice process it is a very frustrating one. Don't buy this game plz. You may buy games like Cyberpunk 2077....\""
   },
   {
     "passage_id": 30,
-    "app_id": 730,
-    "game_title": "Counter-Strike: Global Offensive",
+    "app_id": 307690,
+    "game_title": "Sleeping Dogs: Definitive Edition",
     "field": "loved_features",
-    "text": "Celebrated for crisp gun mechanics, tactical team communication, tournament esports scene, and skin trading."
+    "text": "Core praised aspects and retention drivers for Sleeping Dogs: Definitive Edition: Atmosphere & Worldbuilding (13% praise frequency across 267 mentions); Fluid Combat Mechanics (25% praise frequency across 501 mentions); Soundtrack & Audio Design (3% praise frequency across 60 mentions)."
   },
   {
     "passage_id": 31,
-    "app_id": 570,
-    "game_title": "Dota 2",
+    "app_id": 646570,
+    "game_title": "Slay the Spire",
     "field": "summary",
-    "text": "A deeply complex 5v5 competitive MOBA where teams draft unique heroes to destroy the Ancient."
+    "text": "Overall player consensus for Slay the Spire is Overwhelmingly Positive with 92.75% positive ratings. Frequently praised for Atmosphere & Worldbuilding (19 mentions, 1.0% praise frequency). Frequently praised for Fluid Combat Mechanics (123 mentions, 6.6% praise frequency). Player criticism concentrated on Performance & Frame Drops (3.4% of negative reviews). Player criticism concentrated on Controls & Input Latency (3.4% of negative reviews)."
   },
   {
     "passage_id": 32,
-    "app_id": 570,
-    "game_title": "Dota 2",
+    "app_id": 646570,
+    "game_title": "Slay the Spire",
     "field": "complaints",
-    "text": "Criticized for an impenetrable new-player learning curve and severe teammate hostility."
+    "text": "Top recorded criticisms and complaints for Slay the Spire: Performance & Frame Drops (3.4% of negative feedback). Quoted player feedback: \"This is a card based game where you fight battles over and over and it pretends to be a rogue/rogue - light.\n\n\nThere are 4 characters, the iron clad, which is tanky, the silent, wh...\" | Controls & Input Latency (3.4% of negative feedback). Quoted player feedback: \"One of those purchases I regret. A highly overrated game. There\u2019s a genre in board games that\u2019s the most boring of all, built entirely on uncontrollable randomness with dice\u2014it\u2019s c...\" | Difficulty Spike & Balance (20.0% of negative feedback). Quoted player feedback: \"I defeated the 4th boss while drunk! This roguelike is luck based, and stole hours and hours of my life, and shall steal your hours too. I do not recommend it!\""
   },
   {
     "passage_id": 33,
-    "app_id": 570,
-    "game_title": "Dota 2",
+    "app_id": 646570,
+    "game_title": "Slay the Spire",
     "field": "loved_features",
-    "text": "Lauded for completely free unmonetized hero roster, tactical strategic depth, and high skill ceiling."
+    "text": "Core praised aspects and retention drivers for Slay the Spire: Atmosphere & Worldbuilding (1% praise frequency across 19 mentions); Fluid Combat Mechanics (6% praise frequency across 123 mentions); Soundtrack & Audio Design (1% praise frequency across 27 mentions)."
   },
   {
     "passage_id": 34,
-    "app_id": 1091500,
-    "game_title": "Cyberpunk 2077",
+    "app_id": 252490,
+    "game_title": "Rust",
     "field": "summary",
-    "text": "An open-world action-adventure RPG set in the dystopian megalopolis of Night City as mercenary V."
+    "text": "Overall player consensus for Rust is Very Positive with 80.45% positive ratings. Frequently praised for Atmosphere & Worldbuilding (1 mentions, 0.6% praise frequency). Frequently praised for Fluid Combat Mechanics (19 mentions, 10.7% praise frequency). Player criticism concentrated on Performance & Frame Drops (14.0% of negative reviews). Player criticism concentrated on Controls & Input Latency (2.3% of negative reviews)."
   },
   {
     "passage_id": 35,
-    "app_id": 1091500,
-    "game_title": "Cyberpunk 2077",
+    "app_id": 252490,
+    "game_title": "Rust",
     "field": "complaints",
-    "text": "Historical launch glitches, pedestrian AI quirks, and vehicular handling received player criticism."
+    "text": "Top recorded criticisms and complaints for Rust: Performance & Frame Drops (14.0% of negative feedback). Quoted player feedback: \"Its been weeks and still cant load into servers before it crashes, messaged facepunch but no replay.\" | Controls & Input Latency (2.3% of negative feedback). Quoted player feedback: \"Very controlling do not recommend it will make u a terrible person overall\" | Camera & Visual Readability (4.7% of negative feedback). Quoted player feedback: \"Encountered bugs, poor performance, and lack of content.\""
   },
   {
     "passage_id": 36,
-    "app_id": 1091500,
-    "game_title": "Cyberpunk 2077",
+    "app_id": 252490,
+    "game_title": "Rust",
     "field": "loved_features",
-    "text": "Adored for breathtaking neon visuals, Keanu Reeves as Johnny Silverhand, cinematic storytelling, and 2.0 perk overhaul."
+    "text": "Core praised aspects and retention drivers for Rust: Atmosphere & Worldbuilding (0% praise frequency across 1 mentions); Fluid Combat Mechanics (10% praise frequency across 19 mentions)."
   },
   {
     "passage_id": 37,
-    "app_id": 1245620,
-    "game_title": "Elden Ring",
+    "app_id": 1086940,
+    "game_title": "Baldur's Gate 3",
     "field": "summary",
-    "text": "A massive open-world souls-like action RPG directed by Hidetaka Miyazaki with worldbuilding by George R. R. Martin."
+    "text": "Overall player consensus for Baldur's Gate 3 is Overwhelmingly Positive with 95.0% positive ratings. Frequently praised for Atmosphere & Worldbuilding (8 mentions, 3.8% praise frequency). Frequently praised for Fluid Combat Mechanics (36 mentions, 17.2% praise frequency). Player criticism concentrated on Difficulty Spike & Balance (9.1% of negative reviews). Player criticism concentrated on Camera & Visual Readability (9.1% of negative reviews)."
   },
   {
     "passage_id": 38,
-    "app_id": 1245620,
-    "game_title": "Elden Ring",
+    "app_id": 1086940,
+    "game_title": "Baldur's Gate 3",
     "field": "complaints",
-    "text": "Players criticize delayed attack inputs, camera tracking on giant bosses, and late-game damage spikes."
+    "text": "Top recorded criticisms and complaints for Baldur's Gate 3: Difficulty Spike & Balance (9.1% of negative feedback). Quoted player feedback: \"To be honest maybe its just D&D isnt for me but the RNG in this game has never made me more frustrated in a games mechs and combat in my life. though the games story is good it has...\" | Camera & Visual Readability (9.1% of negative feedback). Quoted player feedback: \"Absolutely terrible!\r\nThe hit boxes are too hard to find.\r\nThe camera is wonky....Not enough zoom and moving back and forth was annoying,\r\nI died on ever single combat scene! Multi...\" | Pacing & Content Repetition (18.2% of negative feedback). Quoted player feedback: \"The stories are shallow, and weak. The game doesn't allow for the standard 6 player party even in honour mode. There are rules and mechanics from 5.5/5e not present in this game. T...\""
   },
   {
     "passage_id": 39,
-    "app_id": 1245620,
-    "game_title": "Elden Ring",
+    "app_id": 1086940,
+    "game_title": "Baldur's Gate 3",
     "field": "loved_features",
-    "text": "Praised for staggering freedom of exploration, build variety, memorable legacy dungeons, and boss spectacle."
+    "text": "Core praised aspects and retention drivers for Baldur's Gate 3: Atmosphere & Worldbuilding (3% praise frequency across 8 mentions); Fluid Combat Mechanics (17% praise frequency across 36 mentions); Soundtrack & Audio Design (1% praise frequency across 4 mentions)."
   },
   {
     "passage_id": 40,
-    "app_id": 1086940,
-    "game_title": "Baldur's Gate 3",
+    "app_id": 632360,
+    "game_title": "Risk of Rain 2",
     "field": "summary",
-    "text": "A story-rich party-based CRPG set in the D&D Forgotten Realms where player choices dictate fate."
+    "text": "Overall player consensus for Risk of Rain 2 is Overwhelmingly Positive with 94.09% positive ratings. Frequently praised for Atmosphere & Worldbuilding (5 mentions, 2.4% praise frequency). Frequently praised for Fluid Combat Mechanics (31 mentions, 15.0% praise frequency). Player criticism concentrated on Performance & Frame Drops (7.7% of negative reviews). Player criticism concentrated on Difficulty Spike & Balance (7.7% of negative reviews)."
   },
   {
     "passage_id": 41,
-    "app_id": 1086940,
-    "game_title": "Baldur's Gate 3",
+    "app_id": 632360,
+    "game_title": "Risk of Rain 2",
     "field": "complaints",
-    "text": "Act 3 performance drops in the lower city and party inventory management clunkiness."
+    "text": "Top recorded criticisms and complaints for Risk of Rain 2: Performance & Frame Drops (7.7% of negative feedback). Quoted player feedback: \"Encountered bugs, poor performance, and lack of content.\" | Difficulty Spike & Balance (7.7% of negative feedback). Quoted player feedback: \"This game just did not stick with me. I found it to be one of the most boring and uninteresting roguelikes I've ever played.\r\n\r\nFirst the positives:\r\n\r\nThe music was alright, not a...\" | Camera & Visual Readability (15.4% of negative feedback). Quoted player feedback: \"The game just deleted my save (after bugging multiple times forcing my character to look upward) and uploaded it to Steam Cloud.\n\nDo not recommend, can't understand this type of bu...\""
   },
   {
     "passage_id": 42,
-    "app_id": 1086940,
-    "game_title": "Baldur's Gate 3",
+    "app_id": 632360,
+    "game_title": "Risk of Rain 2",
     "field": "loved_features",
-    "text": "Hailed for unmatched narrative agency, rich companion romances, tactile turn-based combat, and voice acting."
+    "text": "Core praised aspects and retention drivers for Risk of Rain 2: Atmosphere & Worldbuilding (2% praise frequency across 5 mentions); Fluid Combat Mechanics (15% praise frequency across 31 mentions); Soundtrack & Audio Design (4% praise frequency across 10 mentions)."
+  },
+  {
+    "passage_id": 43,
+    "app_id": 292030,
+    "game_title": "The Witcher 3: Wild Hunt",
+    "field": "summary",
+    "text": "Overall player consensus for The Witcher 3: Wild Hunt is Overwhelmingly Positive with 95.91% positive ratings. Frequently praised for Atmosphere & Worldbuilding (23 mentions, 10.9% praise frequency). Frequently praised for Fluid Combat Mechanics (46 mentions, 21.8% praise frequency). Player criticism concentrated on Controls & Input Latency (11.1% of negative reviews). Player criticism concentrated on Difficulty Spike & Balance (11.1% of negative reviews)."
+  },
+  {
+    "passage_id": 44,
+    "app_id": 292030,
+    "game_title": "The Witcher 3: Wild Hunt",
+    "field": "complaints",
+    "text": "Top recorded criticisms and complaints for The Witcher 3: Wild Hunt: Pacing & Content Repetition (11.1% of negative feedback). Quoted player feedback: \"6.5/10\n\nI can see why so many people love The Witcher 3, but it just isn't really my type of game. The world and story are really well made, and I can tell a lot of work went into ...\" | Controls & Input Latency (11.1% of negative feedback). Quoted player feedback: \"I played the game back when it was released and remember enjoying it at the time. I have come back almost a decade later to give it a spin.\n\nThe UI/UX is insufferable beyond belief...\" | Difficulty Spike & Balance (11.1% of negative feedback). Quoted player feedback: \"I played the game back when it was released and remember enjoying it at the time. I have come back almost a decade later to give it a spin.\n\nThe UI/UX is insufferable beyond belief...\""
+  },
+  {
+    "passage_id": 45,
+    "app_id": 292030,
+    "game_title": "The Witcher 3: Wild Hunt",
+    "field": "loved_features",
+    "text": "Core praised aspects and retention drivers for The Witcher 3: Wild Hunt: Atmosphere & Worldbuilding (10% praise frequency across 23 mentions); Fluid Combat Mechanics (21% praise frequency across 46 mentions); Soundtrack & Audio Design (3% praise frequency across 8 mentions)."
+  },
+  {
+    "passage_id": 46,
+    "app_id": 477160,
+    "game_title": "Human Fall Flat",
+    "field": "summary",
+    "text": "Overall player consensus for Human Fall Flat is Overwhelmingly Positive with 93.64% positive ratings. Frequently praised for Atmosphere & Worldbuilding (1 mentions, 0.5% praise frequency). Frequently praised for Fluid Combat Mechanics (24 mentions, 11.7% praise frequency). Player criticism concentrated on Performance & Frame Drops (7.1% of negative reviews). Player criticism concentrated on Controls & Input Latency (28.6% of negative reviews)."
+  },
+  {
+    "passage_id": 47,
+    "app_id": 477160,
+    "game_title": "Human Fall Flat",
+    "field": "complaints",
+    "text": "Top recorded criticisms and complaints for Human Fall Flat: Performance & Frame Drops (7.1% of negative feedback). Quoted player feedback: \"Encountered bugs, poor performance, and lack of content.\" | Controls & Input Latency (28.6% of negative feedback). Quoted player feedback: \"i remember when i used to play it on my pc when i was a child some maps are gone\nu used to be able to play it with your friend on 1 keyboard and mouse but that feature was gone\nand...\" | Difficulty Spike & Balance (7.1% of negative feedback). Quoted player feedback: \"This game looked funny but the controls are awful. The floaty physics make everything frustrating and repetitive. Multiplayer is full of glitches too. Got bored fast.\""
+  },
+  {
+    "passage_id": 48,
+    "app_id": 477160,
+    "game_title": "Human Fall Flat",
+    "field": "loved_features",
+    "text": "Core praised aspects and retention drivers for Human Fall Flat: Atmosphere & Worldbuilding (0% praise frequency across 1 mentions); Fluid Combat Mechanics (11% praise frequency across 24 mentions); Boss Design & Encounter Depth (1% praise frequency across 4 mentions)."
+  },
+  {
+    "passage_id": 49,
+    "app_id": 892970,
+    "game_title": "Valheim",
+    "field": "summary",
+    "text": "Overall player consensus for Valheim is Very Positive with 88.64% positive ratings. Frequently praised for Atmosphere & Worldbuilding (13 mentions, 6.7% praise frequency). Frequently praised for Fluid Combat Mechanics (40 mentions, 20.5% praise frequency). Player criticism concentrated on Performance & Frame Drops (12.0% of negative reviews). Player criticism concentrated on Difficulty Spike & Balance (28.0% of negative reviews)."
+  },
+  {
+    "passage_id": 50,
+    "app_id": 892970,
+    "game_title": "Valheim",
+    "field": "complaints",
+    "text": "Top recorded criticisms and complaints for Valheim: Performance & Frame Drops (12.0% of negative feedback). Quoted player feedback: \"The game chooses to store you player progress locally instead of on the server, so if you happen to crash, you lose progress and possibly unique items.\" | Difficulty Spike & Balance (28.0% of negative feedback). Quoted player feedback: \"I personally do not like or enjoy this game.\n\nIt is a basic realistic survival craft game, so a lot of walking. A lot of grinding. Unless you make a new base per area, maybe this i...\" | Camera & Visual Readability (4.0% of negative feedback). Quoted player feedback: \"Encountered bugs, poor performance, and lack of content.\""
+  },
+  {
+    "passage_id": 51,
+    "app_id": 892970,
+    "game_title": "Valheim",
+    "field": "loved_features",
+    "text": "Core praised aspects and retention drivers for Valheim: Atmosphere & Worldbuilding (6% praise frequency across 13 mentions); Fluid Combat Mechanics (20% praise frequency across 40 mentions); Soundtrack & Audio Design (3% praise frequency across 7 mentions)."
+  },
+  {
+    "passage_id": 52,
+    "app_id": 1057090,
+    "game_title": "Ori and the Will of the Wisps",
+    "field": "summary",
+    "text": "Overall player consensus for Ori and the Will of the Wisps is Overwhelmingly Positive with 96.02% positive ratings. Frequently praised for Atmosphere & Worldbuilding (16 mentions, 8.3% praise frequency). Frequently praised for Fluid Combat Mechanics (63 mentions, 32.6% praise frequency). Player criticism concentrated on Performance & Frame Drops (12.5% of negative reviews). Player criticism concentrated on Controls & Input Latency (12.5% of negative reviews)."
+  },
+  {
+    "passage_id": 53,
+    "app_id": 1057090,
+    "game_title": "Ori and the Will of the Wisps",
+    "field": "complaints",
+    "text": "Top recorded criticisms and complaints for Ori and the Will of the Wisps: Performance & Frame Drops (12.5% of negative feedback). Quoted player feedback: \"Compared to Ori and the Blind Forest, this game is a little disappointing. The improved graphics don't really make up for the fact that it is much heavier to run and has a tendency...\" | Controls & Input Latency (12.5% of negative feedback). Quoted player feedback: \"Quite fun at first, interesting gameplay mechanics, and good balance. Then it gets a bit annoying, as you backtrack a lot after a couple of hours. And finally it just gets frustrat...\" | Difficulty Spike & Balance (25.0% of negative feedback). Quoted player feedback: \"Compared to Ori and the Blind Forest, this game is a little disappointing. The improved graphics don't really make up for the fact that it is much heavier to run and has a tendency...\""
+  },
+  {
+    "passage_id": 54,
+    "app_id": 1057090,
+    "game_title": "Ori and the Will of the Wisps",
+    "field": "loved_features",
+    "text": "Core praised aspects and retention drivers for Ori and the Will of the Wisps: Atmosphere & Worldbuilding (8% praise frequency across 16 mentions); Fluid Combat Mechanics (32% praise frequency across 63 mentions); Soundtrack & Audio Design (18% praise frequency across 36 mentions)."
+  },
+  {
+    "passage_id": 55,
+    "app_id": 1382330,
+    "game_title": "Persona\u00ae 5 Strikers",
+    "field": "summary",
+    "text": "Overall player consensus for Persona\u00ae 5 Strikers is Very Positive with 75.0% positive ratings. Frequently praised for Atmosphere & Worldbuilding (8 mentions, 5.3% praise frequency). Frequently praised for Fluid Combat Mechanics (44 mentions, 29.3% praise frequency). Player criticism concentrated on Performance & Frame Drops (54.0% of negative reviews). Player criticism concentrated on Controls & Input Latency (8.0% of negative reviews)."
+  },
+  {
+    "passage_id": 56,
+    "app_id": 1382330,
+    "game_title": "Persona\u00ae 5 Strikers",
+    "field": "complaints",
+    "text": "Top recorded criticisms and complaints for Persona\u00ae 5 Strikers: Performance & Frame Drops (54.0% of negative feedback). Quoted player feedback: \"The game itself is pretty good, but the steam port is terrible. It will constantly crash during cutscenes, so if you don't save every chance you get, you will lose so much progress...\" | Controls & Input Latency (8.0% of negative feedback). Quoted player feedback: \"Bad port, good game.\n\nHaving 200 different controls and not allowing you to take full advantage of your keybinds, especially knowing its a hack and slash game, really ruins the exp...\" | Difficulty Spike & Balance (12.0% of negative feedback). Quoted player feedback: \"Gameplay loop is not engaging. For a musou-style game, I did not get a sense of overwhelming power. The gang can easily be slept/froze/shocked/brainwashed or otherwise juggled when...\""
+  },
+  {
+    "passage_id": 57,
+    "app_id": 1382330,
+    "game_title": "Persona\u00ae 5 Strikers",
+    "field": "loved_features",
+    "text": "Core praised aspects and retention drivers for Persona\u00ae 5 Strikers: Atmosphere & Worldbuilding (5% praise frequency across 8 mentions); Fluid Combat Mechanics (29% praise frequency across 44 mentions); Soundtrack & Audio Design (12% praise frequency across 19 mentions)."
+  },
+  {
+    "passage_id": 58,
+    "app_id": 250900,
+    "game_title": "The Binding of Isaac: Rebirth",
+    "field": "summary",
+    "text": "Overall player consensus for The Binding of Isaac: Rebirth is Overwhelmingly Positive with 95.5% positive ratings. Frequently praised for Atmosphere & Worldbuilding (1 mentions, 0.5% praise frequency). Frequently praised for Fluid Combat Mechanics (3 mentions, 1.6% praise frequency). Minimal recurring player friction recorded."
+  },
+  {
+    "passage_id": 59,
+    "app_id": 250900,
+    "game_title": "The Binding of Isaac: Rebirth",
+    "field": "complaints",
+    "text": "No significant recurring player criticisms or bug clusters recorded for The Binding of Isaac: Rebirth."
+  },
+  {
+    "passage_id": 60,
+    "app_id": 250900,
+    "game_title": "The Binding of Isaac: Rebirth",
+    "field": "loved_features",
+    "text": "Core praised aspects and retention drivers for The Binding of Isaac: Rebirth: Atmosphere & Worldbuilding (0% praise frequency across 1 mentions); Fluid Combat Mechanics (1% praise frequency across 3 mentions); Soundtrack & Audio Design (0% praise frequency across 1 mentions)."
   }
 ]

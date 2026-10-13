@@ -1,7 +1,7 @@
 # Model Card: `recsys_two_tower_clean`
 
 **Family:** Two-Tower Retrieval | **Stage:** `production` (Headline Champion)  
-**Run ID:** `eb9a3374-2aad-476f-a25e-5d3b84261b7f` | **Generated:** 2026-10-11  
+**Run ID:** `eb9a3374-2aad-476f-a25e-5d3b84261b7f` | **Generated:** 2026-10-12  
 **License:** Project Internal / MIT  
 
 ---
