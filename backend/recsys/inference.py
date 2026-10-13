@@ -194,18 +194,26 @@ class RecommenderService:
             # Read fallback metrics from leaderboard.json in case DB is unreachable
             lb_fallback: dict[str, dict[str, Any]] = {}
             for lb_p in [
-                self.data_dir / "artifacts" / "recsys_leaderboard" / "leaderboard.json",
+                self.data_dir / "reports" / "leaderboard.json",
                 Path("docs/results/leaderboard.json"),
+                self.data_dir / "artifacts" / "recsys_leaderboard" / "leaderboard.json",
                 Path("artifacts/recsys_leaderboard/leaderboard.json"),
             ]:
                 if lb_p.exists():
                     try:
                         import json
-                        entries = json.loads(lb_p.read_text(encoding="utf-8"))
-                        for e in entries:
-                            if isinstance(e, dict) and "model_name" in e:
-                                lb_fallback[e["model_name"]] = e
-                        break
+                        raw_lb = json.loads(lb_p.read_text(encoding="utf-8"))
+                        entries = raw_lb.get("models", raw_lb) if isinstance(raw_lb, dict) else raw_lb
+                        if isinstance(entries, list):
+                            for e in entries:
+                                if isinstance(e, dict) and "model_name" in e:
+                                    val_n = e.get("val_metrics", {}).get("ndcg_at_10") if isinstance(e.get("val_metrics"), dict) else e.get("val_ndcg_at_10", 0.0)
+                                    test_n = e.get("test_metrics", {}).get("ndcg_at_10") if isinstance(e.get("test_metrics"), dict) else e.get("test_ndcg_at_10", 0.0)
+                                    e_copy = dict(e)
+                                    e_copy["val_ndcg_at_10"] = float(val_n) if val_n is not None else 0.0
+                                    e_copy["test_ndcg_at_10"] = float(test_n) if test_n is not None else 0.0
+                                    lb_fallback[e["model_name"]] = e_copy
+                            break
                     except Exception:
                         pass
 
@@ -248,7 +256,11 @@ class RecommenderService:
 
                 # If missing model_run_id or val_ndcg_at_10 <= 0, enrich from leaderboard fallback
                 if p is not None:
-                    lb_entry = lb_fallback.get(model_name, {})
+                    lb_entry = lb_fallback.get(model_name) or (
+                        lb_fallback.get("recsys_two_tower_ranker_v2_trainstats", {})
+                        if model_name == "recsys_two_tower_ranker_clean_v2"
+                        else {}
+                    )
                     if not meta.get("model_run_id"):
                         meta["model_run_id"] = lb_entry.get("model_run_id") or p.name
                     if not meta.get("val_ndcg_at_10") or meta["val_ndcg_at_10"] <= 0.0:

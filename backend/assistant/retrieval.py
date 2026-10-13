@@ -205,12 +205,12 @@ class PassageIndex:
         diff_rr = dense_rr - tfidf_rr
         paired_diffs["delta_mrr"] = round(float(np.mean(diff_rr)), 4)
         paired_diffs["delta_mrr_ci"] = _boot_diff(diff_rr)
-        dense_beats_tfidf = bool(paired_diffs["delta_mrr_ci"][0] > 0.0)
+        dense_beats_tfidf = bool(paired_diffs["delta_mrr_ci"][0] > 0.0 and len(gold_queries) >= 60)
         paired_diffs["dense_beats_tfidf"] = dense_beats_tfidf
         paired_diffs["claim"] = (
-            "Dense MiniLM significantly outperforms TF-IDF (95% CI excludes 0)"
+            "Dense MiniLM significantly outperforms TF-IDF (95% CI excludes 0, n >= 60)"
             if dense_beats_tfidf
-            else "No evidence that dense retrieval outperforms TF-IDF (95% CI includes 0)"
+            else "No evidence that dense retrieval outperforms TF-IDF (95% CI includes 0 or n < 60)"
         )
 
         user_idxs = [i for i, g in enumerate(gold_queries) if g.get("written_by") == "user"]

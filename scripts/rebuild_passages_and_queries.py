@@ -8,13 +8,25 @@ from pathlib import Path
 import psycopg2
 
 
+import sys
+backend_dir = Path(__file__).resolve().parent.parent / "backend"
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+from core.config import settings
+
+
 def main():
+    gold_path = backend_dir / "assistant" / "data" / "gold_retrieval_queries.json"
+    with open(gold_path, "r", encoding="utf-8") as f:
+        gold_queries = json.load(f)
+    gold_app_ids = list({q["expected_app_id"] for q in gold_queries})
+
     conn = psycopg2.connect(
-        host="localhost",
-        port=5432,
-        dbname="steamiq",
-        user="steamiq",
-        password="changeme",
+        host=settings.postgres_host,
+        port=settings.postgres_port,
+        dbname=settings.postgres_db,
+        user=settings.postgres_user,
+        password=settings.postgres_password,
     )
     cur = conn.cursor()
 
@@ -22,11 +34,12 @@ def main():
     SELECT m.app_id, g.name, m.sentiment_overview, m.summary, m.complaints, m.loved_features
     FROM mart_review_intelligence m
     JOIN raw_games g ON m.app_id = g.app_id
-    WHERE (m.sentiment_overview->>'total_count')::int >= 50
-    ORDER BY (m.sentiment_overview->>'total_count')::int DESC
-    LIMIT 20;
+    WHERE m.app_id = ANY(%(target_ids)s)
+       OR (m.sentiment_overview->>'total_count')::int >= 20
+    ORDER BY (m.app_id = ANY(%(target_ids)s)) DESC, (m.sentiment_overview->>'total_count')::int DESC
+    LIMIT 30;
     """
-    cur.execute(query)
+    cur.execute(query, {"target_ids": gold_app_ids})
     rows = cur.fetchall()
 
     passages = []
@@ -79,7 +92,7 @@ def main():
                 feat_name = f.get("feature_name", f.get("feature", "Core Feature"))
                 mentions = f.get("mention_count", f.get("mentions", 0))
                 intensity = f.get("praise_intensity", f.get("intensity", 0))
-                loved_parts.append(f"{feat_name} ({intensity}/100 praise intensity across {mentions} mentions)")
+                loved_parts.append(f"{feat_name} ({intensity}% praise share across {mentions} mentions)")
             loved_text = f"Core praised aspects and retention drivers for {name}: " + "; ".join(loved_parts) + "."
         else:
             loved_text = f"Players enjoy the general core mechanics and atmosphere of {name}."

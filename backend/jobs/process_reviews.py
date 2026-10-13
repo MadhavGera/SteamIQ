@@ -329,12 +329,13 @@ class ProcessReviewsJob(BaseJob):
             if matching_count == 0:
                 continue
 
-            # Scale praise intensity to 50-100 integer score representing depth of positive reception
-            intensity = int(round(min(100, max(50, 70 + (matching_count / total_pos) * 100.0))))
+            # Plain share of positive reviews mentioning this feature
+            share = round((matching_count / total_pos) * 100.0, 1)
             results.append({
                 "feature": name,
                 "mentions": matching_count,
-                "intensity": intensity,
+                "intensity": int(round(share)),
+                "share": share,
             })
         return results
 
@@ -342,7 +343,7 @@ class ProcessReviewsJob(BaseJob):
         self, game: RawGame, pos: list[RawReview], neg: list[RawReview], loved: list[dict], complaints: list[dict]
     ) -> dict[str, list[str]]:
         strengths = [
-            f"Frequently praised for {f['feature']} ({f['mentions']} mentions, {f['intensity']}/100 praise intensity)."
+            f"Frequently praised for {f['feature']} ({f['mentions']} mentions, {f.get('share', f['intensity'])}% praise share)."
             for f in loved
             if f.get("mentions", 0) > 0
         ][:3]

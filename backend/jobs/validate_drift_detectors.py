@@ -177,9 +177,14 @@ class ValidateDriftDetectorsJob(BaseJob):
                 "mean_jsd": round(float(np.mean(jsd_values)), 4),
             })
 
-        # Summary Metrics
+        # Summary Metrics with Clopper-Pearson Exact CIs for Null FPR
         null_mean = mean_shift_results[0]
         null_cat = cat_shift_results[0]
+
+        from assistant.calibration import clopper_pearson_ci
+        psi_k = int(round(null_mean["psi_detection_rate"] * self.n_trials))
+        ks_k = int(round(null_mean["ks_detection_rate"] * self.n_trials))
+        jsd_k = int(round(null_cat["jsd_detection_rate"] * self.n_trials))
 
         report_payload = {
             "report_key": "monitoring_detector_power",
@@ -188,8 +193,11 @@ class ValidateDriftDetectorsJob(BaseJob):
             "sample_size": self.sample_size,
             "null_hypothesis_fpr": {
                 "psi_null_fpr": null_mean["psi_detection_rate"],
+                "psi_null_fpr_ci": list(clopper_pearson_ci(psi_k, self.n_trials)),
                 "ks_null_fpr": null_mean["ks_detection_rate"],
+                "ks_null_fpr_ci": list(clopper_pearson_ci(ks_k, self.n_trials)),
                 "jsd_null_fpr": null_cat["jsd_detection_rate"],
+                "jsd_null_fpr_ci": list(clopper_pearson_ci(jsd_k, self.n_trials)),
                 "fpr_target_satisfied": bool(null_mean["psi_detection_rate"] <= 0.05 and null_mean["ks_detection_rate"] <= 0.05),
             },
             "mean_shift_power": mean_shift_results,

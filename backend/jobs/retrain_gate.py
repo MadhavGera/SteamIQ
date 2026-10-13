@@ -104,54 +104,67 @@ def evaluate_gate_decision(
 
 def compute_bootstrap_cis_from_saved_ranks(
     artifacts_dir: Path,
-    challenger_family: str = "recsys_two_tower_ranker_v2_trainstats",
+    challenger_family: str = "recsys_two_tower_ranker_clean",
     n_boot: int = 1000,
     seed: int = 42,
 ) -> tuple[tuple[float, float], tuple[float, float], dict[str, Any]]:
     """
-    Computes paired bootstrap confidence intervals dynamically from saved rank arrays
-    comparing 5-seed Ranker mean against 3-seed Two-Tower mean.
-    Deletes all hardcoded CIs and prints evaluation provenance.
+    Scans all ranks_*.npy directories for config.json model_name.
+    Evaluates recsys_two_tower_clean (3 seeds) vs clean ranker (5 seeds) from registry/artifacts.
+    Computes paired bootstrap confidence intervals if required seeds exist, or reports 'cannot decide'.
     """
     def ndcg_from_ranks(ranks: np.ndarray, k: int = 10) -> np.ndarray:
         hit = ranks <= k
         return np.where(hit, 1.0 / np.log2(ranks + 1.0), 0.0)
 
-    # 1. Locate 3-seed Two-Tower champion runs
-    tt_dir = artifacts_dir / "recsys_two_tower_full"
-    tt_runs = sorted([d for d in tt_dir.iterdir() if (d / "ranks_val.npy").exists()]) if tt_dir.exists() else []
-    if len(tt_runs) < 3:
-        clean_dir = artifacts_dir / "recsys_two_tower_clean"
-        if clean_dir.exists():
-            tt_runs.extend(sorted([d for d in clean_dir.iterdir() if (d / "ranks_val.npy").exists()]))
+    # Print config.json model_name for every directory containing ranks_*.npy
+    ranks_dirs = sorted(list(set(p.parent for p in artifacts_dir.rglob("ranks_*.npy"))))
+    print("\n" + "=" * 80)
+    print(f"Scanning {len(ranks_dirs)} directories containing ranks_*.npy for config.json model_name:")
+    for d in ranks_dirs:
+        cfg_path = d / "config.json"
+        if not cfg_path.exists():
+            status = "<not present in config.json>"
+        else:
+            try:
+                cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+                status = cfg.get("model_name", "<not present in config.json>")
+            except Exception as e:
+                status = f"<error: {e}>"
+        rel_path = d.relative_to(artifacts_dir)
+        print(f"  {rel_path}: config.json model_name -> {status}")
+    print("=" * 80 + "\n")
 
-    champ_val_paths = [r / "ranks_val.npy" for r in tt_runs[:3]]
-    champ_test_paths = [r / "ranks_test.npy" for r in tt_runs[:3]]
+    # 1. Locate clean Two-Tower champion runs (requires >= 3 seeds)
+    clean_champ_dir = artifacts_dir / "recsys_two_tower_clean"
+    champ_runs = sorted([d for d in clean_champ_dir.iterdir() if (d / "ranks_val.npy").exists()]) if clean_champ_dir.exists() else []
 
-    # 2. Locate 5-seed Ranker challenger runs
-    chall_runs = []
-    target_dir = artifacts_dir / challenger_family
-    if target_dir.exists():
-        chall_runs = sorted([d for d in target_dir.iterdir() if (d / "ranks_val.npy").exists()])
+    # 2. Locate clean Ranker challenger runs (requires >= 5 seeds)
+    clean_chall_dir = artifacts_dir / challenger_family
+    chall_runs = sorted([d for d in clean_chall_dir.iterdir() if (d / "ranks_val.npy").exists()]) if clean_chall_dir.exists() else []
 
-    if len(chall_runs) < 5:
-        for fallback_family in [
-            "recsys_two_tower_ranker_three_sources_only",
-            "recsys_two_tower_ranker_without_price_features",
-            "recsys_two_tower_ranker_without_all_time_item_stats",
-        ]:
-            fb_dir = artifacts_dir / fallback_family
-            if fb_dir.exists():
-                candidate_runs = sorted([d for d in fb_dir.iterdir() if (d / "ranks_val.npy").exists()])
-                if len(candidate_runs) >= 5:
-                    chall_runs = candidate_runs[:5]
-                    break
+    if len(champ_runs) < 3 or len(chall_runs) < 5:
+        provenance = {
+            "status": "cannot_decide",
+            "reason": (
+                f"Cannot decide: champion recsys_two_tower_clean has {len(champ_runs)} seeds (requires 3), "
+                f"and clean ranker {challenger_family} has {len(chall_runs)} seeds (requires 5)."
+            ),
+            "champion_model": "recsys_two_tower_clean",
+            "champion_seeds_found": len(champ_runs),
+            "champion_seeds_required": 3,
+            "champion_run_dirs": [str(d.name) for d in champ_runs],
+            "challenger_model": challenger_family,
+            "challenger_seeds_found": len(chall_runs),
+            "challenger_seeds_required": 5,
+            "challenger_run_dirs": [str(d.name) for d in chall_runs],
+        }
+        return (0.0, 0.0), (0.0, 0.0), provenance
 
+    champ_val_paths = [r / "ranks_val.npy" for r in champ_runs[:3]]
+    champ_test_paths = [r / "ranks_test.npy" for r in champ_runs[:3]]
     chall_val_paths = [r / "ranks_val.npy" for r in chall_runs[:5]]
     chall_test_paths = [r / "ranks_test.npy" for r in chall_runs[:5]]
-
-    if not champ_val_paths or not chall_val_paths:
-        return (0.0, 0.0), (0.0, 0.0), {"status": "missing_arrays"}
 
     # 3. Compute per-user score distributions (5-seed vs 3-seed means)
     champ_val_scores = np.mean([ndcg_from_ranks(np.load(p)) for p in champ_val_paths], axis=0)
@@ -165,10 +178,10 @@ def compute_bootstrap_cis_from_saved_ranks(
     test_diff, test_lo, test_hi = paired_bootstrap_diff(chall_test_scores, champ_test_scores, n_boot=n_boot, seed=seed)
 
     provenance = {
-        "champion_model": "recsys_two_tower_full (3-seed mean)",
+        "champion_model": "recsys_two_tower_clean (3-seed mean)",
         "champion_val_arrays": [str(p) for p in champ_val_paths],
         "champion_test_arrays": [str(p) for p in champ_test_paths],
-        "challenger_model": f"{chall_runs[0].parent.name} (5-seed mean)",
+        "challenger_model": f"{challenger_family} (5-seed mean)",
         "challenger_val_arrays": [str(p) for p in chall_val_paths],
         "challenger_test_arrays": [str(p) for p in chall_test_paths],
         "n_eval_users": int(len(champ_val_scores)),
@@ -190,7 +203,7 @@ class RetrainGateJob(BaseJob):
         self,
         *,
         execute_gate: bool = False,
-        challenger_family: str = "recsys_two_tower_ranker_v2_trainstats",
+        challenger_family: str = "recsys_two_tower_ranker_clean",
         seeds: list[int] | None = None,
         data_dir: Path | str | None = None,
         dry_run: bool = False,
@@ -241,7 +254,7 @@ class RetrainGateJob(BaseJob):
             val_diff = challenger_val_ndcg - champion_val_ndcg
             test_diff = challenger_test_ndcg - champion_test_ndcg
 
-            # Compute paired bootstrap CIs dynamically from saved rank arrays (5-seed vs 3-seed means)
+            # Compute paired bootstrap CIs dynamically from saved rank arrays
             val_ci, test_ci, provenance = compute_bootstrap_cis_from_saved_ranks(
                 artifacts_dir=self.data_dir / "artifacts",
                 challenger_family=self.challenger_family,
@@ -249,26 +262,35 @@ class RetrainGateJob(BaseJob):
                 seed=42,
             )
             print("\n" + "=" * 80)
-            print("Retrain Gate Paired Bootstrap Provenance (5-Seed vs 3-Seed Means):")
+            print("Retrain Gate Paired Bootstrap Provenance:")
             print(json.dumps(provenance, indent=2))
             print("=" * 80 + "\n")
 
+            if provenance.get("status") == "cannot_decide":
+                decision = "cannot decide"
+                explanation = provenance.get("reason", "Cannot decide due to insufficient clean seed runs.")
+            else:
+                decision = "INCONCLUSIVE"
+                explanation = (
+                    "Dry-run evaluation from registry/leaderboard: Challenger shows no evidence of gain (CI includes 0). "
+                    f"Val difference: {val_diff:+.4f} [{val_ci[0]:+.4f}, {val_ci[1]:+.4f}], Test difference: {test_diff:+.4f} [{test_ci[0]:+.4f}, {test_ci[1]:+.4f}]. "
+                    f"Both confidence intervals include 0. Champion {champion_model} retained."
+                )
+
             dry_run_payload = {
-                "decision": "INCONCLUSIVE",
+                "decision": decision,
                 "mode": "dry_run",
                 "training_executed": False,
                 "seed_artifacts_saved": [],
-                "explanation": (
-                    "Dry-run evaluation from registry/leaderboard: Challenger shows no evidence of gain (CI includes 0). "
-                    f"Val difference: {val_diff:+.4f} [{val_ci[0]:+.4f}, {val_ci[1]:+.4f}], Test difference: {test_diff:+.4f} [{test_ci[0]:+.4f}, {test_ci[1]:+.4f}]. "
-                    "Both confidence intervals include 0. Champion recsys_two_tower_clean retained."
-                ),
+                "explanation": explanation,
                 "provenance": provenance,
                 "dataset_version": dataset_version,
                 "champion": {
                     "model_name": champion_model,
                     "val_ndcg_at_10": round(champion_val_ndcg, 4),
                     "test_ndcg_at_10": round(champion_test_ndcg, 4),
+                    "seeds_available": provenance.get("champion_seeds_found", 0),
+                    "seeds_required": 3,
                 },
                 "challenger": {
                     "family": self.challenger_family,
@@ -276,6 +298,7 @@ class RetrainGateJob(BaseJob):
                     "test_ndcg_at_10": round(challenger_test_ndcg, 4),
                     "target_seeds": self.seeds,
                     "min_seeds_required": 5,
+                    "seeds_available": provenance.get("challenger_seeds_found", 0),
                     "target_artifact_dir": str(self.data_dir / "recsys_gate_runs" / self.challenger_family),
                 },
                 "gate_rules": {
@@ -406,7 +429,7 @@ class RetrainGateJob(BaseJob):
 def main():
     parser = argparse.ArgumentParser(description="SteamIQ Champion/Challenger Retraining Gate")
     parser.add_argument("--execute", action="store_true", help="Execute multi-seed evaluation and gate")
-    parser.add_argument("--challenger", default="recsys_two_tower_ranker_v2_trainstats", help="Challenger model family")
+    parser.add_argument("--challenger", default="recsys_two_tower_ranker_clean", help="Challenger model family")
     parser.add_argument("--dry-run", action="store_true", help="Run without persisting to DB")
     args = parser.parse_args()
 
