@@ -37,15 +37,18 @@ target_metadata = Base.metadata
 def _build_sync_url() -> str:
     url = os.getenv("DATABASE_URL", "")
     if url:
-        # Strip async driver prefix
-        return url.replace("postgresql+asyncpg://", "postgresql://", 1)
+        # Strip async driver prefix and ensure psycopg2
+        url = url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        return url
 
     host = os.getenv("POSTGRES_HOST", "localhost")
     port = os.getenv("POSTGRES_PORT", "5432")
     db   = os.getenv("POSTGRES_DB",   "steamiq")
     user = os.getenv("POSTGRES_USER", "steamiq")
     pw   = os.getenv("POSTGRES_PASSWORD", "changeme")
-    return f"postgresql://{user}:{pw}@{host}:{port}/{db}"
+    return f"postgresql+psycopg2://{user}:{pw}@{host}:{port}/{db}"
 
 
 # ─── Migration runners ────────────────────────────────────────────────────────
