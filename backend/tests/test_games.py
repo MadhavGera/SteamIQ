@@ -81,8 +81,18 @@ async def test_search_empty_returns_zero(client: AsyncClient, db_session: AsyncS
 
 
 @pytest.mark.anyio
-async def test_search_missing_query_returns_422(client: AsyncClient) -> None:
+async def test_search_default_query_returns_200(client: AsyncClient, db_session: AsyncSession) -> None:
+    await _insert_game(db_session)
     resp = await client.get("/api/v1/games/search")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    assert body["data"]["total"] >= 1
+
+
+@pytest.mark.anyio
+async def test_search_invalid_page_returns_422(client: AsyncClient) -> None:
+    resp = await client.get("/api/v1/games/search", params={"page": 0})
     assert resp.status_code == 422
     body = resp.json()
     assert body["success"] is False

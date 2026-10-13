@@ -197,7 +197,20 @@ The **Recommender System** serves as the cross-cutting Machine Learning core, un
 - Node.js 18+
 - PostgreSQL 16 (or Docker Compose)
 
-### 2. Setup & Execution
+### 2. Docker Quick Start (Recommended)
+Run the entire production stack (PostgreSQL with pgvector, Redis, FastAPI backend, RQ worker, and Next.js frontend) with a single command:
+
+```bash
+docker compose up -d --build
+```
+
+- **Frontend:** `http://localhost:3001`
+- **Backend API & Swagger:** `http://localhost:8001/docs`
+- **Health Check:** `http://localhost:8001/health`
+
+On launch, the backend container automatically applies Alembic migrations and runs `jobs.bootstrap_database` to ensure serving reports, universe items, and embedding projections are immediately available.
+
+### 3. Local Development Setup (Manual)
 ```bash
 # 1. Setup Python virtualenv, install dependencies, and run DB migrations
 make setup
@@ -209,4 +222,5 @@ RECSYS_PROFILE=dev make recsys-all
 make dev
 ```
 
-Open `http://localhost:3000` to interact with the cold-start recommender, explore Model Lab metrics, and navigate the embedding scatter map.
+Open `http://localhost:3000` (or `http://localhost:3001` in Docker) to interact with the cold-start recommender, explore Model Lab metrics, and navigate the embedding scatter map.
+
