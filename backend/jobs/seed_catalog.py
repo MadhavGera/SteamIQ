@@ -327,7 +327,7 @@ class SeedCatalogJob(BaseJob):
                             "voted_up": bool(r.get("voted_up", False)),
                             "votes_up": r.get("votes_up", 0),
                             "votes_funny": r.get("votes_funny", 0),
-                            "weighted_vote_score": Decimal(str(round(r.get("weighted_vote_score", 0), 4))),
+                            "weighted_vote_score": Decimal(str(round(float(r.get("weighted_vote_score", 0) or 0), 4))),
                             "received_for_free": bool(r.get("received_for_free", False)),
                             "written_during_early_access": bool(r.get("written_during_early_access", False)),
                         }

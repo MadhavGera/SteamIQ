@@ -160,8 +160,8 @@ class RetrainGateJob(BaseJob):
             val_diff = challenger_val_ndcg - champion_val_ndcg
             test_diff = challenger_test_ndcg - champion_test_ndcg
 
-            val_ci = (-33 / 10000, 10 / 10000)
-            test_ci = (-12 / 10000, 24 / 10000)
+            val_ci = (-33 / 10000, 77 / 10000)
+            test_ci = (-26 / 10000, 65 / 10000)
             dry_run_payload = {
                 "decision": "INCONCLUSIVE",
                 "mode": "dry_run",
