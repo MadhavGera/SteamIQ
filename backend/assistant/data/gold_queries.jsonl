@@ -300,48 +300,48 @@
 {"text": "has stardew vally ever had a 50% discount?", "intent": "price_advice", "game": "Stardew Valley", "mode": "player", "source": "hand_written", "verified": true, "written_by": "user"}
 {"text": "is hollow knight a steal at fifteen dollars?", "intent": "price_advice", "game": "Hollow Knight", "mode": "player", "source": "hand_written", "verified": true, "written_by": "user"}
 {"text": "is cyberpunk price dropping anytime soon?", "intent": "price_advice", "game": "Cyberpunk 2077", "mode": "player", "source": "hand_written", "verified": true, "written_by": "user"}
-{"text": "will i hate celeste if i suck at platformers?", "intent": "player_match", "game": "Celeste", "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "is hades too fast twitch for casual players?", "intent": "player_match", "game": "Hades", "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "does elden ring have easy mode for noobs?", "intent": "player_match", "game": "Elden Ring", "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "is subnautica too terrifying if i have thalassophobia?", "intent": "player_match", "game": "Subnautica", "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "how hard is dead cells on keyboard and mouse?", "intent": "player_match", "game": "Dead Cells", "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "what does the ml model predict for hades revenue?", "intent": "success_score", "game": "Hades", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "whats the success score forecast for dead cells?", "intent": "success_score", "game": "Dead Cells", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "breakdown of shap drivers for slay the spire success", "intent": "success_score", "game": "Slay the Spire", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "commercial potential rating for hollow knight", "intent": "success_score", "game": "Hollow Knight", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "will an indie roguelike succeed according to your model?", "intent": "success_score", "game": null, "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "did the latest patch hurt review scores for terraria?", "intent": "update_impact", "game": "Terraria", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "how did players react to the new csgo update?", "intent": "update_impact", "game": "Counter-Strike: Global Offensive", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "sentiment change after the latest dead cells dlc", "intent": "update_impact", "game": "Dead Cells", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "did negative reviews spike after the recent elden ring patch?", "intent": "update_impact", "game": "Elden Ring", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "track patch notes reception for cyberpunk", "intent": "update_impact", "game": "Cyberpunk 2077", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "what should the devs fix next in subnautica?", "intent": "recommendations", "game": "Subnautica", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "actionable roadmap ideas to boost hollow knight retention", "intent": "recommendations", "game": "Hollow Knight", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "competitor gap suggestions for dead cells studio", "intent": "recommendations", "game": "Dead Cells", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "how can hades developers reduce player churn?", "intent": "recommendations", "game": "Hades", "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "what features should an indie dev prioritize based on reviews?", "intent": "recommendations", "game": null, "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "where is the whitespace for roguelike deckbuilders?", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "what genre tags are high revenue but low competition?", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "undeserved niches on steam for indie studios", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "where should our team invest for our next steam game?", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "top market gaps in turn based strategy", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "recommend me something good to play tonight", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "what should i boot up based on what i played?", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "pick a new game for me please", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "got any bangers for me based on my history?", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "suggest a hidden gem from the catalog", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "can you write python code to scrape metacritic?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "how do i overclock my ryzen cpu for gaming?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "who won the premier league in 2023?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "how do you make beef wellington from scratch?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "write a poem about dragons and knights", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "is the steam deck oled screen worth upgrading to?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "what is the current price of bitcoin in usd?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "can you teach me how to speak conversational french?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "how does a 4-stroke internal combustion engine work?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "what are the best graphics settings for warzone?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "who is the current prime minister of the uk?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "why is my hdmi monitor displaying no signal?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "what is the capital of new zealand?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "solve for x in the equation 3x + 15 = 45", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
-{"text": "write a polite cover letter for a data scientist job", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": true, "written_by": "agent"}
+{"text": "will i hate celeste if i suck at platformers?", "intent": "player_match", "game": "Celeste", "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "is hades too fast twitch for casual players?", "intent": "player_match", "game": "Hades", "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "does elden ring have easy mode for noobs?", "intent": "player_match", "game": "Elden Ring", "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "is subnautica too terrifying if i have thalassophobia?", "intent": "player_match", "game": "Subnautica", "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "how hard is dead cells on keyboard and mouse?", "intent": "player_match", "game": "Dead Cells", "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "what does the ml model predict for hades revenue?", "intent": "success_score", "game": "Hades", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "whats the success score forecast for dead cells?", "intent": "success_score", "game": "Dead Cells", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "breakdown of shap drivers for slay the spire success", "intent": "success_score", "game": "Slay the Spire", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "commercial potential rating for hollow knight", "intent": "success_score", "game": "Hollow Knight", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "will an indie roguelike succeed according to your model?", "intent": "success_score", "game": null, "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "did the latest patch hurt review scores for terraria?", "intent": "update_impact", "game": "Terraria", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "how did players react to the new csgo update?", "intent": "update_impact", "game": "Counter-Strike: Global Offensive", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "sentiment change after the latest dead cells dlc", "intent": "update_impact", "game": "Dead Cells", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "did negative reviews spike after the recent elden ring patch?", "intent": "update_impact", "game": "Elden Ring", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "track patch notes reception for cyberpunk", "intent": "update_impact", "game": "Cyberpunk 2077", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "what should the devs fix next in subnautica?", "intent": "recommendations", "game": "Subnautica", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "actionable roadmap ideas to boost hollow knight retention", "intent": "recommendations", "game": "Hollow Knight", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "competitor gap suggestions for dead cells studio", "intent": "recommendations", "game": "Dead Cells", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "how can hades developers reduce player churn?", "intent": "recommendations", "game": "Hades", "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "what features should an indie dev prioritize based on reviews?", "intent": "recommendations", "game": null, "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "where is the whitespace for roguelike deckbuilders?", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "what genre tags are high revenue but low competition?", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "undeserved niches on steam for indie studios", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "where should our team invest for our next steam game?", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "top market gaps in turn based strategy", "intent": "market_opportunity", "game": null, "mode": "developer", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "recommend me something good to play tonight", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "what should i boot up based on what i played?", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "pick a new game for me please", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "got any bangers for me based on my history?", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "suggest a hidden gem from the catalog", "intent": "recommend_for_me", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "can you write python code to scrape metacritic?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "how do i overclock my ryzen cpu for gaming?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "who won the premier league in 2023?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "how do you make beef wellington from scratch?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "write a poem about dragons and knights", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "is the steam deck oled screen worth upgrading to?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "what is the current price of bitcoin in usd?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "can you teach me how to speak conversational french?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "how does a 4-stroke internal combustion engine work?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "what are the best graphics settings for warzone?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "who is the current prime minister of the uk?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "why is my hdmi monitor displaying no signal?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "what is the capital of new zealand?", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "solve for x in the equation 3x + 15 = 45", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}
+{"text": "write a polite cover letter for a data scientist job", "intent": "out_of_scope", "game": null, "mode": "player", "source": "hand_written", "verified": false, "written_by": "agent"}

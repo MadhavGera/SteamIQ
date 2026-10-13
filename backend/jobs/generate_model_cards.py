@@ -222,7 +222,7 @@ Evaluated across 5,000 held-out evaluation users with 95% bootstrap confidence i
 
         return f"""# Model Card: `assistant_intent_main`
 
-**Family:** MiniLM Sentence Embedding + Temperature Scaled Classifier | **Stage:** `candidate` (Ask SteamIQ Headline)  
+**Family:** MiniLM Sentence Embedding + Temperature Scaled Classifier | **Stage:** `production` (Ask SteamIQ Headline)  
 **Run ID:** `{lb.get('dataset_hash', 'assistant_intent_minilm_main')}` | **Generated:** {datetime.now(UTC).strftime('%Y-%m-%d')}  
 **License:** Project Internal / MIT  
 

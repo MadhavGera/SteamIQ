@@ -77,7 +77,10 @@ def print_mart_review_sample(n: int = 5) -> None:
             print(f"  {t}: {cnt}")
 
         count = conn.execute(text("SELECT count(*) FROM mart_review_intelligence")).scalar()
-        print(f"\n=== mart_review_intelligence (Total rows: {count}) ===")
+        empty_comp_count = conn.execute(
+            text("SELECT count(*) FROM mart_review_intelligence WHERE complaints IS NULL OR jsonb_array_length(complaints) = 0")
+        ).scalar()
+        print(f"\n=== mart_review_intelligence (Total rows: {count}, Empty complaints: {empty_comp_count}) ===")
         rows = conn.execute(
             text(
                 "SELECT app_id, sentiment_overview, timeline, topics, "
@@ -98,7 +101,7 @@ def print_models(models: list[str]) -> None:
         print(f"\n=== model_runs for {models} ===")
         rows = conn.execute(
             text(
-                "SELECT id, model_name, stage, created_at, hyperparameters, metrics "
+                "SELECT id, model_name, stage, created_at, hyperparameters, metrics, artifact_path "
                 "FROM model_runs WHERE model_name = ANY(:names) "
                 "ORDER BY created_at DESC"
             ),
@@ -106,6 +109,7 @@ def print_models(models: list[str]) -> None:
         ).fetchall()
         for r in rows:
             print(f"\nModel: {r[1]} | Stage: {r[2]} | ID: {r[0]} | Created: {r[3]}")
+            print(f"Artifact Path: {r[6]}")
             print(f"Hyperparameters: {json.dumps(r[4], indent=2)}")
             print(f"Metrics: {json.dumps(r[5], indent=2)}")
 

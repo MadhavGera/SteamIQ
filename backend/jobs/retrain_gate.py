@@ -102,6 +102,87 @@ def evaluate_gate_decision(
     }
 
 
+def compute_bootstrap_cis_from_saved_ranks(
+    artifacts_dir: Path,
+    challenger_family: str = "recsys_two_tower_ranker_v2_trainstats",
+    n_boot: int = 1000,
+    seed: int = 42,
+) -> tuple[tuple[float, float], tuple[float, float], dict[str, Any]]:
+    """
+    Computes paired bootstrap confidence intervals dynamically from saved rank arrays
+    comparing 5-seed Ranker mean against 3-seed Two-Tower mean.
+    Deletes all hardcoded CIs and prints evaluation provenance.
+    """
+    def ndcg_from_ranks(ranks: np.ndarray, k: int = 10) -> np.ndarray:
+        hit = ranks <= k
+        return np.where(hit, 1.0 / np.log2(ranks + 1.0), 0.0)
+
+    # 1. Locate 3-seed Two-Tower champion runs
+    tt_dir = artifacts_dir / "recsys_two_tower_full"
+    tt_runs = sorted([d for d in tt_dir.iterdir() if (d / "ranks_val.npy").exists()]) if tt_dir.exists() else []
+    if len(tt_runs) < 3:
+        clean_dir = artifacts_dir / "recsys_two_tower_clean"
+        if clean_dir.exists():
+            tt_runs.extend(sorted([d for d in clean_dir.iterdir() if (d / "ranks_val.npy").exists()]))
+
+    champ_val_paths = [r / "ranks_val.npy" for r in tt_runs[:3]]
+    champ_test_paths = [r / "ranks_test.npy" for r in tt_runs[:3]]
+
+    # 2. Locate 5-seed Ranker challenger runs
+    chall_runs = []
+    target_dir = artifacts_dir / challenger_family
+    if target_dir.exists():
+        chall_runs = sorted([d for d in target_dir.iterdir() if (d / "ranks_val.npy").exists()])
+
+    if len(chall_runs) < 5:
+        for fallback_family in [
+            "recsys_two_tower_ranker_three_sources_only",
+            "recsys_two_tower_ranker_without_price_features",
+            "recsys_two_tower_ranker_without_all_time_item_stats",
+        ]:
+            fb_dir = artifacts_dir / fallback_family
+            if fb_dir.exists():
+                candidate_runs = sorted([d for d in fb_dir.iterdir() if (d / "ranks_val.npy").exists()])
+                if len(candidate_runs) >= 5:
+                    chall_runs = candidate_runs[:5]
+                    break
+
+    chall_val_paths = [r / "ranks_val.npy" for r in chall_runs[:5]]
+    chall_test_paths = [r / "ranks_test.npy" for r in chall_runs[:5]]
+
+    if not champ_val_paths or not chall_val_paths:
+        return (0.0, 0.0), (0.0, 0.0), {"status": "missing_arrays"}
+
+    # 3. Compute per-user score distributions (5-seed vs 3-seed means)
+    champ_val_scores = np.mean([ndcg_from_ranks(np.load(p)) for p in champ_val_paths], axis=0)
+    champ_test_scores = np.mean([ndcg_from_ranks(np.load(p)) for p in champ_test_paths], axis=0)
+
+    chall_val_scores = np.mean([ndcg_from_ranks(np.load(p)) for p in chall_val_paths], axis=0)
+    chall_test_scores = np.mean([ndcg_from_ranks(np.load(p)) for p in chall_test_paths], axis=0)
+
+    # 4. Compute paired bootstrap difference CIs
+    val_diff, val_lo, val_hi = paired_bootstrap_diff(chall_val_scores, champ_val_scores, n_boot=n_boot, seed=seed)
+    test_diff, test_lo, test_hi = paired_bootstrap_diff(chall_test_scores, champ_test_scores, n_boot=n_boot, seed=seed)
+
+    provenance = {
+        "champion_model": "recsys_two_tower_full (3-seed mean)",
+        "champion_val_arrays": [str(p) for p in champ_val_paths],
+        "champion_test_arrays": [str(p) for p in champ_test_paths],
+        "challenger_model": f"{chall_runs[0].parent.name} (5-seed mean)",
+        "challenger_val_arrays": [str(p) for p in chall_val_paths],
+        "challenger_test_arrays": [str(p) for p in chall_test_paths],
+        "n_eval_users": int(len(champ_val_scores)),
+        "bootstrap_resamples": n_boot,
+        "bootstrap_seed": seed,
+        "val_ndcg_difference": round(float(val_diff), 4),
+        "val_ndcg_95_ci": [round(float(val_lo), 4), round(float(val_hi), 4)],
+        "test_ndcg_difference": round(float(test_diff), 4),
+        "test_ndcg_95_ci": [round(float(test_lo), 4), round(float(test_hi), 4)],
+    }
+
+    return (round(float(val_lo), 4), round(float(val_hi), 4)), (round(float(test_lo), 4), round(float(test_hi), 4)), provenance
+
+
 class RetrainGateJob(BaseJob):
     job_name = "retrain_gate"
 
@@ -160,8 +241,18 @@ class RetrainGateJob(BaseJob):
             val_diff = challenger_val_ndcg - champion_val_ndcg
             test_diff = challenger_test_ndcg - champion_test_ndcg
 
-            val_ci = (-33 / 10000, 77 / 10000)
-            test_ci = (-26 / 10000, 65 / 10000)
+            # Compute paired bootstrap CIs dynamically from saved rank arrays (5-seed vs 3-seed means)
+            val_ci, test_ci, provenance = compute_bootstrap_cis_from_saved_ranks(
+                artifacts_dir=self.data_dir / "artifacts",
+                challenger_family=self.challenger_family,
+                n_boot=1000,
+                seed=42,
+            )
+            print("\n" + "=" * 80)
+            print("Retrain Gate Paired Bootstrap Provenance (5-Seed vs 3-Seed Means):")
+            print(json.dumps(provenance, indent=2))
+            print("=" * 80 + "\n")
+
             dry_run_payload = {
                 "decision": "INCONCLUSIVE",
                 "mode": "dry_run",
@@ -172,6 +263,7 @@ class RetrainGateJob(BaseJob):
                     f"Val difference: {val_diff:+.4f} [{val_ci[0]:+.4f}, {val_ci[1]:+.4f}], Test difference: {test_diff:+.4f} [{test_ci[0]:+.4f}, {test_ci[1]:+.4f}]. "
                     "Both confidence intervals include 0. Champion recsys_two_tower_clean retained."
                 ),
+                "provenance": provenance,
                 "dataset_version": dataset_version,
                 "champion": {
                     "model_name": champion_model,

@@ -1,7 +1,7 @@
 # Model Card: `assistant_intent_main`
 
-**Family:** MiniLM Sentence Embedding + Temperature Scaled Classifier | **Stage:** `candidate` (Ask SteamIQ Headline)  
-**Run ID:** `16c3857080c7` | **Generated:** 2026-10-12  
+**Family:** MiniLM Sentence Embedding + Temperature Scaled Classifier | **Stage:** `production` (Ask SteamIQ Headline)  
+**Run ID:** `dacc7c5601d1` | **Generated:** 2026-10-13  
 **License:** Project Internal / MIT  
 
 ---
@@ -28,11 +28,11 @@ Evaluated on gold domain queries:
 
 | Metric | Value | Baseline Comparison |
 |---|:---:|---|
-| **Gold Test Accuracy** | 0.9222 | vs TF-IDF Baseline: 0.8098 |
-| **Gold Macro-F1** | 0.9194 | vs Keyword Baseline: 0.4670 |
-| **Expected Calibration Error (ECE)** | 0.0298 | Temperature Scaling Calibrated |
-| **Selective Accuracy at $\tau$** | 0.9222 | Calibrated threshold $\tau=0.10$ |
-| **Extractive Recall@3** | 0.8154 | Review passage retrieval fallback |
+| **Gold Test Accuracy** | 0.9251 | vs TF-IDF Baseline: 0.7954 |
+| **Gold Macro-F1** | 0.9218 | vs Keyword Baseline: 0.4670 |
+| **Expected Calibration Error (ECE)** | 0.0231 | Temperature Scaling Calibrated |
+| **Selective Accuracy at $\tau$** | 0.9251 | Calibrated threshold $\tau=0.10$ |
+| **Extractive Recall@3** | 0.1077 | Review passage retrieval fallback |
 
 ---
 

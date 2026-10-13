@@ -86,8 +86,41 @@ class AssistantService:
             artifacts_dir = self.data_dir / "artifacts" / self.model_name
             target_artifact_dir: Path | None = None
 
-            # 1. Resolve artifact directory
-            if artifacts_dir.exists():
+            # 1. Resolve registered production artifact from PostgreSQL model_runs
+            try:
+                from sqlalchemy import create_engine, text
+                sync_url = settings.database_url or (
+                    f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
+                    f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+                )
+                eng = create_engine(sync_url, pool_pre_ping=True)
+                with eng.connect() as conn:
+                    row = conn.execute(
+                        text(
+                            "SELECT id, artifact_path, stage FROM model_runs "
+                            "WHERE model_name = :name AND stage IN ('production', 'candidate') "
+                            "ORDER BY CASE WHEN stage = 'production' THEN 0 ELSE 1 END, created_at DESC "
+                            "LIMIT 1"
+                        ),
+                        {"name": self.model_name},
+                    ).first()
+                    if row:
+                        db_p = Path(row[1])
+                        resolved_p = db_p if db_p.exists() else None
+                        if resolved_p is None and (artifacts_dir / db_p.name).exists():
+                            resolved_p = artifacts_dir / db_p.name
+                        elif resolved_p is None and (artifacts_dir / str(row[0])).exists():
+                            resolved_p = artifacts_dir / str(row[0])
+
+                        if resolved_p is not None:
+                            target_artifact_dir = resolved_p
+                            self.model_run_id = str(row[0])
+                            logger.info("Serving registered %s run %s from DB: %s", row[2], self.model_run_id, target_artifact_dir)
+            except Exception as e:
+                logger.debug("Database model_runs lookup fallback: %s", e)
+
+            # 2. Filesystem fallback if DB lookup didn't resolve an existing path
+            if target_artifact_dir is None and artifacts_dir.exists():
                 candidates = sorted(
                     [d for d in artifacts_dir.iterdir() if d.is_dir()],
                     key=lambda x: x.stat().st_mtime,

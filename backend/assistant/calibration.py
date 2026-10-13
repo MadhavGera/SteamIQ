@@ -16,7 +16,24 @@ from typing import Any
 
 import numpy as np
 from scipy.optimize import minimize
+from scipy.stats import beta
 from sklearn.metrics import roc_auc_score
+
+
+def clopper_pearson_ci(k: int, n: int, confidence: float = 0.95) -> tuple[float, float]:
+    """
+    Computes exact Clopper-Pearson binomial confidence interval using Beta quantiles.
+    k: count of successes
+    n: total trials
+    For 0-count rates (k=0, n>0), lower bound is 0.0 and upper bound is 1 - (alpha/2)^(1/n).
+    For empty bins (n=0), returns uninformative interval (0.0, 1.0).
+    """
+    if n == 0:
+        return (0.0, 1.0)
+    alpha = 1.0 - confidence
+    lower = 0.0 if k == 0 else float(beta.ppf(alpha / 2.0, k, n - k + 1))
+    upper = 1.0 if k == n else float(beta.ppf(1.0 - alpha / 2.0, k + 1, n - k))
+    return (round(lower, 4), round(upper, 4))
 
 
 class TemperatureCalibrator:
@@ -124,21 +141,25 @@ def compute_ece(
             bin_acc = float(np.mean(accuracies[in_bin]))
             bin_conf = float(np.mean(confidences[in_bin]))
             ece += (bin_count / total_samples) * abs(bin_acc - bin_conf)
+            acc_ci = clopper_pearson_ci(int(np.sum(accuracies[in_bin])), bin_count)
             bins_data.append({
                 "bin_lower": round(float(bin_lower), 3),
                 "bin_upper": round(float(bin_upper), 3),
                 "bin_center": round(float((bin_lower + bin_upper) / 2.0), 3),
                 "count": bin_count,
                 "accuracy": round(bin_acc, 4),
+                "accuracy_ci": list(acc_ci),
                 "confidence": round(bin_conf, 4),
             })
         else:
+            acc_ci = clopper_pearson_ci(0, 0)
             bins_data.append({
                 "bin_lower": round(float(bin_lower), 3),
                 "bin_upper": round(float(bin_upper), 3),
                 "bin_center": round(float((bin_lower + bin_upper) / 2.0), 3),
                 "count": 0,
                 "accuracy": 0.0,
+                "accuracy_ci": list(acc_ci),
                 "confidence": round(float((bin_lower + bin_upper) / 2.0), 4),
             })
 

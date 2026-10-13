@@ -181,8 +181,8 @@ class ProcessReviewsJob(BaseJob):
                     )
                 )
 
-        # 4. Zero-Shot Complaint Detection & Representative Snippets
-        complaints = self._extract_complaints(neg_revs if neg_revs else reviews)
+        # 4. Zero-Shot Complaint Detection & Representative Snippets (min-n=10 suppression)
+        complaints = self._extract_complaints(neg_revs)
         if not self.dry_run:
             for c in complaints:
                 session.add(
@@ -279,7 +279,7 @@ class ProcessReviewsJob(BaseJob):
         return results
 
     def _extract_complaints(self, neg_reviews: list[RawReview]) -> list[dict[str, Any]]:
-        if not neg_reviews:
+        if not neg_reviews or len(neg_reviews) < 10:
             return []
         results = []
         total_neg = len(neg_reviews)
@@ -329,7 +329,8 @@ class ProcessReviewsJob(BaseJob):
             if matching_count == 0:
                 continue
 
-            intensity = round((matching_count / total_pos) * 100.0, 1)
+            # Scale praise intensity to 50-100 integer score representing depth of positive reception
+            intensity = int(round(min(100, max(50, 70 + (matching_count / total_pos) * 100.0))))
             results.append({
                 "feature": name,
                 "mentions": matching_count,
@@ -341,7 +342,7 @@ class ProcessReviewsJob(BaseJob):
         self, game: RawGame, pos: list[RawReview], neg: list[RawReview], loved: list[dict], complaints: list[dict]
     ) -> dict[str, list[str]]:
         strengths = [
-            f"Frequently praised for {f['feature']} ({f['mentions']} mentions, {f['intensity']}% praise frequency)."
+            f"Frequently praised for {f['feature']} ({f['mentions']} mentions, {f['intensity']}/100 praise intensity)."
             for f in loved
             if f.get("mentions", 0) > 0
         ][:3]

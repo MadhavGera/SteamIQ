@@ -1003,3 +1003,18 @@
 {"text": "Top rated winter waterproof jackets on Amazon", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
 {"text": "Discount codes for food delivery on DoorDash", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
 {"text": "Cheapest flights from New York to London in November", "intent": "out_of_scope", "mode": "general", "category": "hard_negative_shopping"}
+{"text": "who directed the movie interstellar?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "recommend a good sci-fi movie with time travel", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "who played batman in the dark knight trilogy?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "is dune part 2 currently streaming on hbo max?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "who is the author of to kill a mockingbird?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "recommend a high fantasy book series like stormlight archive", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "summary of the great gatsby novel", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "who wrote 1984 and animal farm?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "how far is the moon from the earth in kilometers?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "what is the boiling point of water in fahrenheit?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "which continent has the most countries in the world?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "who painted the mona lisa?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "what is the speed of light in vacuum?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "when did world war 2 officially end?", "intent": "out_of_scope", "game": null, "mode": "player"}
+{"text": "what is the deepest ocean trench on earth?", "intent": "out_of_scope", "game": null, "mode": "player"}

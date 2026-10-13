@@ -38,6 +38,7 @@ from typing import Any
 
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
+from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -650,10 +651,17 @@ class TrainAssistantJob(BaseJob):
         if session is not None and not self.dry_run:
             self.logger.info("Persisting ModelRun and ServingRecReport records to database...")
 
+            # Archive previous production runs for assistant_intent_main
+            await session.execute(
+                update(ModelRun)
+                .where(ModelRun.model_name == model_name, ModelRun.stage == "production")
+                .values(stage="archived")
+            )
+
             run_record = ModelRun(
                 id=uuid.UUID(run_id),
                 model_name=model_name,
-                stage="candidate",
+                stage="production",
                 dataset_version=dataset_hash,
                 hyperparameters={
                     "temperature": round(calibrator.temperature, 4),

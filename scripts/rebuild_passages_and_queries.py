@@ -79,7 +79,7 @@ def main():
                 feat_name = f.get("feature_name", f.get("feature", "Core Feature"))
                 mentions = f.get("mention_count", f.get("mentions", 0))
                 intensity = f.get("praise_intensity", f.get("intensity", 0))
-                loved_parts.append(f"{feat_name} ({intensity}% praise frequency across {mentions} mentions)")
+                loved_parts.append(f"{feat_name} ({intensity}/100 praise intensity across {mentions} mentions)")
             loved_text = f"Core praised aspects and retention drivers for {name}: " + "; ".join(loved_parts) + "."
         else:
             loved_text = f"Players enjoy the general core mechanics and atmosphere of {name}."
