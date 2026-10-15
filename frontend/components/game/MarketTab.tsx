@@ -23,12 +23,24 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
     );
   }
 
-  const spec = market.genre_pricing_spectrum;
+  // HONEST-FALLBACK: Read genre_pricing_spectrum or construct from pricing object
+  const spec = market.genre_pricing_spectrum ?? (market.pricing ? {
+    genre: market.pricing.primary_genre,
+    median_price_usd: market.pricing.genre_median_price_usd,
+    q25_price_usd: market.pricing.genre_p25_price_usd,
+    q75_price_usd: market.pricing.genre_p75_price_usd,
+    min_price_usd: market.pricing.genre_min_price_usd,
+    max_price_usd: market.pricing.genre_max_price_usd,
+    discounted_game_share_pct: 0,
+  } : null);
   // HONEST-FALLBACK: Real list price or 0 for free/unpriced games
-  const currentPrice = market.current_price_usd ?? 0;
+  const currentPrice = market.current_price_usd ?? market.pricing?.game_price_usd ?? 0;
   // HONEST-FALLBACK: Real median price from genre pricing spectrum or null if uncalculated
   const medianPrice = spec?.median_price_usd != null ? spec.median_price_usd : null;
-  const histLow = market.historical_lowest_price_usd != null ? market.historical_lowest_price_usd : currentPrice;
+  // HONEST-FALLBACK: Historical lowest price or current price
+  const histLow = market.historical_lowest_price_usd ?? market.pricing?.historical_lowest_price_usd ?? currentPrice;
+  // HONEST-FALLBACK: Price tier classification
+  const priceTier = market.price_tier || market.pricing?.position_bracket || "Standard";
 
   // Calculate percentage position of current price relative to min and max for the spectrum bar
   // HONEST-FALLBACK: Spectrum minimum bound or 0
@@ -116,7 +128,7 @@ export function MarketTab({ market, gameTitle }: MarketTabProps) {
         <div className="kpi-card">
           <div className="kpi-card__top">
             <span className="kpi-card__eyebrow">CURRENT LIST PRICE</span>
-            <span className="badge-pill badge-pill--neutral">{market.price_tier || "Standard"}</span>
+            <span className="badge-pill badge-pill--neutral">{priceTier}</span>
           </div>
           <div>
             <div className="kpi-card__num" style={{ color: "var(--accent-primary)" }}>

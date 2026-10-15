@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.market import (
+    GenrePricingSpectrumSchema,
     MarketIntelligenceSchema,
     MarketOpportunitySummarySchema,
     MarketTrendPointSchema,
@@ -107,6 +108,42 @@ async def get_market_intelligence(
                 monetization_score=float(opp_row.monetization_score),
             )
 
+    # 5. Extract competitor price distribution and genre discount share from mart_game_overview
+    competitor_brackets: dict[str, int] = {}
+    discounted_share_pct = 0.0
+    if overview.primary_genre:
+        genre_stmt = select(MartGameOverview.pricing_spectrum, MartGameOverview.discount_pct).where(
+            MartGameOverview.primary_genre == overview.primary_genre
+        )
+        genre_res = await db.execute(genre_stmt)
+        genre_rows = genre_res.all()
+        total_in_genre = len(genre_rows)
+        discounted_count = 0
+        for p_spec, disc_pct in genre_rows:
+            if disc_pct and disc_pct > 0:
+                discounted_count += 1
+            if p_spec and isinstance(p_spec, dict) and "position_bracket" in p_spec:
+                b = p_spec["position_bracket"]
+                competitor_brackets[b] = competitor_brackets.get(b, 0) + 1
+        if total_in_genre > 0:
+            discounted_share_pct = round((discounted_count / total_in_genre) * 100.0, 1)
+
+    genre_spectrum: GenrePricingSpectrumSchema | None = None
+    if pricing_data:
+        genre_spectrum = GenrePricingSpectrumSchema(
+            genre=pricing_data.primary_genre,
+            median_price_usd=pricing_data.genre_median_price_usd,
+            q25_price_usd=pricing_data.genre_p25_price_usd,
+            q75_price_usd=pricing_data.genre_p75_price_usd,
+            min_price_usd=pricing_data.genre_min_price_usd,
+            max_price_usd=pricing_data.genre_max_price_usd,
+            discounted_game_share_pct=discounted_share_pct,
+        )
+
+    current_price = float(overview.final_price_usd or overview.price_usd or 0.0) if not overview.is_free else 0.0
+    hist_low = pricing_data.historical_lowest_price_usd if pricing_data else current_price
+    price_tier = pricing_data.position_bracket if pricing_data else (overview.revenue_tier or "Standard")
+
     data = MarketIntelligenceSchema(
         app_id=overview.app_id,
         name=overview.name,
@@ -118,7 +155,13 @@ async def get_market_intelligence(
         net_sentiment_pct=overview.net_sentiment_pct,
         peak_ccu_24h=overview.peak_ccu_24h,
         price_tracking_started_at=overview.price_tracking_started_at,
+        current_price_usd=current_price,
+        price_tier=price_tier,
+        historical_lowest_price_usd=hist_low,
+        genre_pricing_spectrum=genre_spectrum,
         pricing=pricing_data,
+        competitor_price_distribution=competitor_brackets,
+        recent_price_snapshots=price_history,
         price_history=price_history,
         market_opportunity=market_opp,
     )

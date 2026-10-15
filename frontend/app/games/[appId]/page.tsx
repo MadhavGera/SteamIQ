@@ -34,6 +34,9 @@ export async function generateMetadata({
 
 // ─── Page Component (Server Component with Client Mode-Toggle IA) ────────────
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function GameDetailPage({
   params,
   searchParams,

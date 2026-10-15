@@ -111,14 +111,31 @@ export interface PriceSnapshotItem {
 
 export interface MarketIntelligence {
   app_id: number;
+  name?: string;
   primary_genre: string | null;
   current_price_usd: number | null;
   price_tier: string;
   historical_lowest_price_usd: number | null;
   price_tracking_started_at: string | null;
-  genre_pricing_spectrum: GenrePricingSpectrum;
-  competitor_price_distribution: Record<string, number>;
-  recent_price_snapshots: PriceSnapshotItem[];
+  genre_pricing_spectrum?: GenrePricingSpectrum | null;
+  pricing?: {
+    primary_genre: string;
+    game_price_usd: number;
+    genre_min_price_usd: number;
+    genre_p25_price_usd: number;
+    genre_median_price_usd: number;
+    genre_p75_price_usd: number;
+    genre_max_price_usd: number;
+    price_vs_median_pct: number;
+    position_bracket: string;
+    historical_lowest_price_usd: number;
+    historical_lowest_discount_pct: number;
+    price_tracking_started_at: string | null;
+    is_free: boolean;
+  } | null;
+  competitor_price_distribution?: Record<string, number> | null;
+  recent_price_snapshots?: PriceSnapshotItem[];
+  price_history?: PriceSnapshotItem[];
 }
 
 export interface MarketOpportunityScore {
@@ -572,6 +589,8 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${baseUrl}${path}`;
 
   const resp = await fetch(url, {
+    // HONEST-FALLBACK: Server-side calls use no-store to ensure freshly materialized data is served
+    cache: options?.cache ?? (typeof window === "undefined" ? "no-store" : "default"),
     ...options,
     headers: {
       "Content-Type": "application/json",

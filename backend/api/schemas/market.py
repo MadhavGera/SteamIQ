@@ -44,6 +44,17 @@ class MarketOpportunitySummarySchema(BaseModel):
     monetization_score: float = Field(..., description="Monetization index [0-100]")
 
 
+class GenrePricingSpectrumSchema(BaseModel):
+    """Comparable pricing spectrum summary for genre (Frontend Tab 4 compatibility)."""
+    genre: str = Field(..., description="Primary genre classification")
+    median_price_usd: float = Field(..., description="Median price benchmark")
+    q25_price_usd: float = Field(..., description="25th percentile price benchmark")
+    q75_price_usd: float = Field(..., description="75th percentile price benchmark")
+    min_price_usd: float = Field(..., description="Lowest observed price benchmark")
+    max_price_usd: float = Field(..., description="Highest observed price benchmark")
+    discounted_game_share_pct: float = Field(default=0.0, description="Percentage of genre titles currently discounted")
+
+
 class MarketIntelligenceSchema(BaseModel):
     """Unified Market & Pricing Intelligence view for Tab 4."""
     app_id: int = Field(..., description="Steam App ID")
@@ -56,9 +67,15 @@ class MarketIntelligenceSchema(BaseModel):
     net_sentiment_pct: Decimal | None = Field(default=None, description="Net positive sentiment percentage")
     peak_ccu_24h: int | None = Field(default=None, description="Peak 24-hour concurrent users")
 
-    # Pricing Intelligence
+    # Pricing Intelligence (Phase 5 / Frontend contract compatibility)
+    current_price_usd: float | None = Field(default=None, description="Current list price")
+    price_tier: str | None = Field(default=None, description="Pricing bracket classification")
+    historical_lowest_price_usd: float | None = Field(default=None, description="Historical lowest observed price")
     price_tracking_started_at: datetime | None = Field(default=None, description="Timestamp when price tracking began for this game")
+    genre_pricing_spectrum: GenrePricingSpectrumSchema | None = Field(default=None, description="Genre pricing spectrum")
     pricing: PricingSpectrumSchema | None = Field(default=None, description="Comparable pricing spectrum")
+    competitor_price_distribution: dict[str, int] = Field(default_factory=dict, description="Distribution of competitors across price tiers")
+    recent_price_snapshots: list[PriceHistoryPointSchema] = Field(default_factory=list, description="Recent price snapshot records")
     price_history: list[PriceHistoryPointSchema] = Field(default_factory=list, description="Historical price time-series records")
 
     # Market Opportunity Context
