@@ -298,3 +298,52 @@ The ML Evidence Hardening Sprint is an end-to-end reliability and consistency ov
 - **Content-Routed Hybrid:** NDCG@10 = **`0.0078 [0.0016, 0.0155]`**, HR@10 = **`0.0217 [0.0054, 0.0435]`**.
 - **Analytic Random Baseline:** NDCG@10 = `0.0015`, HR@10 = `0.0033`.
 - **Finding:** Multimodal text + tag embeddings reliably provide meaningful zero-shot discovery for un-interacted games (5.2x over random NDCG, 6.6x over random HR).
+
+---
+
+## Corrections Round
+
+### Phase A: Diagnosis of Training Budget Regression (Issue I1)
+
+#### 1. Context & Investigation
+In Phase 4 of the previous sprint, the Clean Two-Tower retriever 5-seed validation mean was reported as **0.0483** (with test champion at **0.0415**), causing `recsys_two_tower_clean` to fall behind the collaborative filtering baseline `recsys_itemknn` (Val NDCG@10 = **0.0553**, Test = **0.0433**). However, the original clean champion artifact (`eb9a3374-2aad-476f-a25e-5d3b84261b7f`) achieved Val NDCG@10 = **0.0611** (Test = **0.0516**).
+
+Investigation of the training scripts, Makefiles, and artifact configurations revealed that `run_phase4_sweep.py` artificially capped the Two-Tower training budget to `epochs_tt = 8` and `pairs_per_epoch = 60000` with early stopping `patience = 3`. In contrast, the original champion was trained via `train_two_tower.py` using `epochs = 15` on the entire un-subsampled training interaction dataset (`pairs_per_epoch = None`, ~164,749 pairs per epoch $\approx$ 2,471,235 total exposure pairs), with dev `patience = 5`.
+
+#### 2. Side-by-Side Training Hyperparameter Comparison
+
+| Hyperparameter / Training Setting | Original Champion (`eb9a3374`) | Phase 4 Multi-Seed Sweep | Difference Impact |
+| :--- | :---: | :---: | :--- |
+| **Epochs** | **15** | 8 | **-46.7% epochs** (premature cutoff) |
+| **Pairs per Epoch** | **None (all ~164,749)** | 60,000 (subsampled) | **-63.6% pairs/epoch** |
+| **Total Exposure Pairs** | **~2,471,235** | 480,000 | **>5.15x reduction in gradient steps** |
+| **Early Stopping Patience** | 5 | 3 | More aggressive early termination |
+| **Tuning Users** | 5,000 (disjoint) | 5,000 (disjoint) | Identical split protocol |
+| **Evaluation Users** | 5,000 (disjoint) | 5,000 (disjoint) | Identical split protocol |
+| **Batch Size** | 2,048 | 2,048 | Identical |
+| **Learning Rate** | 2e-3 | 2e-3 | Identical |
+| **LR Scheduler** | CosineAnnealingLR (T_max=15) | CosineAnnealingLR (T_max=8) | Faster decay schedule in sweep |
+| **Optimizer** | AdamW (weight_decay=0.01) | AdamW (weight_decay=0.01) | Identical |
+| **Loss Function** | In-batch sampled softmax + logQ | In-batch sampled softmax + logQ | Identical |
+| **Temperature** | $\tau=0.07$ (learned) | $\tau=0.07$ (learned) | Identical |
+| **Pooling Architecture** | Multi-head attention (`pool="attn"`) | Multi-head attention (`pool="attn"`) | Identical |
+| **Hidden / Output Dims** | 256 / 64 | 256 / 64 | Identical |
+| **ID Dropout** | 0.25 | 0.25 | Identical |
+| **Proxy Dropout** | 0.25 | 0.25 | Identical |
+| **No Popularity Proxies** | `True` (6 numeric features) | `True` (6 numeric features) | Identical |
+| **Seeds Evaluated** | Seed 44 | Seeds 42, 43, 44, 45, 46 | Multi-seed vs single seed |
+
+#### 3. Empirical Direct Validation Evaluation (Fixed Evaluation Protocol)
+Both artifacts were directly evaluated on the validation split (5,000 fixed validation users) using the identical, leak-free evaluation pipeline:
+
+| Model Run | Configuration / Budget | Val NDCG@10 (95% CI) | Val HR@10 (95% CI) | Val MRR@10 (95% CI) | Catalog Coverage@10 |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **Original Champion (`eb9a3374`)** | Full budget (15 ep, all pairs, Seed 44) | **0.06106** [0.05574, 0.06624] | **0.1190** [0.1104, 0.1280] | **0.0436** [0.0391, 0.0481] | **43.47%** |
+| **Phase 4 Sweep Seed 44** | Reduced budget (8 ep, 60k pairs, Seed 44) | **0.05152** [0.04724, 0.05614] | **0.1042** [0.0966, 0.1126] | **0.0358** | **16.43%** |
+| **Phase 4 Sweep Seed 42** | Reduced budget (8 ep, 60k pairs, Seed 42) | **0.04745** [0.04274, 0.05192] | **0.0932** [0.0850, 0.1012] | **0.0337** | **12.93%** |
+
+#### 4. Diagnosis Conclusion
+- **Cause Refutation/Confirmation:** Issue I1 is **CONFIRMED**. The performance regression was entirely driven by the severe training budget reduction (subsampling pairs to 60k and capping epochs at 8).
+- **Training Curves Evidence:** Inspection of `seed_44` training curves confirms that at epoch 8, training loss was still steadily decreasing ($8.056 \to 7.171$) and tuning NDCG@10 was monotonically climbing ($0.0258 \to 0.0473$). The model had not converged and had not plateaued.
+- **Representation Collapse:** The underfitted model under-explored the catalog, collapsing catalog coverage from 43.47% down to 12.93% - 16.43%, which degraded retrieval diversity and top-10 accuracy.
+- **Action Plan for Phase B:** Restore the full training budget (`epochs_tt = 15`, `pairs_per_epoch = None`, `patience = 5`) for all 5 seeds in the multi-seed sweep.
