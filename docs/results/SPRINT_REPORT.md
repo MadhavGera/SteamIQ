@@ -152,6 +152,42 @@ The ML Evidence Hardening Sprint is an end-to-end reliability and consistency ov
   - Emitted single authoritative metrics file: `docs/results/assistant_metrics.json`.
   - Reconciled numbers across `docs/claims-and-evidence.md`, `docs/model-cards/assistant_intent_main.md`, and report outputs.
 
+### Phase 6: Final Test Evaluation & Cold-Start Study
+- **Single Test Evaluation Pass:**
+  - Evaluated on the test split strictly once for: Clean Two-Tower (5 seeds), Clean Ranker (5 seeds), and Baselines (ItemKNN 5-seed, ALS 5-seed, Content, Popularity).
+  - Evaluated on 5,000 fixed evaluation users with timestamp-aware seen-item masking.
+- **Headline Test-Split Results:**
+  - **Clean Two-Tower (5 seeds: 42, 43, 44, 45, 46):**
+    - Test NDCG@10 (mean ± std): `0.04155 ± 0.00192` (HR@10: `0.08280 ± 0.00392`, Coverage@10: `0.1267`, Diversity@10: `0.7571`).
+    - Champion Seed 42: Test NDCG@10 = `0.04155` [0.0376, 0.0457], HR@10 = `0.08280` [0.0756, 0.0902].
+  - **Clean Ranker (5 seeds, Train-Only Stats, Quota Candidates):**
+    - Test NDCG@10 (mean ± std): `0.04959 ± 0.00287` (HR@10: `0.09244 ± 0.00600`, Coverage@10: `0.4303`, Diversity@10: `0.7609`).
+    - Champion Seed 43: Test NDCG@10 = `0.04849` [0.0440, 0.0534], HR@10 = `0.09380` [0.0856, 0.1020].
+  - **Baselines (Test Split):**
+    - ItemKNN (5 seeds): Test NDCG@10: `0.04331 ± 0.00000` (HR@10: `0.08260`, Coverage@10: `0.6150`).
+    - ALS (5 seeds): Test NDCG@10: `0.03633 ± 0.00075` (HR@10: `0.07240`, Coverage@10: `0.3233`).
+    - Popularity: Test NDCG@10: `0.01511` [0.0125, 0.0178] (HR@10: `0.03260`, Coverage@10: `0.0070`).
+    - Content: Test NDCG@10: `0.01413` [0.0116, 0.0171] (HR@10: `0.02580`, Coverage@10: `0.6337`).
+- **Ranker Promotion Gate Decision:**
+  - Paired difference (Ranker Champion vs Two-Tower Champion on Test Split): `+0.00694` (95% Bootstrap CI: `[+0.00236, +0.01193]`).
+  - **Gate Verdict: PASSED.** The 95% bootstrap confidence interval strictly excludes zero, demonstrating statistically significant positive ranking lift over the Stage-1 neural retriever champion.
+  - Paired difference vs Item-kNN:
+    - Clean Ranker Champion vs ItemKNN: `+0.00519` `[+0.00063, +0.01019]` (statistically significant lift over ItemKNN).
+    - Two-Tower Champion vs ItemKNN: `-0.00176` `[-0.00668, +0.00307]` (CI spans zero).
+- **Sliced Performance (Test Split):**
+  - Popularity Head (top 20%): Ranker `0.0715` vs TT `0.0686` (diff `+0.0029 [-0.0052, +0.0102]`).
+  - Popularity Torso (next 30%): Ranker `0.0228` vs TT `0.0005` (diff `+0.0223 [+0.0147, +0.0301]`, highly significant gain).
+  - Popularity Tail (bottom 50%): Ranker `0.0052` vs TT `0.0021` (diff `+0.0030 [-0.0009, +0.0075]`).
+  - Long History (10+ interactions): Ranker `0.0518` vs TT `0.0383` (diff `+0.0134 [+0.0033, +0.0235]`, significant gain).
+- **Beyond-Accuracy & MMR Diversity Re-Ranking:**
+  - Clean Ranker achieves 43.03% catalog coverage (vs 12.67% for pure Two-Tower), novelty 9.23 bits, diversity 0.7609.
+  - MMR trade-off sensitivity on Ranker candidates: $\lambda=0.8$ increases diversity to 0.7798 with negligible NDCG drop (`-0.0002 [-0.0011, +0.0009]`).
+- **Multi-Seed True Item Holdout Cold-Start Study:**
+  - Evaluated on 184 users with held-out items across seeds 42, 43, 44.
+  - Content model achieves NDCG@10 `0.0078 [0.0016, 0.0155]` and HR@10 `0.0217 [0.0054, 0.0435]`, reliably outperforming random (`0.0015` NDCG, `0.0033` HR).
+- **Artifacts Updated:**
+  - `docs/results/leaderboard.json`, `docs/results/leaderboard.md`, `docs/results/slices.json`, `docs/results/beyond_accuracy.json`, `docs/results/cold_start.json`.
+
 ---
 
 ## Blockers

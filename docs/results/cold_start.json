@@ -2,160 +2,10 @@
   "metadata": {
     "report_key": "cold_start",
     "dataset_version": "c662b8232dc0",
+    "git_commit": "235083f2501cf6c1898c9817be29386bad1c946c",
     "n_eval_users": 5000,
     "seed": 42,
-    "generated_at": "2026-10-08T20:00:00+00:00"
-  },
-  "item_holdout_study": {
-    "study_type": "item_holdout",
-    "primary_evidence": true,
-    "title": "True Item Holdout (90% Catalog Retrained, 300 Items Withheld \u2014 all-time-stats architecture, clean=False)",
-    "n_eval_users": 184,
-    "n_held_out_items": 300,
-    "models": {
-      "random": {
-        "hits_k": 1,
-        "n_users": 184,
-        "hit_rate_at_10": 0.0033333333333333335,
-        "hit_rate_at_10_lo95": 0.0033333333333333335,
-        "hit_rate_at_10_hi95": 0.0033333333333333335,
-        "ndcg_at_10": 0.0015145197793627818,
-        "ndcg_at_10_lo95": 0.0015145197793627818,
-        "ndcg_at_10_hi95": 0.0015145197793627818,
-        "mrr_at_10": 0.0009763227513227513,
-        "mrr_at_10_lo95": 0.0009763227513227513,
-        "mrr_at_10_hi95": 0.0009763227513227513,
-        "mean_rank": 1500.0,
-        "mean_rank_lo95": 1500.0,
-        "mean_rank_hi95": 1500.0,
-        "median_rank": 1500.0
-      },
-      "content": {
-        "hits_k": 4,
-        "n_users": 184,
-        "hit_rate_at_10": 0.021739130434782608,
-        "hit_rate_at_10_lo95": 0.005434782608695652,
-        "hit_rate_at_10_hi95": 0.043478260869565216,
-        "ndcg_at_10": 0.007783455209822421,
-        "ndcg_at_10_lo95": 0.0015710044908580864,
-        "ndcg_at_10_hi95": 0.015527089712170728,
-        "mrr_at_10": 0.003713768115942029,
-        "mrr_at_10_lo95": 0.0005434782608695652,
-        "mrr_at_10_hi95": 0.007336956521739131,
-        "mean_rank": 1084.608695652174,
-        "mean_rank_lo95": 963.673097826087,
-        "mean_rank_hi95": 1212.2521739130434,
-        "median_rank": 855.5
-      },
-      "two_tower_unmasked": {
-        "hits_k": 1,
-        "n_users": 184,
-        "hit_rate_at_10": 0.005434782608695652,
-        "hit_rate_at_10_lo95": 0.0,
-        "hit_rate_at_10_hi95": 0.016304347826086956,
-        "ndcg_at_10": 0.005434782608695652,
-        "ndcg_at_10_lo95": 0.0,
-        "ndcg_at_10_hi95": 0.016304347826086956,
-        "mrr_at_10": 0.005434782608695652,
-        "mrr_at_10_lo95": 0.0,
-        "mrr_at_10_hi95": 0.016304347826086956,
-        "mean_rank": 820.2391304347826,
-        "mean_rank_lo95": 724.4256793478261,
-        "mean_rank_hi95": 917.9203804347826,
-        "median_rank": 615.0
-      },
-      "two_tower_masked": {
-        "hits_k": 1,
-        "n_users": 184,
-        "hit_rate_at_10": 0.005434782608695652,
-        "hit_rate_at_10_lo95": 0.0,
-        "hit_rate_at_10_hi95": 0.016304347826086956,
-        "ndcg_at_10": 0.003428966052018791,
-        "ndcg_at_10_lo95": 0.0,
-        "ndcg_at_10_hi95": 0.010286898156056374,
-        "mrr_at_10": 0.002717391304347826,
-        "mrr_at_10_lo95": 0.0,
-        "mrr_at_10_hi95": 0.008152173913043478,
-        "mean_rank": 781.2065217391304,
-        "mean_rank_lo95": 682.7690217391305,
-        "mean_rank_hi95": 873.4224184782609,
-        "median_rank": 524.0
-      },
-      "two_tower_masked_train_pos_raw_0": {
-        "hits_k": 0,
-        "n_users": 184,
-        "hit_rate_at_10": 0.0,
-        "hit_rate_at_10_lo95": 0.0,
-        "hit_rate_at_10_hi95": 0.0,
-        "ndcg_at_10": 0.0,
-        "ndcg_at_10_lo95": 0.0,
-        "ndcg_at_10_hi95": 0.0,
-        "mrr_at_10": 0.0,
-        "mrr_at_10_lo95": 0.0,
-        "mrr_at_10_hi95": 0.0,
-        "mean_rank": 2162.353260869565,
-        "mean_rank_lo95": 2063.4447010869567,
-        "mean_rank_hi95": 2264.3627717391305,
-        "median_rank": 2365.0
-      },
-      "two_tower_masked_standardized_z0": {
-        "hits_k": 0,
-        "n_users": 184,
-        "hit_rate_at_10": 0.0,
-        "hit_rate_at_10_lo95": 0.0,
-        "hit_rate_at_10_hi95": 0.0,
-        "ndcg_at_10": 0.0,
-        "ndcg_at_10_lo95": 0.0,
-        "ndcg_at_10_hi95": 0.0,
-        "mrr_at_10": 0.0,
-        "mrr_at_10_lo95": 0.0,
-        "mrr_at_10_hi95": 0.0,
-        "mean_rank": 2007.516304347826,
-        "mean_rank_lo95": 1895.2266304347825,
-        "mean_rank_hi95": 2120.3404891304344,
-        "median_rank": 2215.5
-      },
-      "two_tower_masked_all_proxies_neutralized": {
-        "hits_k": 0,
-        "n_users": 184,
-        "hit_rate_at_10": 0.0,
-        "hit_rate_at_10_lo95": 0.0,
-        "hit_rate_at_10_hi95": 0.0,
-        "ndcg_at_10": 0.0,
-        "ndcg_at_10_lo95": 0.0,
-        "ndcg_at_10_hi95": 0.0,
-        "mrr_at_10": 0.0,
-        "mrr_at_10_lo95": 0.0,
-        "mrr_at_10_hi95": 0.0,
-        "mean_rank": 2126.5978260869565,
-        "mean_rank_lo95": 2015.088179347826,
-        "mean_rank_hi95": 2238.716847826087,
-        "median_rank": 2356.0
-      },
-      "two_tower (all-time-stats architecture, clean=False)": {
-        "hits_k": 0,
-        "n_users": 184,
-        "hit_rate_at_10": 0.0,
-        "hit_rate_at_10_lo95": 0.0,
-        "hit_rate_at_10_hi95": 0.0,
-        "ndcg_at_10": 0.0,
-        "ndcg_at_10_lo95": 0.0,
-        "ndcg_at_10_hi95": 0.0,
-        "mrr_at_10": 0.0,
-        "mrr_at_10_lo95": 0.0,
-        "mrr_at_10_hi95": 0.0,
-        "mean_rank": 2126.5978260869565,
-        "mean_rank_lo95": 2015.088179347826,
-        "mean_rank_hi95": 2238.716847826087,
-        "median_rank": 2356.0
-      }
-    },
-    "random_reference": {
-      "hit_rate_at_10": 0.0033333333333333335,
-      "ndcg_at_10": 0.0015145197793627818,
-      "formula": "10 / n_items"
-    },
-    "note": "True Item Holdout: Evaluated on the all-time-stats architecture (clean=False). Held-out items had zero interactions during model training. This is the primary prospective benchmark."
+    "generated_at": "2026-10-17T18:10:14.316756+00:00"
   },
   "sparse_targets_study": {
     "study_type": "sparse_targets",
@@ -228,10 +78,10 @@
         "mrr_at_10": 0.0,
         "mrr_at_10_lo95": 0.0,
         "mrr_at_10_hi95": 0.0,
-        "mean_rank": 1235.9150090415912,
-        "mean_rank_lo95": 1189.2782097649185,
-        "mean_rank_hi95": 1285.3821880650994,
-        "median_rank": 1239.0
+        "mean_rank": 1213.4520795660037,
+        "mean_rank_lo95": 1165.4941681735986,
+        "mean_rank_hi95": 1265.3604430379746,
+        "median_rank": 1231.0
       },
       "two_tower_intact": {
         "hits_k": 5,
@@ -239,36 +89,36 @@
         "hit_rate_at_10": 0.009041591320072333,
         "hit_rate_at_10_lo95": 0.0018083182640144665,
         "hit_rate_at_10_hi95": 0.018083182640144666,
-        "ndcg_at_10": 0.0037340940168699853,
-        "ndcg_at_10_lo95": 0.0007788002858470037,
-        "ndcg_at_10_hi95": 0.007419589344554233,
-        "mrr_at_10": 0.0021448663853727147,
-        "mrr_at_10_lo95": 0.00042633614627285513,
-        "mrr_at_10_hi95": 0.004521297970665059,
-        "mean_rank": 1201.609403254973,
-        "mean_rank_lo95": 1132.6684448462931,
-        "mean_rank_hi95": 1275.2556057866184,
-        "median_rank": 1037.0
+        "ndcg_at_10": 0.0037285217917044197,
+        "ndcg_at_10_lo95": 0.0006995529968074894,
+        "ndcg_at_10_hi95": 0.007298913713185765,
+        "mrr_at_10": 0.002129797066505927,
+        "mrr_at_10_lo95": 0.0003616636528028933,
+        "mrr_at_10_hi95": 0.004381153305203937,
+        "mean_rank": 1285.987341772152,
+        "mean_rank_lo95": 1208.2261754068716,
+        "mean_rank_hi95": 1358.4474683544302,
+        "median_rank": 1104.0
       },
-      "two_tower_masked (reference: all-time stats)": {
-        "hits_k": 5,
+      "two_tower_masked": {
+        "hits_k": 6,
         "n_users": 553,
-        "hit_rate_at_10": 0.009041591320072333,
-        "hit_rate_at_10_lo95": 0.0018083182640144665,
-        "hit_rate_at_10_hi95": 0.018083182640144666,
-        "ndcg_at_10": 0.0036226901983440357,
-        "ndcg_at_10_lo95": 0.0009041591320072332,
-        "ndcg_at_10_hi95": 0.0072145290101602,
-        "mrr_at_10": 0.001994173196704842,
-        "mrr_at_10_lo95": 0.00042696403455897124,
-        "mrr_at_10_hi95": 0.0042053445850914195,
-        "mean_rank": 1143.4810126582279,
-        "mean_rank_lo95": 1074.3417721518988,
-        "mean_rank_hi95": 1217.0200271247738,
-        "median_rank": 984.0
+        "hit_rate_at_10": 0.0108499095840868,
+        "hit_rate_at_10_lo95": 0.003616636528028933,
+        "hit_rate_at_10_hi95": 0.019891500904159132,
+        "ndcg_at_10": 0.0033334950003698874,
+        "ndcg_at_10_lo95": 0.0010670792440901793,
+        "ndcg_at_10_hi95": 0.006090749375473365,
+        "mrr_at_10": 0.0012729986509371681,
+        "mrr_at_10_lo95": 0.0003817560779586096,
+        "mrr_at_10_hi95": 0.002345234507305031,
+        "mean_rank": 1102.2079566003617,
+        "mean_rank_lo95": 1025.505877034358,
+        "mean_rank_hi95": 1167.6739602169982,
+        "median_rank": 911.0
       }
     },
-    "limitations_note": "Target item ID is masked at inference on a reference model trained with full catalog (all-time stats). Evaluates semantic prior quality for items with sparse interactions (optimistic proxy)."
+    "limitations_note": "Target item ID is masked at inference on clean Two-Tower model."
   },
   "simulated_new_items_study": {
     "study_type": "simulated_new_items",
@@ -365,9 +215,75 @@
         "mean_rank_hi95": 1542.3062929061784,
         "median_rank": 1367.0
       },
-      "two_tower_masked (reference: all-time stats)": {
-        "hits_k": 0,
+      "two_tower_masked": {
+        "hits_k": 22,
         "n_users": 437,
+        "hit_rate_at_10": 0.05034324942791762,
+        "hit_rate_at_10_lo95": 0.029748283752860413,
+        "hit_rate_at_10_hi95": 0.07093821510297482,
+        "ndcg_at_10": 0.023048370800892025,
+        "ndcg_at_10_lo95": 0.013193919392512753,
+        "ndcg_at_10_hi95": 0.0334899690624267,
+        "mrr_at_10": 0.014886854818204932,
+        "mrr_at_10_lo95": 0.007448512585812357,
+        "mrr_at_10_hi95": 0.02310418255784388,
+        "mean_rank": 546.4324942791762,
+        "mean_rank_lo95": 488.1395881006865,
+        "mean_rank_hi95": 613.3850686498855,
+        "median_rank": 285.0
+      }
+    },
+    "random_reference": {
+      "hit_rate_at_10": 0.0033333333333333335,
+      "ndcg_at_10": 0.0015145197793627818,
+      "formula": "10 / n_items"
+    },
+    "limitations_note": "Inference-time masking simulation on clean two-tower model with neutralized rating/review proxies."
+  },
+  "item_holdout_study": {
+    "study_type": "item_holdout",
+    "primary_evidence": true,
+    "title": "True Item Holdout (10% Catalog Withheld, 300 Items \u2014 Multi-Seed Study)",
+    "n_eval_users": 184,
+    "n_held_out_items": 300,
+    "models": {
+      "random": {
+        "hits_k": 1,
+        "n_users": 184,
+        "hit_rate_at_10": 0.0033333333333333335,
+        "hit_rate_at_10_lo95": 0.0033333333333333335,
+        "hit_rate_at_10_hi95": 0.0033333333333333335,
+        "ndcg_at_10": 0.0015145197793627818,
+        "ndcg_at_10_lo95": 0.0015145197793627818,
+        "ndcg_at_10_hi95": 0.0015145197793627818,
+        "mrr_at_10": 0.0009763227513227513,
+        "mrr_at_10_lo95": 0.0009763227513227513,
+        "mrr_at_10_hi95": 0.0009763227513227513,
+        "mean_rank": 1500.0,
+        "mean_rank_lo95": 1500.0,
+        "mean_rank_hi95": 1500.0,
+        "median_rank": 1500.0
+      },
+      "content": {
+        "hits_k": 4,
+        "n_users": 184,
+        "hit_rate_at_10": 0.021739130434782608,
+        "hit_rate_at_10_lo95": 0.005434782608695652,
+        "hit_rate_at_10_hi95": 0.043478260869565216,
+        "ndcg_at_10": 0.007783455209822421,
+        "ndcg_at_10_lo95": 0.0015710044908580864,
+        "ndcg_at_10_hi95": 0.015527089712170728,
+        "mrr_at_10": 0.003713768115942029,
+        "mrr_at_10_lo95": 0.0005434782608695652,
+        "mrr_at_10_hi95": 0.007336956521739131,
+        "mean_rank": 1084.608695652174,
+        "mean_rank_lo95": 963.673097826087,
+        "mean_rank_hi95": 1212.2521739130434,
+        "median_rank": 855.5
+      },
+      "two_tower_masked": {
+        "hits_k": 0,
+        "n_users": 184,
         "hit_rate_at_10": 0.0,
         "hit_rate_at_10_lo95": 0.0,
         "hit_rate_at_10_hi95": 0.0,
@@ -377,10 +293,48 @@
         "mrr_at_10": 0.0,
         "mrr_at_10_lo95": 0.0,
         "mrr_at_10_hi95": 0.0,
-        "mean_rank": 1944.5949656750572,
-        "mean_rank_lo95": 1868.8470823798627,
-        "mean_rank_hi95": 2018.4186498855834,
-        "median_rank": 2101.0
+        "mean_rank": 930.820652173913,
+        "mean_rank_lo95": 833.0120923913043,
+        "mean_rank_hi95": 1038.3948369565217,
+        "median_rank": 772.5,
+        "multi_seed_mean_ndcg": 0.002749606088416665,
+        "multi_seed_std_ndcg": 0.002025486165419148
+      },
+      "routed_hybrid": {
+        "hits_k": 0,
+        "n_users": 184,
+        "hit_rate_at_10": 0.0,
+        "hit_rate_at_10_lo95": 0.0,
+        "hit_rate_at_10_hi95": 0.0,
+        "ndcg_at_10": 0.0,
+        "ndcg_at_10_lo95": 0.0,
+        "ndcg_at_10_hi95": 0.0,
+        "mrr_at_10": 0.0,
+        "mrr_at_10_lo95": 0.0,
+        "mrr_at_10_hi95": 0.0,
+        "mean_rank": 2323.657608695652,
+        "mean_rank_lo95": 2240.880842391304,
+        "mean_rank_hi95": 2401.5203804347825,
+        "median_rank": 2503.0,
+        "multi_seed_mean_ndcg": 0.0,
+        "multi_seed_std_ndcg": 0.0
+      }
+    },
+    "multi_seed_results": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "two_tower_masked": {
+        "mean_ndcg_at_10": 0.002749606088416665,
+        "std_ndcg_at_10": 0.002025486165419148,
+        "mean_rank": 880.2264492753624
+      },
+      "routed_hybrid": {
+        "mean_ndcg_at_10": 0.0,
+        "std_ndcg_at_10": 0.0,
+        "mean_rank": 2448.519927536232
       }
     },
     "random_reference": {
@@ -388,6 +342,6 @@
       "ndcg_at_10": 0.0015145197793627818,
       "formula": "10 / n_items"
     },
-    "limitations_note": "Inference-time masking simulation on reference two-tower model (all-time stats) with neutralized rating/review proxies."
+    "note": "Multi-seed true item holdout study. Held-out items had zero interactions during training."
   }
 }
