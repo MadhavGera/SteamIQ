@@ -355,6 +355,10 @@ def train_ranker(
     logger.info("═══════════════════════════════════════════════════════════")
     logger.info("▶ Preparing Stage-Two Ranker Dataset (%d active features, NDCG@10 LambdaMART)...", len(active_features))
 
+    train_stats = getattr(config, "train_stats_only", True)
+    item_cache = ItemFeatureCache(data, train_stats_only=train_stats)
+    user_cache = UserFeatureCache(data, train_stats_only=train_stats)
+
     if precomputed_train_val is not None:
         X_train_df = precomputed_train_val["X_train_df"]
         y_train = precomputed_train_val["y_train"]
@@ -414,10 +418,6 @@ def train_ranker(
 
         # 2. Build training and validation pairs
         user_train_pos, user_train_neg = _build_user_interaction_maps(data)
-
-        train_stats = getattr(config, "train_stats_only", True)
-        item_cache = ItemFeatureCache(data, train_stats_only=train_stats)
-        user_cache = UserFeatureCache(data, train_stats_only=train_stats)
 
         def prepare_split_dataset(u_list: np.ndarray, split_name: str) -> tuple[pd.DataFrame, np.ndarray, list[int], int]:
             if len(u_list) == 0:

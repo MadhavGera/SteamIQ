@@ -92,6 +92,39 @@ The ML Evidence Hardening Sprint is an end-to-end reliability and consistency ov
   - Verified frontend with `npm --prefix frontend run lint`: clean pass with zero warnings/errors.
   - Passed `scripts/check_no_hardcoded_metrics.py` and `scripts/check_honest_fallbacks.py`.
 
+### Phase 4: Multi-Seed Experiment Sweep (Validation-Driven)
+- **Validation Sweep Execution:**
+  - Seeds: `[42, 43, 44, 45, 46]` across 5,000 evaluation users (strictly on `split="val"`).
+  - In strict compliance with Ground Rule 3, the test split was completely untouched and protected.
+- **Two-Tower Neural Retriever (5 Seeds):**
+  - Validation NDCG@10 (mean ± std): `0.04832 ± 0.00231` (HR@10: `0.09564 ± 0.00497`, Coverage@10: `0.1375`).
+  - Seed 42 (`0.04745`), Seed 43 (`0.04519`), Seed 44 (`0.05152`), Seed 45 (`0.05041`), Seed 46 (`0.04705`).
+  - **Champion Selection:** Seed 42 selected as serving champion (NDCG@10: `0.04745`, absolute distance from mean: `0.00088`).
+  - Serialized champion artifact to `backend/data/recsys/artifacts/recsys_two_tower_clean/phase4_seed_42/`.
+- **Stage-Two LightGBM Ranker (5 Seeds, Train-Only Features, Quota Candidates):**
+  - Validation NDCG@10 (mean ± std): `0.05495 ± 0.00323` (HR@10: `0.10260 ± 0.00809`, Coverage@10: `0.4809`).
+  - Seed 42 (`0.05824`), Seed 43 (`0.05505`), Seed 44 (`0.04881`), Seed 45 (`0.05616`), Seed 46 (`0.05648`).
+  - **Champion Selection:** Seed 43 selected as ranker champion (NDCG@10: `0.05505`, absolute distance from mean: `0.00010`).
+  - Serialized ranker artifact to `backend/data/recsys/artifacts/recsys_two_tower_ranker_clean/phase4_seed_43/`.
+  - **Champion vs Champion Paired Diff (Val Split):** `+0.00761` (95% Bootstrap CI: `[0.00225, 0.01300]`, strictly positive improvement on validation split).
+- **Baselines (Validation Split):**
+  - Popularity: Val NDCG@10: `0.02001`, HR@10: `0.0414`, Coverage: `0.0070`.
+  - Content: Val NDCG@10: `0.01824`, HR@10: `0.0318`, Coverage: `0.6937`.
+  - ItemKNN (5 seeds): Val NDCG@10: `0.05529 ± 0.00000`, HR@10: `0.1082`.
+  - ALS (5 seeds): Val NDCG@10: `0.04050 ± 0.00124`, HR@10: `0.0818`.
+- **Two-Tower Architectural Ablations (3 Seeds: 42, 43, 44):**
+  - `no_tags`: Val NDCG@10: `0.04674 ± 0.00188` (diff vs full: `-0.00086 [-0.00279, 0.00123]`).
+  - `no_numeric`: Val NDCG@10: `0.04698 ± 0.00094` (diff vs full: `-0.00054 [-0.00311, 0.00217]`).
+  - `no_id`: Val NDCG@10: `0.04835 ± 0.00145` (diff vs full: `-0.00112 [-0.00372, 0.00167]`).
+- **Ranker Feature-Group Ablations (3 Seeds: 42, 43, 44):**
+  - `without_item_quality`: Val NDCG@10: `0.05246 ± 0.00337` (significant loss: `-0.01036 [-0.01476, -0.00566]`).
+  - `without_source_scores`: Val NDCG@10: `0.05527 ± 0.00175` (significant loss: `-0.00544 [-0.00935, -0.00141]`).
+  - `without_price_features`: Val NDCG@10: `0.05431 ± 0.00101` (significant loss: `-0.00537 [-0.01000, -0.00018]`).
+  - `without_train_popularity`: Val NDCG@10: `0.05798 ± 0.00020` (diff: `-0.00001 [-0.00407, 0.00426]`).
+- **Artifacts Generated:**
+  - `docs/results/training_curves.json`: Live multi-seed training curves for Two-Tower and Ranker.
+  - `docs/results/validation_sweep.json`: Complete audit-verified record of all validation runs and bootstrap intervals.
+
 ---
 
 ## Blockers
