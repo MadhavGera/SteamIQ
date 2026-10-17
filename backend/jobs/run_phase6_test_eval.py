@@ -614,15 +614,73 @@ def run_phase6_test_eval(
 
     cnt_ho_summary = summarize_ranks_helper(ho_rk_cnt, n_ho_users)
 
-    # Representative seed 42 summaries
+    # Representative seed 42 summaries & conditions (a), (b), (c), (c2), (c3)
+    import torch
+
+    # Condition (a): Unmasked
+    vecs_a = champ_tt_model.item_vectors()
+    sc_a = champ_tt_model.score(ho_hist, item_vecs=vecs_a).copy()
+    for i, sm in enumerate(ho_seen):
+        sc_a[i, list(sm)] = -np.inf
+    ho_rk_a = compute_ranks(sc_a, ho_targ_arr)
+    tt_unmasked_summary = summarize_ranks_helper(ho_rk_a, n_ho_users)
+
+    # Condition (b): Masked (ID masked only)
+    vecs_b = champ_tt_model.item_vectors(mask_ids=held_out_list)
+    sc_b = champ_tt_model.score(ho_hist, item_vecs=vecs_b, mask_ids=held_out_list).copy()
+    for i, sm in enumerate(ho_seen):
+        sc_b[i, list(sm)] = -np.inf
+    ho_rk_b = compute_ranks(sc_b, ho_targ_arr)
+    tt_masked_summary = summarize_ranks_helper(ho_rk_b, n_ho_users)
+    tt_masked_summary["multi_seed_mean_ndcg"] = float(np.mean(tt_ho_ndcgs))
+    tt_masked_summary["multi_seed_std_ndcg"] = float(np.std(tt_ho_ndcgs))
+
+    # Condition (c): Masked + train_positives raw 0
+    train_counts = data.items_df["train_positives"].values.astype(np.float32)
+    mean_pop = float(np.mean(train_counts))
+    std_pop = float(np.std(train_counts) + 1e-8)
+    raw_zero_z = float((0.0 - mean_pop) / std_pop)
+
+    t_dict = champ_tt_model._item_features_tensors
+    num_t = t_dict["numeric"].clone()
+    neut_idx = torch.tensor(held_out_list, dtype=torch.long)
+    num_t[neut_idx, 3] = raw_zero_z
+    item_vecs_c = champ_tt_model.module.encode_items(
+        item_ids=t_dict["all_ids"],
+        text_embs=t_dict["text"],
+        tag_features=t_dict["tags"],
+        numeric_features=num_t,
+        mask_ids=torch.tensor(held_out_list, dtype=torch.long),
+    ).detach().cpu().numpy()
+    sc_c = champ_tt_model.score(ho_hist, item_vecs=item_vecs_c, mask_ids=held_out_list).copy()
+    for i, sm in enumerate(ho_seen):
+        sc_c[i, list(sm)] = -np.inf
+    ho_rk_c = compute_ranks(sc_c, ho_targ_arr)
+    tt_c_summary = summarize_ranks_helper(ho_rk_c, n_ho_users)
+
+    # Condition (c2): Standardized mean (train_positives z=0, reviews and rating intact)
+    num_t_c2 = t_dict["numeric"].clone()
+    num_t_c2[neut_idx, 3] = 0.0
+    item_vecs_c2 = champ_tt_model.module.encode_items(
+        item_ids=t_dict["all_ids"],
+        text_embs=t_dict["text"],
+        tag_features=t_dict["tags"],
+        numeric_features=num_t_c2,
+        mask_ids=torch.tensor(held_out_list, dtype=torch.long),
+    ).detach().cpu().numpy()
+    sc_c2 = champ_tt_model.score(ho_hist, item_vecs=item_vecs_c2, mask_ids=held_out_list).copy()
+    for i, sm in enumerate(ho_seen):
+        sc_c2[i, list(sm)] = -np.inf
+    ho_rk_c2 = compute_ranks(sc_c2, ho_targ_arr)
+    tt_c2_summary = summarize_ranks_helper(ho_rk_c2, n_ho_users)
+
+    # Condition (c3): All proxies neutralized + ID masked
     vecs_c3_42 = champ_tt_model.item_vectors(mask_ids=held_out_list, neutralize_proxies=held_out_list)
     sc_tt_42 = champ_tt_model.score(ho_hist, item_vecs=vecs_c3_42, mask_ids=held_out_list, neutralize_proxies=held_out_list).copy()
     for i, sm in enumerate(ho_seen):
         sc_tt_42[i, list(sm)] = -np.inf
     rk_tt_42 = compute_ranks(sc_tt_42, ho_targ_arr)
-    tt_masked_summary = summarize_ranks_helper(rk_tt_42, n_ho_users)
-    tt_masked_summary["multi_seed_mean_ndcg"] = float(np.mean(tt_ho_ndcgs))
-    tt_masked_summary["multi_seed_std_ndcg"] = float(np.std(tt_ho_ndcgs))
+    tt_c3_summary = summarize_ranks_helper(rk_tt_42, n_ho_users)
 
     sc_hyb_42 = sc_tt_42.copy()
     for it in held_out_list:
@@ -752,7 +810,11 @@ def run_phase6_test_eval(
             "models": {
                 "random": random_summary,
                 "content": cnt_ho_summary,
+                "two_tower_unmasked": tt_unmasked_summary,
                 "two_tower_masked": tt_masked_summary,
+                "two_tower_masked_train_pos_raw_0": tt_c_summary,
+                "two_tower_masked_standardized_z0": tt_c2_summary,
+                "two_tower_masked_all_proxies_neutralized": tt_c3_summary,
                 "routed_hybrid": hybrid_summary,
             },
             "multi_seed_results": {

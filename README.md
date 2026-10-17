@@ -22,11 +22,11 @@ flowchart TD
         Parquet --> Content["Content Cosine<br/>(MiniLM + Tags)"]
         Parquet --> ItemKNN["Item-kNN CF<br/>(Shrinkage Cosine)"]
         Parquet --> ALS["Implicit ALS<br/>(Matrix Factorization)"]
-        Parquet --> TT["Two-Tower Neural Retriever<br/>(Content + ID Dropout + BPR)"]
+        Parquet --> TT["Two-Tower Neural Retriever<br/>(Content + ID Dropout + Sampled Softmax)"]
     end
 
     subgraph Stage2 ["3. Stage 2: Re-Ranking & Explainability"]
-        Pop & Content & ItemKNN & ALS & TT --> Candidates["Top-50 Candidates Pool"]
+        Pop & Content & ItemKNN & ALS & TT --> Candidates["Quota Candidates Pool<br/>(TT 120, kNN 80, ALS 50, Content 50)"]
         Candidates --> Ranker["Stage 2 Ranker<br/>(LightGBM LambdaMART)"]
         Ranker --> SHAP["TreeSHAP Feature Attributions"]
     end
@@ -75,8 +75,8 @@ To run individual pipeline stages:
 | `make recsys-audit` | Audits raw interaction and catalog data against schema assertions |
 | `make recsys-prepare` | Builds chronological splits, interaction matrices, and item feature artifacts |
 | `make recsys-baselines` | Trains Popularity, Content Cosine, Item-kNN (shrinkage-cosine), and ALS |
-| `make recsys-two-tower` | Trains the Two-Tower neural retriever with in-batch BPR loss and ID dropout |
-| `make recsys-ranker` | Trains the Stage-2 LightGBM LambdaMART ranker with clean train-split features |
+| `make recsys-two-tower` | Trains the Two-Tower neural retriever with in-batch sampled softmax loss, logQ correction, and ID dropout |
+| `make recsys-ranker` | Trains the Stage-2 LightGBM LambdaMART ranker with clean train-only features and quota candidates |
 | `make recsys-experiments` | Runs feature ablations, cold-start studies, slice metrics, and beyond-accuracy |
 | `make recsys-project` | Projects 64-d Two-Tower vectors to 2D UMAP and 20 KMeans semantic clusters |
 | `make recsys-reports` | Generates markdown and JSON evidence reports in `backend/data/recsys/reports/` |

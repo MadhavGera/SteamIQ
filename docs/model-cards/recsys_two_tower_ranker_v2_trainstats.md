@@ -1,7 +1,7 @@
 # Model Card: `recsys_two_tower_ranker_v2_trainstats`
 
 **Family:** LambdaMART GBDT Re-ranker | **Stage:** `candidate` (Leak-Free Ranker Candidate)  
-**Run ID:** `ee6d93db-6e51-4548-918f-d5133b214990` | **Generated:** 2026-10-17  
+**Run ID:** `phase4_seed_43` | **Generated:** 2026-10-17  
 **License:** Project Internal / MIT  
 
 ---
@@ -32,10 +32,10 @@ Evaluated across 5,000 held-out evaluation users with 95% bootstrap confidence i
 
 | Metric | Validation Split (95% CI) | Test Split (95% CI) |
 |---|:---:|:---:|
-| **NDCG@10** | 0.0633 [0.0581, 0.0682] | 0.0536 [0.0487, 0.0588] |
-| **Hit Rate@10** | 0.1152 [0.1064, 0.1228] | 0.0992 [0.0910, 0.1076] |
-| **MRR@10** | 0.0475 [0.0433, 0.0519] | 0.0399 [0.0357, 0.0446] |
-| **Catalog Coverage@10** | 52.47% | 52.67% |
+| **NDCG@10** | 0.0551 [0.0500, 0.0602] | 0.0485 [0.0440, 0.0534] |
+| **Hit Rate@10** | 0.1026 [0.0942, 0.1116] | 0.0938 [0.0856, 0.1020] |
+| **MRR@10** | 0.0407 [0.0363, 0.0454] | 0.0349 [0.0312, 0.0390] |
+| **Catalog Coverage@10** | 44.97% | 43.03% |
 
 ---
 
@@ -44,23 +44,17 @@ Evaluated across 5,000 held-out evaluation users with 95% bootstrap confidence i
 {
   "num_leaves": 31,
   "learning_rate": 0.05,
-  "n_estimators": 500,
+  "n_estimators": 300,
   "min_child_samples": 50,
   "colsample_bytree": 0.8,
   "lambdarank_truncation_level": 20,
   "eval_at": [
     10
   ],
-  "seed": 42,
+  "seed": 43,
   "n_jobs": 4,
   "max_candidates": 300,
-  "source_run_ids": {
-    "two_tower": "eb9a3374-2aad-476f-a25e-5d3b84261b7f",
-    "itemknn": "d6a39dd1-e1dc-4815-9e1f-d6b8e94b0fc5",
-    "als": "3c8b20fb-d34b-433f-b293-a165e6e90cea",
-    "content": "cf9737fe-5364-43a6-8b04-ed79c8b21b74",
-    "popularity": "955e8397-9fe6-4bed-a3d6-6dd01421dbef"
-  },
+  "source_run_ids": null,
   "train_stats_only": true
 }
 ```

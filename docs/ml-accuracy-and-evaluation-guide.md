@@ -63,8 +63,8 @@ In conservative baseline scoring, tied items are assigned the worst-case rank: $
 | `recsys_content` | Content Cosine | Cosine similarity between mean user history vector and candidate item vectors (Sentence-Transformers `all-MiniLM-L6-v2` text + multi-hot tags). Zero collaborative feedback. |
 | `recsys_itemknn` | Shrinkage-Cosine CF | Item-item collaborative filtering with shrinkage regularizer $\alpha = 100$: $s(i,j) = \frac{r_i \cdot r_j}{\|r_i\|_2 \|r_j\|_2 + \alpha}$. |
 | `recsys_als` | Implicit Matrix Factorization | Alternating Least Squares on implicit feedback with confidence $c_{ui} = 1 + 40 \cdot r_{ui}$, 64 latent factors, 15 iterations. |
-| `recsys_two_tower_clean` | Two-Tower Neural Retriever | Deep dual-encoder mapping user history (masked mean pooling) and item features (ID + MiniLM + Tags + Price) to 64-d with BPR in-batch loss and ID dropout ($p=0.2$). |
-| `recsys_two_tower_ranker_clean` | Stage 2 LambdaMART Ranker | LightGBM gradient boosted decision trees ranking Stage-1 top-50 candidates using multi-source ranks, content cosine, item quality, and user history features. |
+| `recsys_two_tower_clean` | Two-Tower Neural Retriever | Deep dual-encoder mapping user history (masked mean pooling) and item features (ID + MiniLM + Tags + Price) to 64-d with sampled softmax in-batch loss, logQ correction, and ID dropout ($p=0.2$). |
+| `recsys_two_tower_ranker_clean` | Stage 2 LambdaMART Ranker | LightGBM gradient boosted decision trees ranking Stage-1 quota candidates using multi-source ranks, content cosine, item quality, and train-only user features. |
 
 ---
 

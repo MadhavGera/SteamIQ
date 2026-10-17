@@ -1,10 +1,10 @@
 # 🏆 SteamIQ Recommender System Evaluation & Evidence Report
 
 - **Dataset Version:** `c662b8232dc0`
-- **Git Commit:** `0708c689972ff9cd3d37de701329fca4dec9b438`
+- **Git Commit:** `e2708d5932b015a628b7a98e42e00d02bec8b5b3`
 - **Evaluation Users:** 5,000
 - **Random Seed:** 42
-- **Generated At:** 2026-10-17T18:23:44.339726+00:00
+- **Generated At:** 2026-10-17T18:37:25.962224+00:00
 
 ---
 
@@ -121,7 +121,11 @@ Multi-seed mean ± std reported for deployable neural models; 95% bootstrap perc
 | :--- | :---: | :---: | :---: | :--- |
 | `random` | 0.0033 [0.0033, 0.0033] | 0.0015 [0.0015, 0.0015] | 0.0010 | Zero Train Overlap |
 | `content` | 0.0217 [0.0054, 0.0435] | 0.0078 [0.0016, 0.0155] | 0.0037 | Zero Train Overlap |
+| `two_tower_unmasked` | 0.0000 [0.0000, 0.0000] | 0.0000 [0.0000, 0.0000] | 0.0000 | Retrained (0 Interactions for Held-out Items) |
 | `two_tower_masked` | 0.0000 [0.0000, 0.0000] | 0.0000 [0.0000, 0.0000] | 0.0000 | Retrained (0 Interactions for Held-out Items) |
+| `two_tower_masked_train_pos_raw_0` | 0.0000 [0.0000, 0.0000] | 0.0000 [0.0000, 0.0000] | 0.0000 | Retrained (0 Interactions for Held-out Items) |
+| `two_tower_masked_standardized_z0` | 0.0000 [0.0000, 0.0000] | 0.0000 [0.0000, 0.0000] | 0.0000 | Retrained (0 Interactions for Held-out Items) |
+| `two_tower_masked_all_proxies_neutralized` | 0.0000 [0.0000, 0.0000] | 0.0000 [0.0000, 0.0000] | 0.0000 | Retrained (0 Interactions for Held-out Items) |
 | `routed_hybrid` | 0.0000 [0.0000, 0.0000] | 0.0000 [0.0000, 0.0000] | 0.0000 | Zero Train Overlap |
 
 ---

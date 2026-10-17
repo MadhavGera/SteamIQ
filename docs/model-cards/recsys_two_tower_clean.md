@@ -1,7 +1,7 @@
 # Model Card: `recsys_two_tower_clean`
 
 **Family:** Two-Tower Retrieval | **Stage:** `production` (Headline Champion)  
-**Run ID:** `eb9a3374-2aad-476f-a25e-5d3b84261b7f` | **Generated:** 2026-10-17  
+**Run ID:** `phase4_seed_42` | **Generated:** 2026-10-17  
 **License:** Project Internal / MIT  
 
 ---
@@ -36,12 +36,12 @@ Evaluated across 5,000 held-out evaluation users with 95% bootstrap confidence i
 
 | Metric | Validation Split (95% CI) | Test Split (95% CI) |
 |---|:---:|:---:|
-| **NDCG@10** | 0.0611 [0.0562, 0.0661] | 0.0516 [0.0473, 0.0562] |
-| **Hit Rate@10** | 0.1190 [0.1104, 0.1280] | 0.1028 [0.0954, 0.1108] |
-| **MRR@10** | 0.0436 [0.0394, 0.0478] | 0.0361 [0.0324, 0.0400] |
-| **Catalog Coverage@10** | 43.47% | 43.83% |
-| **Novelty@10** | 9.25 bits | 9.34 bits |
-| **Diversity@10** | 0.7588 | 0.7629 |
+| **NDCG@10** | 0.0474 [0.0427, 0.0519] | 0.0415 [0.0376, 0.0457] |
+| **Hit Rate@10** | 0.0932 [0.0850, 0.1012] | 0.0828 [0.0756, 0.0902] |
+| **MRR@10** | 0.0337 [0.0297, 0.0375] | 0.0291 [0.0257, 0.0327] |
+| **Catalog Coverage@10** | 12.93% | 12.67% |
+| **Novelty@10** | 8.66 bits | 8.71 bits |
+| **Diversity@10** | 0.7547 | 0.7571 |
 
 ---
 
@@ -52,6 +52,9 @@ Evaluated across 5,000 held-out evaluation users with 95% bootstrap confidence i
   "output_dim": 64,
   "pool": "attn",
   "id_dropout": 0.25,
+  "proxy_dropout": 0.25,
+  "no_pop_proxies": true,
+  "numeric_dim": 6,
   "use_id": true,
   "use_text": true,
   "use_tags": true,
