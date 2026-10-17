@@ -49,6 +49,34 @@ The ML Evidence Hardening Sprint is an end-to-end reliability and consistency ov
   - **After Fix:** `0.0610587` (95% Bootstrap CI: `[0.056177, 0.066076]`, HR@10: `0.1190` `[0.1104, 0.1280]`).
   - **Test Split Protection:** In strict compliance with Ground Rule 3, the test split was not inspected or evaluated.
 
+### Phase 2: Candidate Generation with Source Quotas
+- **Quota & Strategy Implementation:**
+  - Implemented configurable candidate merging strategies in `backend/recsys/candidates.py`:
+    - `strategy="quota"` (default): Guaranteed slices (`two_tower: 120`, `itemknn: 80`, `als: 50`, `content: 50`) followed by round-robin over sources' next-best items up to `max_candidates`.
+    - `strategy="interleave"`: Strict round-robin across sources by rank.
+    - `strategy="legacy_ordered"`: Preserves original sequential fill order.
+- **Candidate Quota Unit Tests:**
+  - Created `backend/tests/test_candidate_quotas.py` covering:
+    - `test_pool_never_exceeds_cap`: Pool size bounded by `max_candidates`.
+    - `test_no_duplicates_in_pool`: Zero duplicate candidate IDs.
+    - `test_seen_items_never_appear`: Consumed items masked under all strategies.
+    - `test_every_source_gets_at_least_quota_when_available`: Verified quotas guaranteed.
+    - `test_legacy_ordered_starvation_demonstration`: Proved Content candidates were 0 under legacy fixed-order.
+    - `test_interleave_strategy_distribution`: Balanced rank distribution.
+  - All 6 tests passed in 2.90s.
+- **Validation Retrieval Experiment Results (`docs/results/candidate_recall.json`):**
+  - Evaluated on 5,000 validation users with Stage-1 models (`two_tower`, `itemknn`, `als`, `content`).
+  - **Union Recall@K (Quota):**
+    - Recall@50: `0.3106` (31.06%)
+    - Recall@100: `0.4480` (44.80%)
+    - Recall@200: `0.5656` (56.56%)
+    - Recall@300: `0.5996` (59.96%)
+  - **Sliced Recall@300 (Quota):** Head: `0.7537`, Torso: `0.3358`, Tail: `0.2251`.
+  - **Per-Source Recall:** Two-Tower: `0.5250`, ItemKNN: `0.3584`, ALS: `0.2290`, Content: `0.0858`.
+  - **Strategy Decision:**
+    - `quota` selected as the default strategy: eliminates content starvation (guaranteeing 20.21% pool presence) while matching union recall at 0.5996 without any head recall drop (`head_drop = +0.0000 <= 0.0100`).
+    - Full analysis saved to `docs/results/candidate_recall.json`.
+
 ---
 
 ## Blockers

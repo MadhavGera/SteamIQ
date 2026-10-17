@@ -1,0 +1,199 @@
+{
+  "metadata": {
+    "report_key": "candidate_recall",
+    "dataset_version": "c662b8232dc0",
+    "git_commit": "47ef6f1f57435d341d190f045943051f4035c272",
+    "n_eval_users": 5000,
+    "seed": 42,
+    "quotas": {
+      "two_tower": 120,
+      "itemknn": 80,
+      "als": 50,
+      "content": 50
+    },
+    "source_counts": {
+      "two_tower": 150,
+      "itemknn": 100,
+      "als": 50,
+      "content": 50
+    },
+    "generated_at": "2026-10-17T15:32:56.367109+00:00"
+  },
+  "strategies": {
+    "quota": {
+      "union_recall_at_k": {
+        "recall_at_50": 0.3106,
+        "recall_at_100": 0.448,
+        "recall_at_200": 0.5656,
+        "recall_at_300": 0.5996
+      },
+      "sliced_recall_at_k": {
+        "k_50": {
+          "pop_head": 0.41591861160981447,
+          "pop_torso": 0.12343096234309624,
+          "pop_tail": 0.0641025641025641,
+          "hist_3_4": 0.3083615273078782,
+          "hist_5_9": 0.31938073394495414,
+          "hist_10_plus": 0.3016006739679865
+        },
+        "k_100": {
+          "pop_head": 0.5897666068222621,
+          "pop_torso": 0.20815899581589958,
+          "pop_tail": 0.09971509971509972,
+          "hist_3_4": 0.4528757854035766,
+          "hist_5_9": 0.4501146788990826,
+          "hist_10_plus": 0.43639427127211455
+        },
+        "k_200": {
+          "pop_head": 0.7208258527827648,
+          "pop_torso": 0.3002092050209205,
+          "pop_tail": 0.18803418803418803,
+          "hist_3_4": 0.5780570323827936,
+          "hist_5_9": 0.5653669724770642,
+          "hist_10_plus": 0.544229149115417
+        },
+        "k_300": {
+          "pop_head": 0.7537402752842609,
+          "pop_torso": 0.33577405857740583,
+          "pop_tail": 0.22507122507122507,
+          "hist_3_4": 0.611406476558724,
+          "hist_5_9": 0.5934633027522935,
+          "hist_10_plus": 0.5880370682392586
+        }
+      },
+      "per_source_recall": {
+        "recall_two_tower": 0.525,
+        "recall_itemknn": 0.3584,
+        "recall_als": 0.229,
+        "recall_content": 0.0858
+      },
+      "source_pool_share": {
+        "two_tower": 0.6059049555782585,
+        "itemknn": 0.40411418392023485,
+        "als": 0.20206396213483,
+        "content": 0.20206396213483
+      }
+    },
+    "interleave": {
+      "union_recall_at_k": {
+        "recall_at_50": 0.269,
+        "recall_at_100": 0.3848,
+        "recall_at_200": 0.542,
+        "recall_at_300": 0.5996
+      },
+      "sliced_recall_at_k": {
+        "k_50": {
+          "pop_head": 0.3590664272890485,
+          "pop_torso": 0.10774058577405858,
+          "pop_tail": 0.05982905982905983,
+          "hist_3_4": 0.27694538424359594,
+          "hist_5_9": 0.28784403669724773,
+          "hist_10_plus": 0.22746419545071608
+        },
+        "k_100": {
+          "pop_head": 0.5053859964093357,
+          "pop_torso": 0.16631799163179917,
+          "pop_tail": 0.10826210826210826,
+          "hist_3_4": 0.38569357177380376,
+          "hist_5_9": 0.3985091743119266,
+          "hist_10_plus": 0.36310025273799496
+        },
+        "k_200": {
+          "pop_head": 0.6915020945541592,
+          "pop_torso": 0.27824267782426776,
+          "pop_tail": 0.18945868945868946,
+          "hist_3_4": 0.5500241662638956,
+          "hist_5_9": 0.544151376146789,
+          "hist_10_plus": 0.5248525695029486
+        },
+        "k_300": {
+          "pop_head": 0.7537402752842609,
+          "pop_torso": 0.33577405857740583,
+          "pop_tail": 0.22507122507122507,
+          "hist_3_4": 0.611406476558724,
+          "hist_5_9": 0.5934633027522935,
+          "hist_10_plus": 0.5880370682392586
+        }
+      },
+      "per_source_recall": {
+        "recall_two_tower": 0.525,
+        "recall_itemknn": 0.3584,
+        "recall_als": 0.229,
+        "recall_content": 0.0858
+      },
+      "source_pool_share": {
+        "two_tower": 0.6058912152288334,
+        "itemknn": 0.40412792426966,
+        "als": 0.20206396213483,
+        "content": 0.20206396213483
+      }
+    },
+    "legacy_ordered": {
+      "union_recall_at_k": {
+        "recall_at_50": 0.3106,
+        "recall_at_100": 0.448,
+        "recall_at_200": 0.5782,
+        "recall_at_300": 0.5996
+      },
+      "sliced_recall_at_k": {
+        "k_50": {
+          "pop_head": 0.41591861160981447,
+          "pop_torso": 0.12343096234309624,
+          "pop_tail": 0.0641025641025641,
+          "hist_3_4": 0.3083615273078782,
+          "hist_5_9": 0.31938073394495414,
+          "hist_10_plus": 0.3016006739679865
+        },
+        "k_100": {
+          "pop_head": 0.5897666068222621,
+          "pop_torso": 0.20815899581589958,
+          "pop_tail": 0.09971509971509972,
+          "hist_3_4": 0.4528757854035766,
+          "hist_5_9": 0.4501146788990826,
+          "hist_10_plus": 0.43639427127211455
+        },
+        "k_200": {
+          "pop_head": 0.7348892878515859,
+          "pop_torso": 0.3075313807531381,
+          "pop_tail": 0.20085470085470086,
+          "hist_3_4": 0.5857902368293861,
+          "hist_5_9": 0.5779816513761468,
+          "hist_10_plus": 0.565290648694187
+        },
+        "k_300": {
+          "pop_head": 0.7537402752842609,
+          "pop_torso": 0.33577405857740583,
+          "pop_tail": 0.22507122507122507,
+          "hist_3_4": 0.611406476558724,
+          "hist_5_9": 0.5934633027522935,
+          "hist_10_plus": 0.5880370682392586
+        }
+      },
+      "per_source_recall": {
+        "recall_two_tower": 0.525,
+        "recall_itemknn": 0.3584,
+        "recall_als": 0.229,
+        "recall_content": 0.0858
+      },
+      "source_pool_share": {
+        "two_tower": 0.6061918864044901,
+        "itemknn": 0.40412792426966,
+        "als": 0.20206396213483,
+        "content": 0.2017632909591734
+      }
+    }
+  },
+  "decision": {
+    "chosen_default_strategy": "quota",
+    "quota_union_recall_at_300": 0.5996,
+    "legacy_union_recall_at_300": 0.5996,
+    "quota_tail_recall_at_300": 0.22507,
+    "legacy_tail_recall_at_300": 0.22507,
+    "quota_head_recall_at_300": 0.75374,
+    "legacy_head_recall_at_300": 0.75374,
+    "union_gain": 0.0,
+    "head_drop": 0.0,
+    "meets_criteria": true,
+    "rationale": "Quota strategy yields Union Recall@300 of 0.5996 (vs legacy 0.5996, gain: +0.0000) with Tail Recall@300 of 0.2251 (vs legacy 0.2251). Head recall difference is +0.0000 (threshold <= 0.0100)."
+  }
+}

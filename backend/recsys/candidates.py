@@ -29,6 +29,13 @@ DEFAULT_CANDIDATE_COUNTS: dict[str, int] = {
     "content": 50,
 }
 
+DEFAULT_QUOTAS: dict[str, int] = {
+    "two_tower": 120,
+    "itemknn": 80,
+    "als": 50,
+    "content": 50,
+}
+
 
 @dataclass
 class CandidateInfo:
@@ -56,12 +63,15 @@ class CandidateResult:
     source_top_items: dict[str, list[list[int]]] = field(default_factory=dict)
     n_users: int = 0
     max_candidates: int = 300
+    strategy: str = "quota"
 
 
 def generate_candidates(
     histories: list[np.ndarray],
     models: dict[str, BaseRecommender],
     n_each: dict[str, int] | None = None,
+    quotas: dict[str, int] | None = None,
+    strategy: str = "quota",
     seen_masks: list[set[int]] | list[list[int]] | None = None,
     max_candidates: int = 300,
     batch_size: int = 512,
@@ -73,6 +83,8 @@ def generate_candidates(
         histories: List of user fold-in history arrays (each array contains item_idx).
         models: Dictionary of models, keys in {"two_tower", "itemknn", "als", "content"}.
         n_each: Dictionary specifying top-N per source (defaults to 150 TT, 100 kNN, 50 ALS, 50 Content).
+        quotas: Guaranteed candidate quota per source (defaults to TT 120, kNN 80, ALS 50, Content 50).
+        strategy: Merge strategy in {"quota", "interleave", "legacy_ordered"}.
         seen_masks: Optional list of seen/consumed item sets per user to mask with -inf.
         max_candidates: Maximum deduplicated candidate union size per user (default: 300).
         batch_size: Batch size for scoring large user sets.
@@ -171,18 +183,90 @@ def generate_candidates(
         u_cand_set: set[int] = set()
         u_cand_list: list[int] = []
 
-        # Order of merging: two_tower -> itemknn -> als -> content
-        for s_name in canonical_sources:
-            items_arr, _, _ = source_results[s_name][u_idx]
-            for item in items_arr:
-                item_int = int(item)
-                if item_int not in u_cand_set:
-                    u_cand_set.add(item_int)
-                    u_cand_list.append(item_int)
+        # Extract pre-retrieved items per source
+        source_items = {
+            s_name: [int(x) for x in source_results[s_name][u_idx][0]]
+            for s_name in canonical_sources
+        }
+
+        if strategy == "legacy_ordered":
+            # 1. Legacy ordered: sequential fill until max_candidates
+            for s_name in canonical_sources:
+                for item in source_items[s_name]:
+                    if item not in u_cand_set:
+                        u_cand_set.add(item)
+                        u_cand_list.append(item)
+                        if len(u_cand_list) >= max_candidates:
+                            break
+                if len(u_cand_list) >= max_candidates:
+                    break
+
+        elif strategy == "interleave":
+            # 2. Interleave: round-robin by rank across sources
+            ptrs = {s_name: 0 for s_name in canonical_sources}
+            while len(u_cand_list) < max_candidates:
+                added_any = False
+                for s_name in canonical_sources:
+                    s_list = source_items[s_name]
+                    while ptrs[s_name] < len(s_list):
+                        cand = s_list[ptrs[s_name]]
+                        ptrs[s_name] += 1
+                        if cand not in u_cand_set:
+                            u_cand_set.add(cand)
+                            u_cand_list.append(cand)
+                            added_any = True
+                            break
                     if len(u_cand_list) >= max_candidates:
                         break
-            if len(u_cand_list) >= max_candidates:
-                break
+                if not added_any:
+                    break
+
+        elif strategy == "quota":
+            # 3. Quota merge (default proposal):
+            # Step A: Guaranteed quota slices
+            active_quotas = dict(DEFAULT_QUOTAS)
+            if quotas is not None:
+                active_quotas.update(quotas)
+
+            source_ptrs = {s_name: 0 for s_name in canonical_sources}
+
+            for s_name in canonical_sources:
+                q = active_quotas.get(s_name, 0)
+                s_list = source_items[s_name]
+                taken = 0
+                while source_ptrs[s_name] < len(s_list) and taken < q:
+                    cand = s_list[source_ptrs[s_name]]
+                    source_ptrs[s_name] += 1
+                    if cand not in u_cand_set:
+                        u_cand_set.add(cand)
+                        u_cand_list.append(cand)
+                        taken += 1
+                        if len(u_cand_list) >= max_candidates:
+                            break
+                if len(u_cand_list) >= max_candidates:
+                    break
+
+            # Step B: Round-robin fill remaining slots from next-best items of each source
+            while len(u_cand_list) < max_candidates:
+                added_any = False
+                for s_name in canonical_sources:
+                    s_list = source_items[s_name]
+                    while source_ptrs[s_name] < len(s_list):
+                        cand = s_list[source_ptrs[s_name]]
+                        source_ptrs[s_name] += 1
+                        if cand not in u_cand_set:
+                            u_cand_set.add(cand)
+                            u_cand_list.append(cand)
+                            added_any = True
+                            break
+                    if len(u_cand_list) >= max_candidates:
+                        break
+                if not added_any:
+                    break
+        else:
+            raise ValueError(
+                f"Unknown candidate merge strategy: '{strategy}'. Supported: 'quota', 'interleave', 'legacy_ordered'"
+            )
 
         # Build candidate info records for each union candidate
         u_cand_infos: list[CandidateInfo] = []
@@ -256,6 +340,7 @@ def generate_candidates(
         source_top_items=source_top_items_dict,
         n_users=n_users,
         max_candidates=max_candidates,
+        strategy=strategy,
     )
 
 
