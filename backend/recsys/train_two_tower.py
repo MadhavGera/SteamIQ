@@ -401,13 +401,17 @@ def train_two_tower_model(
         except Exception:
             pass
 
+        lr_val = float(scheduler.get_last_lr()[0]) if hasattr(scheduler, "get_last_lr") else lr
         epoch_stats = {
             "epoch": epoch,
             "train_loss": avg_loss,
             "tau": current_tau,
             "val_ndcg_at_10": val_ndcg10,
             "val_hr_at_10": val_hr10,
+            "learning_rate": lr_val,
             "epoch_sec": round(epoch_sec, 2),
+            "wall_time": round(epoch_sec, 2),
+            "eval_ndcg": val_ndcg10,
         }
         history_log.append(epoch_stats)
 
@@ -437,6 +441,8 @@ def train_two_tower_model(
         "best_tuning_val_ndcg_at_10": best_val_ndcg,
         "epochs_completed": len(history_log),
         "history": history_log,
+        "curves": history_log,
     }
+    model_wrapper.training_curves = training_curves
 
     return model_wrapper, training_curves

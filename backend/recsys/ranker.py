@@ -525,11 +525,13 @@ def train_ranker(
     )
 
     fit_start = time.perf_counter()
+    eval_results: dict[str, dict[str, list[float]]] = {}
     if len(group_val) > 0 and len(X_val_df) > 0:
         logger.info("Training LGBMRanker with early stopping (30 rounds)...")
         callbacks = [
             lgb.early_stopping(stopping_rounds=30, verbose=False),
             lgb.log_evaluation(period=25),
+            lgb.record_evaluation(eval_results),
         ]
         ranker.fit(
             X=X_train_df[active_features],
@@ -549,6 +551,28 @@ def train_ranker(
     fit_time = time.perf_counter() - fit_start
     best_iteration = int(ranker.best_iteration_) if hasattr(ranker, "best_iteration_") else config.n_estimators
     logger.info("LGBMRanker fit complete in %.2fs (best iteration: %d)", fit_time, best_iteration)
+
+    # Extract iteration-by-iteration curve history
+    ranker_curves: list[dict[str, Any]] = []
+    if eval_results:
+        first_ds = next(iter(eval_results.values()), {})
+        if first_ds:
+            first_metric = next(iter(first_ds.keys()), "ndcg@10")
+            metric_vals = first_ds[first_metric]
+            for it_idx, val in enumerate(metric_vals, start=1):
+                ranker_curves.append({
+                    "iteration": it_idx,
+                    "epoch": it_idx,
+                    "eval_ndcg": float(val),
+                    "val_ndcg_at_10": float(val),
+                })
+
+    training_curves_payload = {
+        "best_iteration": best_iteration,
+        "iterations_completed": len(ranker_curves),
+        "curves": ranker_curves,
+        "history": ranker_curves,
+    }
 
     # 4. Feature importances and global SHAP
     booster: lgb.Booster = ranker.booster_
@@ -576,11 +600,13 @@ def train_ranker(
         item_cache=item_cache,
         user_cache=user_cache,
     )
+    model_wrapper.training_curves = training_curves_payload
 
     training_info = {
         "best_iteration": best_iteration,
         "fit_time_sec": fit_time,
         "feature_prep_time_sec": feature_prep_time,
+        "training_curves": training_curves_payload,
         "n_train_users": len(train_users),
         "n_val_users": len(val_users),
         "dropped_train_users": dropped_train,

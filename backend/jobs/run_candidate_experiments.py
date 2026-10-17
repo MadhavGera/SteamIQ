@@ -255,7 +255,7 @@ def run_candidate_retrieval_experiments(
         "rationale": (
             f"Quota strategy yields Union Recall@300 of {quota_union:.4f} (vs legacy {legacy_union:.4f}, "
             f"gain: {union_gain:+.4f}) with Tail Recall@300 of {quota_tail:.4f} (vs legacy {legacy_tail:.4f}). "
-            f"Head recall difference is {head_drop:+.4f} (threshold <= 0.0100)."
+            f"Head recall difference is {head_drop:+.4f} (threshold <= 0.01)."
         ),
     }
 

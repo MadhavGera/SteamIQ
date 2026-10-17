@@ -231,8 +231,8 @@ def build_shap_global_payload(
 
 def build_training_curves_payload(
     dataset_version: str,
-    two_tower_curves: dict[str, Any],
-    ranker_curves: dict[str, Any] | None,
+    two_tower_curves: dict[str, Any] | list[dict[str, Any]],
+    ranker_curves: dict[str, Any] | list[dict[str, Any]] | None,
     n_eval_users: int,
     seed: int = 42,
 ) -> dict[str, Any]:

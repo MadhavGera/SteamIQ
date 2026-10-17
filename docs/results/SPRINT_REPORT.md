@@ -77,6 +77,21 @@ The ML Evidence Hardening Sprint is an end-to-end reliability and consistency ov
     - `quota` selected as the default strategy: eliminates content starvation (guaranteeing 20.21% pool presence) while matching union recall at 0.5996 without any head recall drop (`head_drop = +0.0000 <= 0.0100`).
     - Full analysis saved to `docs/results/candidate_recall.json`.
 
+### Phase 3: Training History Logging
+- **Two-Tower History Logging:**
+  - Extended `backend/recsys/train_two_tower.py` to record per-epoch metrics: `epoch`, `train_loss`, `tau`, `val_ndcg_at_10`, `val_hr_at_10`, `learning_rate`, `epoch_sec`, `wall_time`, and `eval_ndcg`.
+  - Attached structured `training_curves` dictionary to `model_wrapper` containing `curves` and `history` logs.
+- **Ranker Iteration History Logging:**
+  - Updated `backend/recsys/ranker.py` to invoke `lgb.record_evaluation(eval_results)` callback during `LGBMRanker.fit()`.
+  - Parsed iteration-by-iteration NDCG metrics into `ranker_curves` and attached to `model_wrapper.training_curves` and `training_info["training_curves"]`.
+- **Payload Schema & Report Generation:**
+  - Extended `TrainingCurvesPayload` in `backend/recsys/report_schema.py` and `build_training_curves_payload` in `backend/recsys/report.py` to support both `list[dict[str, Any]]` and `dict[str, Any]` (enabling multi-seed dictionary payloads).
+- **Model Lab Visualization & Integrity:**
+  - Corrected chart label in `frontend/components/model-lab/TrainingCurvesTab.tsx` from `"BPR Loss"` to `"Sampled Softmax Loss"`.
+  - Added multi-seed visual overlay support to `TrainingCurvesTab.tsx` to render faint individual seed paths alongside the champion run.
+  - Verified frontend with `npm --prefix frontend run lint`: clean pass with zero warnings/errors.
+  - Passed `scripts/check_no_hardcoded_metrics.py` and `scripts/check_honest_fallbacks.py`.
+
 ---
 
 ## Blockers

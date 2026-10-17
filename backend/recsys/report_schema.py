@@ -190,8 +190,8 @@ class TrainingCurvesPayload(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     metadata: ReportMetadata
-    two_tower_curves: dict[str, Any]
-    ranker_curves: dict[str, Any] | None = None
+    two_tower_curves: dict[str, Any] | list[dict[str, Any]]
+    ranker_curves: dict[str, Any] | list[dict[str, Any]] | None = None
 
 
 class DatasetReportPayload(BaseModel):
