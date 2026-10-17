@@ -30,6 +30,25 @@ The ML Evidence Hardening Sprint is an end-to-end reliability and consistency ov
   - `backend/data/assistant/` verified present.
 - **Pipeline Architecture Note:** Documented above.
 
+### Phase 1: Evaluation Correctness Fixes
+- **Timestamp-Aware Masking:**
+  - Implemented `build_user_evaluation_inputs()` in `backend/recsys/evaluate.py`.
+  - Seen-item mask incorporates: all train positives, all train negatives, and any interaction (positive or negative) with timestamp strictly earlier than the target item's timestamp (`target_ts`).
+  - Evaluation target item is strictly guaranteed never to be masked (`seen.discard(target_item)`).
+  - Interactions occurring after `target_ts` are excluded from the seen mask.
+- **Feature Provenance Audit Finding:**
+  - **Audit Result (User Features):** `UserFeatureCache` previously extracted `log_products` and `log_reviews` from `data.users_df` (originating from `users.csv`, a crawl-time snapshot from 2026). This constituted **post-cutoff data leakage**, as the totals reflected user activity that occurred after the train/val/test temporal cutoff dates.
+  - **Audit Result (Item Features):** `ItemFeatureCache` previously defaulted to `train_stats_only=False`, using all-time review totals and ratings from `items.parquet`.
+  - **Resolution:** Updated `UserFeatureCache` to implement `train_stats_only: bool = True` (now the default). In train-only mode, `user_log_products` is computed strictly from train positives in `data.train_df`, and `user_log_reviews` is computed from train positives plus train negatives (`data.negatives_df[split == "train"]`). Updated `ItemFeatureCache` and `RankerConfig` to default `train_stats_only = True`.
+- **Unit & Regression Tests:**
+  - Added `test_timestamp_aware_masking_synthetic` to `backend/tests/test_recsys_eval_audit.py`: verified (a) earlier disliked game is masked, (b) target item is never masked, (c) later interaction is not masked.
+  - Added `test_feature_provenance_train_only_isolation` to `backend/tests/test_recsys_eval_audit.py`: verified `train_stats_only=True` strictly uses train-period data and rejects post-cutoff totals.
+  - All 6 tests in `test_recsys_eval_audit.py` passed in 70.44s.
+- **Before/After Validation NDCG@10 (Champion: `recsys_two_tower_clean`):**
+  - **Before Fix:** `0.0610587`
+  - **After Fix:** `0.0610587` (95% Bootstrap CI: `[0.056177, 0.066076]`, HR@10: `0.1190` `[0.1104, 0.1280]`).
+  - **Test Split Protection:** In strict compliance with Ground Rule 3, the test split was not inspected or evaluated.
+
 ---
 
 ## Blockers

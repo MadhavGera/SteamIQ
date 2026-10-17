@@ -73,7 +73,7 @@ def _build_user_interaction_maps(
     Constructs per-user chronological train sequences and train negative item sets.
     """
     # Sort train by user and timestamp
-    train_sorted = data.train_df.sort_values(by=["user_idx", "ts"])
+    train_sorted = data.train_df.sort_values(by=["user_idx", "ts"]) if "ts" in data.train_df.columns else data.train_df
     user_train_pos: dict[int, list[int]] = {}
     for u, item in zip(train_sorted["user_idx"].to_numpy(), train_sorted["item_idx"].to_numpy(), strict=True):
         if u not in user_train_pos:
@@ -83,13 +83,122 @@ def _build_user_interaction_maps(
     # Negatives before cutoff (split == 'train')
     user_train_neg: dict[int, set[int]] = {}
     if not data.negatives_df.empty:
-        neg_train = data.negatives_df[data.negatives_df["split"] == "train"]
+        neg_train = (
+            data.negatives_df[data.negatives_df["split"] == "train"]
+            if "split" in data.negatives_df.columns
+            else data.negatives_df
+        )
         for u, item in zip(neg_train["user_idx"].to_numpy(), neg_train["item_idx"].to_numpy(), strict=True):
             if u not in user_train_neg:
                 user_train_neg[u] = set()
             user_train_neg[u].add(int(item))
 
     return user_train_pos, user_train_neg
+
+
+def build_user_evaluation_inputs(
+    data: RecsysData,
+    eval_users: np.ndarray | list[int],
+    split: str,
+    max_history: int = 50,
+) -> tuple[list[np.ndarray], list[int], list[list[int]], list[int]]:
+    """
+    Constructs user fold-in histories, targets, seen masks, and history lengths
+    using timestamp-aware masking.
+
+    Rules:
+      - Seen mask includes: all train positives, all train negatives, and any interaction
+        (positive or negative) with timestamp strictly earlier than the target's timestamp.
+      - Target item itself is GUARANTEED to never be masked.
+      - Interactions occurring after the target timestamp are NOT masked.
+    """
+    split_df = data.val_df if split == "val" else data.test_df
+    target_map = dict(zip(split_df["user_idx"].to_numpy(), split_df["item_idx"].to_numpy(), strict=True))
+
+    has_target_ts = "ts" in split_df.columns
+    target_ts_map = (
+        dict(zip(split_df["user_idx"].to_numpy(), split_df["ts"].to_numpy(), strict=True))
+        if has_target_ts
+        else {}
+    )
+
+    user_train_pos, user_train_neg = _build_user_interaction_maps(data)
+
+    # Collect all negative interactions per user with timestamps if available
+    user_neg_list: dict[int, list[tuple[int, float | None, str]]] = {}
+    if data.negatives_df is not None and not data.negatives_df.empty:
+        has_neg_ts = "ts" in data.negatives_df.columns
+        has_neg_split = "split" in data.negatives_df.columns
+        u_arr = data.negatives_df["user_idx"].to_numpy()
+        i_arr = data.negatives_df["item_idx"].to_numpy()
+        ts_arr = data.negatives_df["ts"].to_numpy() if has_neg_ts else None
+        sp_arr = data.negatives_df["split"].to_numpy() if has_neg_split else None
+
+        for idx, (u, item) in enumerate(zip(u_arr, i_arr, strict=True)):
+            u_int = int(u)
+            item_int = int(item)
+            neg_ts = float(ts_arr[idx]) if ts_arr is not None else None
+            neg_split = str(sp_arr[idx]) if sp_arr is not None else "train"
+            if u_int not in user_neg_list:
+                user_neg_list[u_int] = []
+            user_neg_list[u_int].append((item_int, neg_ts, neg_split))
+
+    # Validation positive map for test split
+    val_target_map = dict(zip(data.val_df["user_idx"].to_numpy(), data.val_df["item_idx"].to_numpy(), strict=True))
+    val_ts_map = (
+        dict(zip(data.val_df["user_idx"].to_numpy(), data.val_df["ts"].to_numpy(), strict=True))
+        if "ts" in data.val_df.columns
+        else {}
+    )
+
+    histories: list[np.ndarray] = []
+    targets: list[int] = []
+    seen_masks: list[list[int]] = []
+    history_lengths: list[int] = []
+
+    for u in eval_users:
+        u_int = int(u)
+        t_item = int(target_map[u_int])
+        target_ts = target_ts_map.get(u_int)
+
+        pos_items = list(user_train_pos.get(u_int, []))
+        neg_items = user_train_neg.get(u_int, set())
+
+        if split == "val":
+            user_hist = pos_items[-max_history:] if len(pos_items) > max_history else pos_items
+            hist_len = len(pos_items)
+            seen = set(pos_items) | set(neg_items)
+        else:
+            # test split: fold-in history includes val positive if prior to test target
+            val_item = val_target_map.get(u_int)
+            val_ts = val_ts_map.get(u_int)
+            full_pos = list(pos_items)
+            if val_item is not None:
+                if target_ts is None or val_ts is None or val_ts < target_ts:
+                    full_pos.append(int(val_item))
+            user_hist = full_pos[-max_history:] if len(full_pos) > max_history else full_pos
+            hist_len = len(full_pos)
+            seen = set(full_pos) | set(neg_items)
+
+        # Timestamp-aware negative masking:
+        # Include any negative interaction with ts < target_ts (including held-out negatives)
+        if u_int in user_neg_list:
+            for neg_item, neg_ts, neg_sp in user_neg_list[u_int]:
+                if target_ts is not None and neg_ts is not None:
+                    if neg_ts < target_ts:
+                        seen.add(neg_item)
+                elif neg_sp == "train":
+                    seen.add(neg_item)
+
+        # STRICT GUARANTEE: Never mask the test target itself!
+        seen.discard(t_item)
+
+        histories.append(np.array(user_hist, dtype=np.int32))
+        seen_masks.append(list(seen))
+        history_lengths.append(hist_len)
+        targets.append(t_item)
+
+    return histories, targets, seen_masks, history_lengths
 
 
 
@@ -294,46 +403,13 @@ def evaluate_model(
     print(f"Evaluating on {n_eval} users ({split} split)...")
     logger.info("Evaluating %s on %s split (n_eval=%d, seed=%d)...", model.name, split, n_eval, seed)
 
-    user_train_pos, user_train_neg = _build_user_interaction_maps(data)
-
-
-    # Map target items
-    target_map = dict(zip(split_df["user_idx"].to_numpy(), split_df["item_idx"].to_numpy(), strict=True))
-    val_target_map = dict(zip(data.val_df["user_idx"].to_numpy(), data.val_df["item_idx"].to_numpy(), strict=True))
-
-
-    # 2. Build histories, targets, and seen masks for evaluated users
-    histories: list[np.ndarray] = []
-    targets: list[int] = []
-    seen_masks: list[list[int]] = []
-    history_lengths: list[int] = []
-
-    for u in eval_users:
-        t_item = int(target_map[u])
-        targets.append(t_item)
-
-        pos_items = user_train_pos.get(u, [])
-        neg_items = user_train_neg.get(u, set())
-
-        if split == "val":
-            # Fold-in history: train positives
-            user_hist = pos_items[-max_history:] if len(pos_items) > max_history else pos_items
-            # Seen items to mask out: train positives + train negatives
-            seen = set(pos_items) | neg_items
-            hist_len = len(pos_items)
-        else:
-            # test split: fold-in history: train positives + val positive
-            val_item = val_target_map.get(u)
-            full_pos = list(pos_items)
-            if val_item is not None:
-                full_pos.append(int(val_item))
-            user_hist = full_pos[-max_history:] if len(full_pos) > max_history else full_pos
-            seen = set(full_pos) | neg_items
-            hist_len = len(full_pos)
-
-        histories.append(np.array(user_hist, dtype=np.int32))
-        seen_masks.append(list(seen))
-        history_lengths.append(hist_len)
+    # 2. Build histories, targets, and seen masks with timestamp-aware masking
+    histories, targets, seen_masks, history_lengths = build_user_evaluation_inputs(
+        data=data,
+        eval_users=eval_users,
+        split=split,
+        max_history=max_history,
+    )
 
     targets_arr = np.array(targets, dtype=np.int64)
     history_lengths_arr = np.array(history_lengths, dtype=np.int32)

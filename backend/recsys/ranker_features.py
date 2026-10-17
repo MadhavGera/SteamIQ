@@ -74,7 +74,7 @@ FEATURE_COLUMNS: list[str] = [
 class ItemFeatureCache:
     """Pre-extracted and vectorized item catalog features for fast batch feature extraction."""
 
-    def __init__(self, data: RecsysData, train_stats_only: bool = False) -> None:
+    def __init__(self, data: RecsysData, train_stats_only: bool = True) -> None:
         n_items = data.n_items
         self.n_items = n_items
         self.train_stats_only = train_stats_only
@@ -193,33 +193,67 @@ class ItemFeatureCache:
 class UserFeatureCache:
     """Pre-extracted user profile stats and interaction hours."""
 
-    def __init__(self, data: RecsysData) -> None:
+    def __init__(self, data: RecsysData, train_stats_only: bool = True) -> None:
         self.user_log_products: dict[int, float] = {}
         self.user_log_reviews: dict[int, float] = {}
         self.user_item_hours: dict[tuple[int, int], float] = {}
         self.median_log_products: float = 4.9836
         self.median_log_reviews: float = 2.3026
         self.median_log_hours: float = 3.2809
+        self.train_stats_only: bool = train_stats_only
 
-        if data.users_df is not None and not data.users_df.empty:
-            u_df = data.users_df
+        if train_stats_only:
+            # Recompute strictly from train-period data only (zero post-cutoff leakage)
             all_prods = []
             all_revs = []
-            for r in u_df.to_dict(orient="records"):
-                u_idx = int(r.get("user_idx", -1))
-                if u_idx >= 0:
-                    prods = float(r.get("products", 0.0) or 0.0)
-                    revs = float(r.get("reviews", 0.0) or 0.0)
-                    lp = float(np.log1p(max(0.0, prods)))
-                    lr = float(np.log1p(max(0.0, revs)))
-                    self.user_log_products[u_idx] = lp
-                    self.user_log_reviews[u_idx] = lr
+            if data.train_df is not None and not data.train_df.empty:
+                pos_counts = data.train_df["user_idx"].value_counts().to_dict()
+                neg_counts: dict[int, int] = {}
+                if data.negatives_df is not None and not data.negatives_df.empty:
+                    neg_train = (
+                        data.negatives_df[data.negatives_df["split"] == "train"]
+                        if "split" in data.negatives_df.columns
+                        else data.negatives_df
+                    )
+                    neg_counts = neg_train["user_idx"].value_counts().to_dict()
+
+                all_user_ids = set(pos_counts.keys()).union(neg_counts.keys())
+                for u_idx in all_user_ids:
+                    u_int = int(u_idx)
+                    n_pos = pos_counts.get(u_idx, 0)
+                    n_neg = neg_counts.get(u_idx, 0)
+                    lp = float(np.log1p(max(0.0, float(n_pos))))
+                    lr = float(np.log1p(max(0.0, float(n_pos + n_neg))))
+                    self.user_log_products[u_int] = lp
+                    self.user_log_reviews[u_int] = lr
                     all_prods.append(lp)
                     all_revs.append(lr)
+
             if all_prods:
                 self.median_log_products = float(np.median(all_prods))
             if all_revs:
                 self.median_log_reviews = float(np.median(all_revs))
+        else:
+            # Legacy crawl-time stats from users.parquet (contains post-cutoff info)
+            if data.users_df is not None and not data.users_df.empty:
+                u_df = data.users_df
+                all_prods = []
+                all_revs = []
+                for r in u_df.to_dict(orient="records"):
+                    u_idx = int(r.get("user_idx", -1))
+                    if u_idx >= 0:
+                        prods = float(r.get("products", 0.0) or 0.0)
+                        revs = float(r.get("reviews", 0.0) or 0.0)
+                        lp = float(np.log1p(max(0.0, prods)))
+                        lr = float(np.log1p(max(0.0, revs)))
+                        self.user_log_products[u_idx] = lp
+                        self.user_log_reviews[u_idx] = lr
+                        all_prods.append(lp)
+                        all_revs.append(lr)
+                if all_prods:
+                    self.median_log_products = float(np.median(all_prods))
+                if all_revs:
+                    self.median_log_reviews = float(np.median(all_revs))
 
         if data.train_df is not None and not data.train_df.empty and "hours" in data.train_df.columns:
             all_hrs = []
@@ -274,9 +308,9 @@ def build_features(
     u_ids = list(range(n_users)) if user_indices is None else [int(u) for u in user_indices]
 
     if item_cache is None:
-        item_cache = ItemFeatureCache(data)
+        item_cache = ItemFeatureCache(data, train_stats_only=True)
     if user_cache is None:
-        user_cache = UserFeatureCache(data)
+        user_cache = UserFeatureCache(data, train_stats_only=True)
 
     rows: list[dict[str, Any]] = []
 

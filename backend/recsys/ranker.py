@@ -56,7 +56,7 @@ class RankerConfig:
     n_jobs: int = 4
     max_candidates: int = 300
     source_run_ids: dict[str, str] | None = None
-    train_stats_only: bool = False
+    train_stats_only: bool = True
 
     def __post_init__(self) -> None:
         if self.eval_at is None:
@@ -193,10 +193,11 @@ class RankerModel(BaseRecommender):
             if precomputed_features is not None:
                 feat_df = precomputed_features
             elif self.data is not None:
+                train_stats = getattr(self.config, "train_stats_only", True)
                 if self.item_cache is None:
-                    self.item_cache = ItemFeatureCache(self.data)
+                    self.item_cache = ItemFeatureCache(self.data, train_stats_only=train_stats)
                 if self.user_cache is None:
-                    self.user_cache = UserFeatureCache(self.data)
+                    self.user_cache = UserFeatureCache(self.data, train_stats_only=train_stats)
                 feat_df = build_features(
                     histories=histories,
                     candidates=cand_res,
@@ -414,9 +415,9 @@ def train_ranker(
         # 2. Build training and validation pairs
         user_train_pos, user_train_neg = _build_user_interaction_maps(data)
 
-        train_stats = getattr(config, "train_stats_only", False)
+        train_stats = getattr(config, "train_stats_only", True)
         item_cache = ItemFeatureCache(data, train_stats_only=train_stats)
-        user_cache = UserFeatureCache(data)
+        user_cache = UserFeatureCache(data, train_stats_only=train_stats)
 
         def prepare_split_dataset(u_list: np.ndarray, split_name: str) -> tuple[pd.DataFrame, np.ndarray, list[int], int]:
             if len(u_list) == 0:
