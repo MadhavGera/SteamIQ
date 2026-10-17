@@ -220,6 +220,18 @@ Evaluated across 5,000 held-out evaluation users with 95% bootstrap confidence i
         sel_acc = float(sel_pred.get("selective_accuracy", accuracy))
         recall3 = float(retrieval_dense.get("recall_at_3", 0.0))
 
+        holdout_models = lb.get("holdout_models", {})
+        holdout_headline = holdout_models.get(headline_key, {})
+        holdout_acc = float(holdout_headline.get("accuracy", 0.0))
+        holdout_f1 = float(holdout_headline.get("macro_f1", 0.0))
+        holdout_tfidf_acc = float(holdout_models.get("tfidf", {}).get("accuracy", 0.0))
+
+        holdout_rows = ""
+        if holdout_acc > 0.0:
+            holdout_rows = f"""| **Realistic Holdout Accuracy** | {holdout_acc:.4f} | vs TF-IDF Baseline: {holdout_tfidf_acc:.4f} |
+| **Realistic Holdout Macro-F1** | {holdout_f1:.4f} | 167 hand-written queries |
+"""
+
         return f"""# Model Card: `assistant_intent_main`
 
 **Family:** MiniLM Sentence Embedding + Temperature Scaled Classifier | **Stage:** `production` (Ask SteamIQ Headline)  
@@ -246,13 +258,13 @@ Evaluated across 5,000 held-out evaluation users with 95% bootstrap confidence i
 ---
 
 ## 3. Quantitative Performance & Empirical Evidence
-Evaluated on gold domain queries:
+Evaluated on gold domain queries and realistic hand-written holdout queries:
 
 | Metric | Value | Baseline Comparison |
 |---|:---:|---|
 | **Gold Test Accuracy** | {accuracy:.4f} | vs TF-IDF Baseline: {tfidf_acc:.4f} |
 | **Gold Macro-F1** | {macro_f1:.4f} | vs Keyword Baseline: {kw_f1:.4f} |
-| **Expected Calibration Error (ECE)** | {ece:.4f} | Temperature Scaling Calibrated |
+{holdout_rows}| **Expected Calibration Error (ECE)** | {ece:.4f} | Temperature Scaling Calibrated |
 | **Selective Accuracy at $\\tau$** | {sel_acc:.4f} | Calibrated threshold $\\tau={tau:.2f}$ |
 | **Extractive Recall@3** | {recall3:.4f} | Review passage retrieval fallback |
 

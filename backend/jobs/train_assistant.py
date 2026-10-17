@@ -111,6 +111,15 @@ class TrainAssistantJob(BaseJob):
         train_raw = [json.loads(line) for line in train_file.read_text(encoding="utf-8").splitlines() if line.strip()]
         gold_raw = [json.loads(line) for line in gold_file.read_text(encoding="utf-8").splitlines() if line.strip()]
 
+        holdout_file = data_pkg_dir / "holdout_queries.jsonl"
+        holdout_raw = []
+        if holdout_file.exists():
+            holdout_raw = [
+                json.loads(line)
+                for line in holdout_file.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+
         dataset_hash = hashlib.sha256(train_file.read_bytes()).hexdigest()[:12]
 
         verified_gold_count = sum(1 for g in gold_raw if g.get("verified", False))
@@ -121,7 +130,13 @@ class TrainAssistantJob(BaseJob):
             else f"verified gold (verified count: {verified_gold_count}/{len(gold_raw)})"
         )
 
-        self.logger.info("Dataset loaded: %d train, %d gold (%s)", len(train_raw), len(gold_raw), verification_status_note)
+        self.logger.info(
+            "Dataset loaded: %d train, %d gold (%s), %d realistic holdout",
+            len(train_raw),
+            len(gold_raw),
+            verification_status_note,
+            len(holdout_raw),
+        )
 
         # 2. Partition Train Data: Train (70%), Calibration (15%), Validation (15%)
         random.shuffle(train_raw)
@@ -317,6 +332,67 @@ class TrainAssistantJob(BaseJob):
             }
             models_eval["minilm_logistic"][f"diff_vs_{b_name}"] = round(diff_mean, 4)
             models_eval["minilm_logistic"][f"diff_vs_{b_name}_ci"] = [round(diff_lo, 4), round(diff_hi, 4)]
+
+        # 6.b Holdout Evaluation (Realistic Hand-Written Queries)
+        holdout_models_eval: dict[str, dict[str, Any]] = {}
+        holdout_paired_diffs: dict[str, dict[str, Any]] = {}
+        if holdout_raw:
+            self.logger.info("Evaluating all models on %d hand-written holdout queries...", len(holdout_raw))
+            holdout_texts = [d["text"] for d in holdout_raw]
+            holdout_labels = [d["intent"] for d in holdout_raw]
+            holdout_true_idx = np.array([label_to_idx[lbl] for lbl in holdout_labels], dtype=int)
+
+            holdout_per_model_preds: dict[str, np.ndarray] = {}
+            holdout_per_model_probs: dict[str, np.ndarray] = {}
+
+            for name, r in routers.items():
+                h_probs = r.predict_proba(holdout_texts)
+                if name == "minilm_logistic":
+                    h_probs = calibrator.calibrate(h_probs)
+
+                holdout_per_model_probs[name] = h_probs
+                h_pred_idx = np.argmax(h_probs, axis=1)
+                holdout_per_model_preds[name] = h_pred_idx
+
+                h_acc = float(np.mean(h_pred_idx == holdout_true_idx))
+                h_f1_macro = float(f1_score(holdout_true_idx, h_pred_idx, average="macro", zero_division=0))
+
+                h_correct_vec = (h_pred_idx == holdout_true_idx).astype(float)
+                _, h_acc_lo, h_acc_hi = bootstrap_ci(h_correct_vec, n_boot=1000, seed=self.seed)
+
+                holdout_models_eval[name] = {
+                    "count": len(holdout_raw),
+                    "accuracy": round(h_acc, 4),
+                    "accuracy_ci": [round(h_acc_lo, 4), round(h_acc_hi, 4)],
+                    "macro_f1": round(h_f1_macro, 4),
+                }
+                models_eval[name]["holdout"] = holdout_models_eval[name]
+
+            # Paired differences on holdout vs headline model
+            h_main_correct = (holdout_per_model_preds["minilm_logistic"] == holdout_true_idx).astype(float)
+            for b_name in ["keyword", "tfidf", "minilm_knn"]:
+                b_correct = (holdout_per_model_preds[b_name] == holdout_true_idx).astype(float)
+                diff_mean, diff_lo, diff_hi = paired_bootstrap_diff(h_main_correct, b_correct, n_boot=1000, seed=self.seed)
+                sig = bool((diff_lo > 0.0) or (diff_hi < 0.0))
+                holdout_paired_diffs[b_name] = {
+                    "diff_mean": round(diff_mean, 4),
+                    "diff_ci": [round(diff_lo, 4), round(diff_hi, 4)],
+                    "significant": sig,
+                }
+                holdout_models_eval["minilm_logistic"][f"diff_vs_{b_name}"] = round(diff_mean, 4)
+                holdout_models_eval["minilm_logistic"][f"diff_vs_{b_name}_ci"] = [round(diff_lo, 4), round(diff_hi, 4)]
+
+            # Selective prediction and calibration on holdout
+            h_main_probs = holdout_per_model_probs["minilm_logistic"]
+            h_sel = evaluate_selective_prediction(h_main_probs, holdout_true_idx, tau=tau)
+            h_ece, _ = compute_ece(h_main_probs, holdout_true_idx, n_bins=10)
+            h_nll = compute_nll(h_main_probs, holdout_true_idx)
+
+            holdout_models_eval["minilm_logistic"]["selective_accuracy"] = h_sel["selective_accuracy"]
+            holdout_models_eval["minilm_logistic"]["coverage"] = h_sel["coverage"]
+            holdout_models_eval["minilm_logistic"]["abstention_rate"] = h_sel["abstention_rate"]
+            holdout_models_eval["minilm_logistic"]["ece"] = round(h_ece, 4)
+            holdout_models_eval["minilm_logistic"]["nll"] = round(h_nll, 4)
 
         # Main Model In-Depth Metrics
         main_probs = gold_per_model_probs["minilm_logistic"]
@@ -570,10 +646,13 @@ class TrainAssistantJob(BaseJob):
             "verification_status": verification_status_note,
             "verified_gold_count": verified_gold_count,
             "total_gold_count": len(gold_raw),
+            "total_holdout_count": len(holdout_raw),
             "generated_at": datetime.now(UTC).isoformat(),
             "headline_model": "minilm_logistic",
             "models": models_eval,
+            "holdout_models": holdout_models_eval,
             "paired_bootstrap": paired_diffs,
+            "paired_bootstrap_holdout": holdout_paired_diffs,
             "slices": slices_data,
             "ablations": ablations_data,
             "entity_resolution": er_metrics,
@@ -626,6 +705,17 @@ class TrainAssistantJob(BaseJob):
             "classes": classes,
         }
 
+        if holdout_raw and "minilm_logistic" in holdout_models_eval:
+            calibration_payload["holdout_calibration"] = {
+                "nll": holdout_models_eval["minilm_logistic"].get("nll", 0.0),
+                "ece": holdout_models_eval["minilm_logistic"].get("ece", 0.0),
+                "selective_prediction": {
+                    "selective_accuracy": holdout_models_eval["minilm_logistic"].get("selective_accuracy", 0.0),
+                    "coverage": holdout_models_eval["minilm_logistic"].get("coverage", 0.0),
+                    "abstention_rate": holdout_models_eval["minilm_logistic"].get("abstention_rate", 0.0),
+                },
+            }
+
         retrieval_payload = {
             "report_key": "assistant_retrieval",
             "dataset_hash": dataset_hash,
@@ -646,6 +736,11 @@ class TrainAssistantJob(BaseJob):
         (self.reports_dir / "assistant_calibration.json").write_text(json.dumps(calibration_payload, indent=2), encoding="utf-8")
         (self.reports_dir / "assistant_retrieval.json").write_text(json.dumps(retrieval_payload, indent=2), encoding="utf-8")
         (self.reports_dir / "assistant_errors.json").write_text(json.dumps(errors_payload, indent=2), encoding="utf-8")
+
+        # Also write authoritative assistant metrics to docs/results/assistant_metrics.json
+        results_dir = Path(__file__).resolve().parent.parent.parent / "docs" / "results"
+        results_dir.mkdir(parents=True, exist_ok=True)
+        (results_dir / "assistant_metrics.json").write_text(json.dumps(leaderboard_payload, indent=2), encoding="utf-8")
 
         # 9. Database Persistence (ModelRun & ServingRecReport)
         if session is not None and not self.dry_run:
@@ -745,12 +840,27 @@ class TrainAssistantJob(BaseJob):
         d_m = retrieval_metrics["dense"]
         t_m = retrieval_metrics["tfidf"]
 
+        holdout_md_rows = []
+        if holdout_models_eval:
+            holdout_md_rows = [
+                "",
+                f"### Realistic Hand-Written Holdout Evaluation (n={len(holdout_raw)})",
+                "| Model | Accuracy (95% CI) | Macro-F1 | Paired Diff vs Headline (95% CI) |",
+                "|---|:---:|:---:|:---:|",
+                f"| **MiniLM + Logistic (Headline)** | **{holdout_models_eval['minilm_logistic']['accuracy']:.4f}** [{holdout_models_eval['minilm_logistic']['accuracy_ci'][0]:.4f}, {holdout_models_eval['minilm_logistic']['accuracy_ci'][1]:.4f}] | **{holdout_models_eval['minilm_logistic']['macro_f1']:.4f}** | — |",
+                f"| MiniLM + kNN | {holdout_models_eval['minilm_knn']['accuracy']:.4f} [{holdout_models_eval['minilm_knn']['accuracy_ci'][0]:.4f}, {holdout_models_eval['minilm_knn']['accuracy_ci'][1]:.4f}] | {holdout_models_eval['minilm_knn']['macro_f1']:.4f} | {holdout_paired_diffs['minilm_knn']['diff_mean']:+.4f} [{holdout_paired_diffs['minilm_knn']['diff_ci'][0]:+.4f}, {holdout_paired_diffs['minilm_knn']['diff_ci'][1]:+.4f}] |",
+                f"| TF-IDF + Logistic | {holdout_models_eval['tfidf']['accuracy']:.4f} [{holdout_models_eval['tfidf']['accuracy_ci'][0]:.4f}, {holdout_models_eval['tfidf']['accuracy_ci'][1]:.4f}] | {holdout_models_eval['tfidf']['macro_f1']:.4f} | {holdout_paired_diffs['tfidf']['diff_mean']:+.4f} [{holdout_paired_diffs['tfidf']['diff_ci'][0]:+.4f}, {holdout_paired_diffs['tfidf']['diff_ci'][1]:+.4f}] |",
+                f"| Keyword Baseline | {holdout_models_eval['keyword']['accuracy']:.4f} [{holdout_models_eval['keyword']['accuracy_ci'][0]:.4f}, {holdout_models_eval['keyword']['accuracy_ci'][1]:.4f}] | {holdout_models_eval['keyword']['macro_f1']:.4f} | {holdout_paired_diffs['keyword']['diff_mean']:+.4f} [{holdout_paired_diffs['keyword']['diff_ci'][0]:+.4f}, {holdout_paired_diffs['keyword']['diff_ci'][1]:+.4f}] |",
+                "",
+                f"- **Holdout Selective Accuracy at tau ({tau:.3f}):** **{holdout_models_eval['minilm_logistic']['selective_accuracy']:.4f}** (Coverage: {holdout_models_eval['minilm_logistic']['coverage']:.4f}, ECE: {holdout_models_eval['minilm_logistic']['ece']:.4f})",
+            ]
+
         md_lines = [
             "# Ask SteamIQ — Model Benchmark & Evaluation Report",
             f"**Dataset Hash:** `{dataset_hash}` | **Generated At:** {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
             f"**Verification Status:** {verification_status_note}",
             "",
-            "## 1. Intent Router Leaderboard (Combined Gold n=347)",
+            f"## 1. Intent Router Leaderboard (Combined Gold n={len(gold_raw)})",
             "| Model | Accuracy (95% CI) | Macro-F1 | Paired Diff vs Headline (95% CI) |",
             "|---|:---:|:---:|:---:|",
             f"| **MiniLM + Logistic (Headline)** | **{models_eval['minilm_logistic']['accuracy']:.4f}** [{models_eval['minilm_logistic']['accuracy_ci'][0]:.4f}, {models_eval['minilm_logistic']['accuracy_ci'][1]:.4f}] | **{models_eval['minilm_logistic']['macro_f1']:.4f}** | — |",
@@ -759,12 +869,13 @@ class TrainAssistantJob(BaseJob):
             f"| Keyword Baseline | {models_eval['keyword']['accuracy']:.4f} [{models_eval['keyword']['accuracy_ci'][0]:.4f}, {models_eval['keyword']['accuracy_ci'][1]:.4f}] | {models_eval['keyword']['macro_f1']:.4f} | {paired_diffs['keyword']['diff_mean']:+.4f} [{paired_diffs['keyword']['diff_ci'][0]:+.4f}, {paired_diffs['keyword']['diff_ci'][1]:+.4f}] |",
             "",
             "### Sub-Split Performance: Generator Gold vs Hand-Written Gold vs User-Authored Gold",
-            "| Model | Gen Gold (n=272) | Hand Gold (n=75) | User-Authored Gold (n=30) | User F1 | User Selective Acc (@tau) | User Coverage |",
+            f"| Model | Gen Gold (n={len(gen_indices)}) | Hand Gold (n={len(hand_indices)}) | User-Authored Gold (n={len(user_indices)}) | User F1 | User Selective Acc (@tau) | User Coverage |",
             "|---|:---:|:---:|:---:|:---:|:---:|:---:|",
             f"| **MiniLM + Logistic** | {models_eval['minilm_logistic']['generator_gold']['accuracy']:.4f} | {models_eval['minilm_logistic']['hand_written_gold']['accuracy']:.4f} | {models_eval['minilm_logistic']['user_written_gold']['accuracy']:.4f} | {models_eval['minilm_logistic']['user_written_gold']['macro_f1']:.4f} | {models_eval['minilm_logistic']['user_written_gold'].get('selective_accuracy', 0.0):.4f} | {models_eval['minilm_logistic']['user_written_gold'].get('coverage', 0.0):.4f} |",
             f"| MiniLM + kNN | {models_eval['minilm_knn']['generator_gold']['accuracy']:.4f} | {models_eval['minilm_knn']['hand_written_gold']['accuracy']:.4f} | {models_eval['minilm_knn']['user_written_gold']['accuracy']:.4f} | {models_eval['minilm_knn']['user_written_gold']['macro_f1']:.4f} | — | — |",
             f"| TF-IDF + Logistic | {models_eval['tfidf']['generator_gold']['accuracy']:.4f} | {models_eval['tfidf']['hand_written_gold']['accuracy']:.4f} | {models_eval['tfidf']['user_written_gold']['accuracy']:.4f} | {models_eval['tfidf']['user_written_gold']['macro_f1']:.4f} | — | — |",
             f"| Keyword Baseline | {models_eval['keyword']['generator_gold']['accuracy']:.4f} | {models_eval['keyword']['hand_written_gold']['accuracy']:.4f} | {models_eval['keyword']['user_written_gold']['accuracy']:.4f} | {models_eval['keyword']['user_written_gold']['macro_f1']:.4f} | — | — |",
+            *holdout_md_rows,
             "",
             "## 2. Calibration & Selective Abstention",
             f"- **Temperature Scaling (T={calibrator.temperature:.3f}):** Multi-class logistic regression outputs uncalibrated logits over 13 classes. Minimizing NLL on the held-out calibration split scales logits by 1/T = {1.0/calibrator.temperature:.2f}, steepening winning confidence to match true empirical accuracy and reducing ECE to {ece:.4f}.",

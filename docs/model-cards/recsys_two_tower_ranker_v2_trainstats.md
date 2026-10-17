@@ -1,7 +1,7 @@
 # Model Card: `recsys_two_tower_ranker_v2_trainstats`
 
 **Family:** LambdaMART GBDT Re-ranker | **Stage:** `candidate` (Leak-Free Ranker Candidate)  
-**Run ID:** `ee6d93db-6e51-4548-918f-d5133b214990` | **Generated:** 2026-10-12  
+**Run ID:** `ee6d93db-6e51-4548-918f-d5133b214990` | **Generated:** 2026-10-17  
 **License:** Project Internal / MIT  
 
 ---

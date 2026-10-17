@@ -125,6 +125,33 @@ The ML Evidence Hardening Sprint is an end-to-end reliability and consistency ov
   - `docs/results/training_curves.json`: Live multi-seed training curves for Two-Tower and Ranker.
   - `docs/results/validation_sweep.json`: Complete audit-verified record of all validation runs and bootstrap intervals.
 
+### Phase 5: Assistant Metrics Reconciliation
+- **Realistic Holdout Dataset Creation:**
+  - Created `backend/assistant/data/holdout_queries.jsonl` with 167 hand-written, realistic, conversational queries across all 13 intents (including out-of-scope, colloquial phrasings, gaming acronyms, and intentional typos).
+- **Comprehensive Training and Dual Evaluation:**
+  - Updated `backend/jobs/train_assistant.py` to evaluate all 4 router models (`minilm_logistic`, `minilm_knn`, `tfidf`, `keyword`) across both the standard gold dataset (n=347) and the independent hand-written holdout set (n=167).
+  - Temperature Scaling fitted on held-out calibration split ($T=0.183$).
+  - Abstention threshold tuned on validation split ($\tau=0.100$).
+- **Reconciled Performance Numbers:**
+  - **Gold Test Evaluation (n=347):**
+    - `MiniLM + Logistic`: Accuracy **0.9251** [0.8963, 0.9510], Macro-F1 **0.9218**.
+    - `TF-IDF + Logistic`: Accuracy **0.7954** [0.7493, 0.8357], Macro-F1 **0.7973** (Paired diff vs MiniLM: `+0.1297 [+0.0893, +0.1729]`, significant).
+    - `MiniLM + kNN`: Accuracy **0.6657** [0.6138, 0.7176], Macro-F1 **0.6686** (Paired diff vs MiniLM: `+0.2594 [+0.2075, +0.3112]`, significant).
+    - `Keyword Baseline`: Accuracy **0.4524** [0.4005, 0.5072], Macro-F1 **0.4670** (Paired diff vs MiniLM: `+0.4726 [+0.4149, +0.5245]`, significant).
+  - **Realistic Hand-Written Holdout Evaluation (n=167):**
+    - `MiniLM + Logistic`: Accuracy **0.8623** [0.8144, 0.9162], Macro-F1 **0.8606**.
+    - `TF-IDF + Logistic`: Accuracy **0.7964** [0.7365, 0.8623], Macro-F1 **0.7783** (Paired diff vs MiniLM: `+0.0659 [+0.0058, +0.1257]`, significant).
+    - `MiniLM + kNN`: Accuracy **0.6407** [0.5629, 0.7126], Macro-F1 **0.6115** (Paired diff vs MiniLM: `+0.2216 [+0.1437, +0.2994]`, significant).
+    - `Keyword Baseline`: Accuracy **0.4072** [0.3353, 0.4910], Macro-F1 **0.3989** (Paired diff vs MiniLM: `+0.4551 [+0.3653, +0.5389]`, significant).
+- **Calibration, Abstention & Retrieval Fallback:**
+  - Expected Calibration Error (ECE): **0.0231** on gold, **0.0752** on holdout.
+  - Selective Accuracy at $\tau=0.100$: **0.9251** on gold, **0.8623** on holdout (Coverage: 100.0%).
+  - Out-of-Scope Softmax AUROC: **0.9960** (FPR@95%TPR: 0.0141).
+  - Extractive dense retrieval fallback: Recall@3: **0.9538** [0.8923, 1.0000], MRR: **0.8536** [0.7900, 0.9113] (beats TF-IDF baseline +0.2377 MRR).
+- **Authoritative Metrics & Alignment:**
+  - Emitted single authoritative metrics file: `docs/results/assistant_metrics.json`.
+  - Reconciled numbers across `docs/claims-and-evidence.md`, `docs/model-cards/assistant_intent_main.md`, and report outputs.
+
 ---
 
 ## Blockers
