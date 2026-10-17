@@ -188,6 +188,47 @@ The ML Evidence Hardening Sprint is an end-to-end reliability and consistency ov
 - **Artifacts Updated:**
   - `docs/results/leaderboard.json`, `docs/results/leaderboard.md`, `docs/results/slices.json`, `docs/results/beyond_accuracy.json`, `docs/results/cold_start.json`.
 
+### Phase 7: SNIPS Exposure-Debiased NDCG@10
+- **Vectorized Implementation in `backend/recsys/metrics.py`:**
+  - Implemented `compute_item_propensities`, `compute_snips_weights`, `snips_ndcg_at_k`, and `snips_bootstrap_ci`.
+  - Marginal item exposure propensities: $p_i = \frac{(\text{pop}_i + 1)^\gamma}{\sum_j (\text{pop}_j + 1)^\gamma}$ with $\gamma = 0.5$.
+  - User inverse propensity weights: $w_u = \frac{1}{\max(p(t_u), p_{\min})}$ with $p_{\min} = 10^{-4}$.
+  - Self-Normalized Inverse Propensity Scoring (SNIPS) NDCG@10:
+    $$\text{SNIPS-NDCG}@10 = \frac{\sum_u w_u \cdot \text{NDCG}_u@10}{\sum_u w_u}$$
+  - Fully vectorized 95% bootstrap confidence intervals with seeded determinism.
+- **Golden Analytical Unit Tests (`backend/tests/golden/test_snips_golden.py`):**
+  - Added 6 reference tests validating hand-calculated analytical ground truths:
+    - 3-item, 3-user closed-form derivation without clipping ($p_0=10/17, p_1=5/17, p_2=2/17$; SNIPS-NDCG@10 = 0.2827 vs Raw NDCG@10 = 0.5436).
+    - Analytical clipping test with $p_{\min} = 0.20$.
+    - Uniform popularity theorem: verifies SNIPS NDCG@10 is mathematically identical to unweighted NDCG@10 when item popularity is uniform.
+    - Tail discovery sensitivity: verifies SNIPS properly rewards models discovering rare items.
+    - Bootstrap CI coverage bounds ($lo95 \le \mu \le hi95$).
+    - Edge cases (empty arrays, single user).
+  - All 6 tests passed in 0.84s.
+- **Headline SNIPS Test Evaluation Results:**
+  - **Clean Two-Tower Champion:**
+    - Raw Test NDCG@10: `0.0415` [0.0376, 0.0457]
+    - SNIPS Test NDCG@10: `0.0156` [0.0135, 0.0178]
+  - **Clean Ranker Champion:**
+    - Raw Test NDCG@10: `0.0485` [0.0440, 0.0534]
+    - SNIPS Test NDCG@10: `0.0253` [0.0223, 0.0286]
+    - **Relative Advantage Under Exposure Debiasing:** In raw NDCG@10, Ranker delivers +16.9% relative gain over Two-Tower (`0.0485` vs `0.0415`). Under SNIPS debiasing, the Ranker's relative advantage widens to **+62.2%** (`0.0253` vs `0.0156`) because Stage-Two ranking with quota candidates excels at ranking torso and tail items that exposure bias suppresses.
+  - **Popularity Baseline:**
+    - Raw Test NDCG@10: `0.0151` [0.0125, 0.0178]
+    - SNIPS Test NDCG@10: plunges to `0.0035` [0.0029, 0.0042] (-76.8% collapse), confirming that popularity recommendations rely almost entirely on head exposure bias.
+  - **Content Baseline:**
+    - Raw Test NDCG@10: `0.0141` [0.0116, 0.0171]
+    - SNIPS Test NDCG@10: `0.0106` [0.0085, 0.0131] (exceeds popularity by 3.0x under SNIPS due to tail coverage).
+  - **ItemKNN Baseline:**
+    - Raw Test NDCG@10: `0.0433` [0.0389, 0.0480]
+    - SNIPS Test NDCG@10: `0.0216` [0.0188, 0.0247]
+  - **ALS Baseline:**
+    - Raw Test NDCG@10: `0.0356` [0.0315, 0.0396]
+    - SNIPS Test NDCG@10: `0.0160` [0.0141, 0.0179]
+- **Leaderboard Integration:**
+  - Automated report generation (`backend/recsys/report.py`) renders `SNIPS-NDCG@10` in main and appendix markdown tables.
+  - Frontend Model Lab (`frontend/components/model-lab/LeaderboardTab.tsx`) includes `SNIPS NDCG@10` column with explanatory tooltip.
+
 ---
 
 ## Blockers

@@ -466,8 +466,8 @@ def generate_leaderboard_markdown(
         "",
         "Multi-seed mean ± std reported for deployable neural models; 95% bootstrap percentile CIs over 5,000 users for baselines.",
         "",
-        "| Model | Split | Seeds | NDCG@10 (mean ± std / 95% CI) | HR@10 (mean ± std / 95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Stage |",
-        "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |",
+        "| Model | Split | Seeds | NDCG@10 (mean ± std / 95% CI) | SNIPS-NDCG@10 | HR@10 (mean ± std / 95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Stage |",
+        "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |",
     ]
 
     models_by_name = {m.get("model_name", ""): m for m in models}
@@ -504,6 +504,10 @@ def generate_leaderboard_markdown(
         hr_lo = metrics.get("hit_rate_at_10_lo95")
         hr_hi = metrics.get("hit_rate_at_10_hi95")
 
+        snips_val = metrics.get("snips_ndcg_at_10")
+        snips_lo = metrics.get("snips_ndcg_at_10_lo95")
+        snips_hi = metrics.get("snips_ndcg_at_10_hi95")
+
         if ndcg_std is not None:
             ndcg_str = f"{ndcg_val:.4f} ± {ndcg_std:.4f}"
         elif ndcg_lo is not None and ndcg_hi is not None:
@@ -518,10 +522,20 @@ def generate_leaderboard_markdown(
         else:
             hr_str = f"{hr_val:.4f}"
 
+        if snips_val is not None:
+            if snips_lo is not None and snips_hi is not None:
+                snips_str = f"{snips_val:.4f} [{snips_lo:.4f}, {snips_hi:.4f}]"
+            else:
+                snips_str = f"{snips_val:.4f}"
+        else:
+            snips_str = "—"
+
         if is_champ:
             ndcg_str = f"**{ndcg_str}**"
             hr_str = f"**{hr_str}**"
             mrr_str = f"**{metrics.get('mrr_at_10', 0.0):.4f}**"
+            if snips_str != "—":
+                snips_str = f"**{snips_str}**"
         else:
             mrr_str = f"{metrics.get('mrr_at_10', 0.0):.4f}"
 
@@ -531,15 +545,15 @@ def generate_leaderboard_markdown(
         stage_str = f"`{stage}`"
 
         lines.append(
-            f"| {name_str} | **{split}** | {seeds} | {ndcg_str} | {hr_str} | {mrr_str} | {cov_str} | {div_str} | {stage_str} |"
+            f"| {name_str} | **{split}** | {seeds} | {ndcg_str} | {snips_str} | {hr_str} | {mrr_str} | {cov_str} | {div_str} | {stage_str} |"
         )
 
     lines.extend([
         "",
         "### Appendix: Single-Seed Runs & Diagnostic Reference Models",
         "",
-        "| Model | Split | HR@10 (95% CI) | HR@20 (95% CI) | NDCG@10 (95% CI) | NDCG@20 (95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Role / Status |",
-        "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |",
+        "| Model | Split | HR@10 (95% CI) | HR@20 (95% CI) | NDCG@10 (95% CI) | SNIPS-NDCG@10 | NDCG@20 (95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Role / Status |",
+        "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |",
     ])
 
     for m in models:
@@ -552,13 +566,14 @@ def generate_leaderboard_markdown(
         v_hr20 = f"{vm.get('hit_rate_at_20', 0.0):.4f} [{vm.get('hit_rate_at_20_lo95', 0.0):.4f}, {vm.get('hit_rate_at_20_hi95', 0.0):.4f}]"
         v_nd10 = f"{vm.get('ndcg_at_10', 0.0):.4f} [{vm.get('ndcg_at_10_lo95', 0.0):.4f}, {vm.get('ndcg_at_10_hi95', 0.0):.4f}]"
         v_nd20 = f"{vm.get('ndcg_at_20', 0.0):.4f} [{vm.get('ndcg_at_20_lo95', 0.0):.4f}, {vm.get('ndcg_at_20_hi95', 0.0):.4f}]"
+        v_snips = f"{vm.get('snips_ndcg_at_10', 0.0):.4f}" if "snips_ndcg_at_10" in vm else "—"
         v_mrr10 = f"{vm.get('mrr_at_10', 0.0):.4f}"
         v_cov = f"{vm.get('catalog_coverage_at_10', 0.0):.4f}"
         v_div = f"{vm.get('diversity_at_10', 0.0):.4f}"
 
         role_str = "Reference (all-time stats)" if "clean" not in name and "ranker" in name or name == "recsys_two_tower" else stage
         lines.append(
-            f"| `{name}` | **val** | {v_hr10} | {v_hr20} | {v_nd10} | {v_nd20} | {v_mrr10} | {v_cov} | {v_div} | {role_str} |"
+            f"| `{name}` | **val** | {v_hr10} | {v_hr20} | {v_nd10} | {v_snips} | {v_nd20} | {v_mrr10} | {v_cov} | {v_div} | {role_str} |"
         )
 
         if tm:
@@ -566,11 +581,12 @@ def generate_leaderboard_markdown(
             t_hr20 = f"{tm.get('hit_rate_at_20', 0.0):.4f} [{tm.get('hit_rate_at_20_lo95', 0.0):.4f}, {tm.get('hit_rate_at_20_hi95', 0.0):.4f}]"
             t_nd10 = f"{tm.get('ndcg_at_10', 0.0):.4f} [{tm.get('ndcg_at_10_lo95', 0.0):.4f}, {tm.get('ndcg_at_10_hi95', 0.0):.4f}]"
             t_nd20 = f"{tm.get('ndcg_at_20', 0.0):.4f} [{tm.get('ndcg_at_20_lo95', 0.0):.4f}, {tm.get('ndcg_at_20_hi95', 0.0):.4f}]"
+            t_snips = f"{tm.get('snips_ndcg_at_10', 0.0):.4f}" if "snips_ndcg_at_10" in tm else "—"
             t_mrr10 = f"{tm.get('mrr_at_10', 0.0):.4f}"
             t_cov = f"{tm.get('catalog_coverage_at_10', 0.0):.4f}"
             t_div = f"{tm.get('diversity_at_10', 0.0):.4f}"
             lines.append(
-                f"| `{name}` | **test** | {t_hr10} | {t_hr20} | {t_nd10} | {t_nd20} | {t_mrr10} | {t_cov} | {t_div} | {role_str} |"
+                f"| `{name}` | **test** | {t_hr10} | {t_hr20} | {t_nd10} | {t_snips} | {t_nd20} | {t_mrr10} | {t_cov} | {t_div} | {role_str} |"
             )
 
     # 2. Two-Tower Ablations

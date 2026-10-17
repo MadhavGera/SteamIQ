@@ -493,3 +493,154 @@ def mmr_rerank(
 
     return results[0] if is_1d else results
 
+
+def compute_item_propensities(
+    item_train_pop: np.ndarray,
+    gamma: float = 0.5,
+) -> np.ndarray:
+    """
+    Computes marginal item exposure propensities p_i proportional to (pop_i + 1)^gamma.
+    Normalized such that sum_i p_i = 1.0.
+
+    Args:
+        item_train_pop: 1D array of shape [n_items] with training interaction counts.
+        gamma: Exponent parameter controlling popularity propensity decay (default: 0.5).
+
+    Returns:
+        1D float64 array of shape [n_items] with normalized propensities summing to 1.0.
+    """
+    pop = np.asarray(item_train_pop, dtype=np.float64)
+    if len(pop) == 0:
+        return np.empty((0,), dtype=np.float64)
+
+    smoothed = np.maximum(pop, 0.0) + 1.0
+    powered = np.power(smoothed, float(gamma))
+    total = np.sum(powered)
+    if total <= 0:
+        return np.full_like(powered, 1.0 / len(powered))
+    return powered / total
+
+
+def compute_snips_weights(
+    targets: np.ndarray,
+    item_train_pop: np.ndarray,
+    gamma: float = 0.5,
+    p_min: float = 1e-4,
+) -> np.ndarray:
+    """
+    Computes per-user inverse propensity weights:
+        w_u = 1.0 / max(p(t_u), p_min)
+    where t_u is user u's held-out target item index.
+
+    Args:
+        targets: 1D int array [n_users] of target item indices.
+        item_train_pop: 1D array [n_items] of training interaction counts.
+        gamma: Exponent parameter for propensities (default: 0.5).
+        p_min: Minimum propensity clipping threshold (default: 1e-4).
+
+    Returns:
+        1D float64 array [n_users] containing inverse propensity weights w_u.
+    """
+    targets_arr = np.asarray(targets, dtype=np.int64)
+    if len(targets_arr) == 0:
+        return np.empty((0,), dtype=np.float64)
+
+    propensities = compute_item_propensities(item_train_pop, gamma=gamma)
+    if len(propensities) == 0:
+        return np.ones(len(targets_arr), dtype=np.float64)
+
+    # Safe indexing with bounds check
+    clipped_targets = np.clip(targets_arr, 0, len(propensities) - 1)
+    p_targets = propensities[clipped_targets]
+    p_clipped = np.maximum(p_targets, float(p_min))
+    return 1.0 / p_clipped
+
+
+def snips_ndcg_at_k(
+    ranks: np.ndarray,
+    targets: np.ndarray,
+    item_train_pop: np.ndarray,
+    k: int = 10,
+    gamma: float = 0.5,
+    p_min: float = 1e-4,
+) -> float:
+    """
+    Computes Self-Normalized Inverse Propensity Scoring (SNIPS) debiased NDCG@k.
+
+    SNIPS NDCG@k = sum_u(w_u * NDCG_u@k) / sum_u(w_u)
+    where w_u = 1 / max(p(t_u), p_min) and p_i \\propto (pop_i + 1)^\\gamma.
+
+    Args:
+        ranks: 1D int array of 1-indexed ranks for target items.
+        targets: 1D int array of target item indices.
+        item_train_pop: 1D array of training interaction counts across items.
+        k: Cutoff threshold (default: 10).
+        gamma: Exponent parameter for propensities (default: 0.5).
+        p_min: Minimum propensity clipping threshold (default: 1e-4).
+
+    Returns:
+        Float SNIPS debiased NDCG@k value.
+    """
+    if len(ranks) == 0:
+        return 0.0
+
+    ndcg_vals = ndcg_at_k(ranks, k)
+    weights = compute_snips_weights(targets, item_train_pop, gamma=gamma, p_min=p_min)
+    sum_w = float(np.sum(weights))
+    if sum_w <= 0:
+        return 0.0
+
+    return float(np.sum(weights * ndcg_vals) / sum_w)
+
+
+def snips_bootstrap_ci(
+    ranks: np.ndarray,
+    targets: np.ndarray,
+    item_train_pop: np.ndarray,
+    k: int = 10,
+    gamma: float = 0.5,
+    p_min: float = 1e-4,
+    n_boot: int = 1000,
+    seed: int = 42,
+) -> tuple[float, float, float]:
+    """
+    Computes SNIPS NDCG@k with 95% bootstrap confidence interval.
+
+    Args:
+        ranks: 1D int array of 1-indexed ranks for target items.
+        targets: 1D int array of target item indices.
+        item_train_pop: 1D array of training interaction counts across items.
+        k: Cutoff threshold (default: 10).
+        gamma: Exponent parameter for propensities (default: 0.5).
+        p_min: Minimum propensity clipping threshold (default: 1e-4).
+        n_boot: Number of bootstrap resamples (default: 1000).
+        seed: Random seed for reproducibility (default: 42).
+
+    Returns:
+        (mean_snips, lo95, hi95) tuple.
+    """
+    if len(ranks) == 0:
+        return 0.0, 0.0, 0.0
+
+    ndcg_vals = ndcg_at_k(ranks, k)
+    weights = compute_snips_weights(targets, item_train_pop, gamma=gamma, p_min=p_min)
+    sum_w = float(np.sum(weights))
+    if sum_w <= 0:
+        return 0.0, 0.0, 0.0
+
+    point_est = float(np.sum(weights * ndcg_vals) / sum_w)
+    n = len(ranks)
+    if n == 1:
+        return point_est, point_est, point_est
+
+    rng = np.random.default_rng(seed)
+    boot_indices = rng.integers(0, n, size=(n_boot, n))
+    w_boot = weights[boot_indices]
+    ndcg_boot = ndcg_vals[boot_indices]
+    boot_means = np.sum(w_boot * ndcg_boot, axis=1) / np.sum(w_boot, axis=1)
+
+    lo95 = float(np.percentile(boot_means, 2.5))
+    hi95 = float(np.percentile(boot_means, 97.5))
+    return point_est, lo95, hi95
+
+

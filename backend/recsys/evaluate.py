@@ -33,6 +33,7 @@ from recsys.metrics import (
     mrr_at_k,
     ndcg_at_k,
     novelty_at_k,
+    snips_bootstrap_ci,
 )
 from recsys.models.base import BaseRecommender
 
@@ -640,6 +641,19 @@ def compute_metrics_from_ranks(
         metrics[f"mrr_at_{k}"] = mrr_m
         metrics[f"mrr_at_{k}_lo95"] = mrr_lo
         metrics[f"mrr_at_{k}_hi95"] = mrr_hi
+
+        if data.item_train_pop is not None and len(data.item_train_pop) > 0 and len(targets) > 0:
+            snips_m, snips_lo, snips_hi = snips_bootstrap_ci(
+                ranks=ranks,
+                targets=targets,
+                item_train_pop=data.item_train_pop,
+                k=k,
+                seed=seed,
+                n_boot=n_boot,
+            )
+            metrics[f"snips_ndcg_at_{k}"] = snips_m
+            metrics[f"snips_ndcg_at_{k}_lo95"] = snips_lo
+            metrics[f"snips_ndcg_at_{k}_hi95"] = snips_hi
 
     for depth in (50, 100):
         if data.n_items >= depth:

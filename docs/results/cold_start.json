@@ -2,10 +2,10 @@
   "metadata": {
     "report_key": "cold_start",
     "dataset_version": "c662b8232dc0",
-    "git_commit": "235083f2501cf6c1898c9817be29386bad1c946c",
+    "git_commit": "0708c689972ff9cd3d37de701329fca4dec9b438",
     "n_eval_users": 5000,
     "seed": 42,
-    "generated_at": "2026-10-17T18:10:14.316756+00:00"
+    "generated_at": "2026-10-17T18:23:44.288769+00:00"
   },
   "sparse_targets_study": {
     "study_type": "sparse_targets",

@@ -8,6 +8,9 @@ interface MetricRecord {
   ndcg_at_10?: number;
   ndcg_at_10_lo95?: number;
   ndcg_at_10_hi95?: number;
+  snips_ndcg_at_10?: number;
+  snips_ndcg_at_10_lo95?: number;
+  snips_ndcg_at_10_hi95?: number;
   ndcg_at_20?: number;
   hit_rate_at_10?: number;
   hit_rate_at_10_lo95?: number;
@@ -121,7 +124,8 @@ export function LeaderboardTab({ payload }: LeaderboardTabProps) {
             <tr>
               <th>Model Name</th>
               <th>Stage</th>
-              <th>NDCG@10 (95% CI)</th>
+              <th title="Standard unweighted NDCG@10 evaluating rank of target item">NDCG@10 (95% CI)</th>
+              <th title="Self-Normalized Inverse Propensity Scoring (SNIPS) NDCG@10 debiasing for item exposure popularity: p_i ∝ (pop_i + 1)^γ">SNIPS NDCG@10</th>
               <th>NDCG@20</th>
               <th>HR@10 (95% CI)</th>
               <th>HR@20</th>
@@ -158,6 +162,21 @@ export function LeaderboardTab({ payload }: LeaderboardTabProps) {
                   </td>
                   <td>
                     <ErrorBar val={m?.ndcg_at_10} lo={m?.ndcg_at_10_lo95} hi={m?.ndcg_at_10_hi95} maxVal={0.2} />
+                  </td>
+                  <td style={{ fontFamily: "var(--font-mono, monospace)" }}>
+                    {m?.snips_ndcg_at_10 !== undefined ? (
+                      <span
+                        title={`SNIPS NDCG@10: ${m.snips_ndcg_at_10.toFixed(4)}${
+                          m.snips_ndcg_at_10_lo95 !== undefined && m.snips_ndcg_at_10_hi95 !== undefined
+                            ? ` (95% CI: [${m.snips_ndcg_at_10_lo95.toFixed(4)}, ${m.snips_ndcg_at_10_hi95.toFixed(4)}])`
+                            : ""
+                        }`}
+                      >
+                        {m.snips_ndcg_at_10.toFixed(3)}
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>—</span>
+                    )}
                   </td>
                   <td style={{ fontFamily: "var(--font-mono, monospace)" }}>
                     {m?.ndcg_at_20 !== undefined ? m.ndcg_at_20.toFixed(3) : "—"}

@@ -155,6 +155,9 @@ def run_phase6_test_eval(
     champ_tt_seed = 42
     champ_tt_model = tt_models[champ_tt_seed]
     champ_tt_eval = tt_test_evals[champ_tt_seed]
+    champ_tt_val_eval = evaluate_model(
+        champ_tt_model, data, split="val", k_list=(10, 20), user_indices=eval_users, seed=champ_tt_seed
+    )
 
     # =========================================================================
     # 2. Evaluate Baselines on Test Split
@@ -255,6 +258,9 @@ def run_phase6_test_eval(
     champ_rk_seed = 43
     champ_rk_model = rk_models[champ_rk_seed]
     champ_rk_eval = rk_test_evals[champ_rk_seed]
+    champ_rk_val_eval = evaluate_model(
+        champ_rk_model, data, split="val", k_list=(10, 20), user_indices=eval_users, seed=champ_rk_seed
+    )
 
     # Reference all-time models for transparency if present on disk
     ref_tt_dir = resolved_data_dir / "artifacts" / "recsys_two_tower"
@@ -778,20 +784,20 @@ def run_phase6_test_eval(
     # =========================================================================
     logger.info("\n>>> Building Leaderboard Payload and Slices Payload...")
     # Grab validation metrics from Phase 4 sweep
-    tt_val_metrics = champ_tt_eval.metrics.copy()
+    tt_val_metrics = champ_tt_val_eval.metrics.copy()
     if "two_tower_clean_5seeds" in val_sweep_data:
         tt_val_mean = val_sweep_data["two_tower_clean_5seeds"]["mean_ndcg_at_10"]
         tt_val_std = val_sweep_data["two_tower_clean_5seeds"]["std_ndcg_at_10"]
     else:
-        tt_val_mean = float(champ_tt_eval.metrics.get("ndcg_at_10", 0.0))
+        tt_val_mean = float(champ_tt_val_eval.metrics.get("ndcg_at_10", 0.0))
         tt_val_std = 0.0
 
-    rk_val_metrics = champ_rk_eval.metrics.copy()
+    rk_val_metrics = champ_rk_val_eval.metrics.copy()
     if "ranker_clean_5seeds" in val_sweep_data:
         rk_val_mean = val_sweep_data["ranker_clean_5seeds"]["mean_ndcg_at_10"]
         rk_val_std = val_sweep_data["ranker_clean_5seeds"]["std_ndcg_at_10"]
     else:
-        rk_val_mean = float(champ_rk_eval.metrics.get("ndcg_at_10", 0.0))
+        rk_val_mean = float(champ_rk_val_eval.metrics.get("ndcg_at_10", 0.0))
         rk_val_std = 0.0
 
     models_payload_data = [
