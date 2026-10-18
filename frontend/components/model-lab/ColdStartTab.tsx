@@ -69,15 +69,15 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
     const noteText = study.note ?? study.limitations_note;
 
     const formatModelName = (name?: string) => {
-      if (!name) return "Model";
-      if (name === "two_tower_masked_all_proxies_neutralized") return "Two-Tower (All Proxies Neutralized z=0)";
+      if (name === "routed_hybrid") return "Routed Hybrid (Calibrated N=5)";
+      if (name === "two_tower_masked_all_proxies_neutralized" || name === "two_tower") return "Two-Tower (Clean, Proxies Neutralized)";
       if (name === "two_tower_masked_standardized_z0") return "Two-Tower (Train Pop z=0, Reviews Intact)";
       if (name === "two_tower_masked_train_pos_raw_0") return "Two-Tower (Train Pop Raw 0)";
       if (name === "two_tower_masked") return "Two-Tower (ID Masked, Popularity Leaked)";
       if (name === "two_tower_unmasked") return "Two-Tower (Unmasked, ID & Popularity Leaked)";
       if (name.includes("two_tower_masked")) return "Two-Tower Masked [Reference: All-Time Stats]";
       if (name === "two_tower_intact") return "Two-Tower Intact (Reference)";
-      if (name === "two_tower" || name.includes("all-time-stats architecture") || name === "two_tower (all-time-stats architecture, clean=False)") return "Two-Tower Holdout [all-time-stats architecture, clean=False]";
+      if (name.includes("all-time-stats architecture") || name === "two_tower (all-time-stats architecture, clean=False)") return "Two-Tower Holdout [all-time-stats architecture, clean=False]";
       if (name === "content") return "Content Cosine";
       if (name === "popularity") return "Popularity";
       if (name === "als") return "ALS";
@@ -223,8 +223,9 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
       {/* 1. Primary Evidence: True Item Holdout Study */}
       {renderStudyTable(
         holdoutStudy,
-        "1. True Item Holdout Study (90% Catalog Retrained, N=184 Users)",
-        "300 torso/tail items completely withheld from training pairs; models retrained from scratch."
+        // HONEST-FALLBACK: Structural UI title for holdout table when title is absent from payload
+        holdoutStudy?.title ?? "1. True Item Holdout Study (Multi-Cohort)",
+        "Torso and tail items completely withheld from training pairs; evaluated under calibrated routing."
       )}
 
       {/* 2. Sparse Targets Subgroup Study */}
