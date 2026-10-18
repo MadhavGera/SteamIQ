@@ -347,3 +347,48 @@ Both artifacts were directly evaluated on the validation split (5,000 fixed vali
 - **Training Curves Evidence:** Inspection of `seed_44` training curves confirms that at epoch 8, training loss was still steadily decreasing ($8.056 \to 7.171$) and tuning NDCG@10 was monotonically climbing ($0.0258 \to 0.0473$). The model had not converged and had not plateaued.
 - **Representation Collapse:** The underfitted model under-explored the catalog, collapsing catalog coverage from 43.47% down to 12.93% - 16.43%, which degraded retrieval diversity and top-10 accuracy.
 - **Action Plan for Phase B:** Restore the full training budget (`epochs_tt = 15`, `pairs_per_epoch = None`, `patience = 5`) for all 5 seeds in the multi-seed sweep.
+
+### Phase B: Re-run Sweep at Original Training Budget (Issue I1 Resolution)
+
+#### 1. Execution Summary
+- **Configuration Restored:** Two-Tower training budget restored to `epochs_tt = 15`, `pairs_per_epoch = None` (~164,749 pairs/epoch $\approx$ 2,471,235 pairs total exposure), and `patience = 5`.
+- **Archive Status:** Reduced-budget sweep results preserved at `docs/results/validation_sweep_reduced_budget.json` and `docs/results/training_curves_reduced_budget.json`. Reduced-budget model artifacts archived to `backend/data/recsys/artifacts/recsys_two_tower_clean_reduced_budget/` and `recsys_two_tower_ranker_clean_reduced_budget/`.
+- **Validation Split Protection:** All runs evaluated strictly on the 5,000 fixed validation users. Test split was strictly un-evaluated.
+
+#### 2. Clean Two-Tower Retriever: Per-Seed Validation Results
+
+| Seed | Val NDCG@10 (95% CI) | Val HR@10 (95% CI) | Val MRR@10 | Coverage@10 | Novelty@10 (bits) | Diversity@10 | SNIPS-NDCG@10 (95% CI) | Wall Time |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **42** | 0.06045 [0.05548, 0.06553] | 0.1184 [0.10940, 0.12681] | 0.04294 | 43.90% | 9.33 | 0.7585 | 0.03321 [0.03014, 0.03637] | 840.0s |
+| **43** | 0.06308 [0.05805, 0.06837] | 0.1212 [0.11260, 0.13020] | 0.04550 | 45.97% | 9.35 | 0.7625 | 0.03654 [0.03314, 0.04069] | 936.7s |
+| **44** | 0.06106 [0.05574, 0.06624] | 0.1190 [0.11040, 0.12800] | 0.04364 | 43.47% | 9.25 | 0.7588 | 0.03379 [0.03054, 0.03726] | 806.1s |
+| **45** | 0.06157 [0.05639, 0.06675] | 0.1252 [0.11600, 0.13461] | 0.04243 | 41.60% | 9.23 | 0.7599 | 0.03468 [0.03143, 0.03822] | 825.2s* |
+| **46** | 0.06015 [0.05525, 0.06522] | 0.1184 [0.10980, 0.12780] | 0.04259 | 34.50% | 9.21 | 0.7617 | 0.03251 [0.02923, 0.03572] | 658.5s |
+| **Mean ± Std** | **0.06126 ± 0.00103** | **0.1204 ± 0.00259** | **0.04342** | **41.89%** | **9.27** | **0.7603** | **0.03415 ± 0.00139** | — |
+
+*\*Seed 45 paused during system overnight sleep and resumed upon wake.*
+
+- **Champion Selected:** **Seed 44** (Val NDCG@10 = `0.06106`, closest to 5-seed mean `0.06126`, exact reproduction of original champion).
+- **Two-Tower vs Item-kNN Comparison:**
+  - Item-kNN Val NDCG@10: `0.05529`
+  - Two-Tower Champion (Seed 44) Val NDCG@10: `0.06106`
+  - Paired Difference: **`+0.00577`** (95% Bootstrap CI: **`[+0.00077, +0.01109]`**)
+  - **Verdict:** **Two-Tower statistically significantly beats Item-kNN on validation** (95% CI strictly excludes zero). The prior sprint's finding where Item-kNN appeared to beat Two-Tower was a direct artifact of the reduced training budget.
+
+#### 3. Clean Stage-2 Ranker: Per-Seed Validation Results
+
+| Seed | Val NDCG@10 (95% CI) | Val HR@10 (95% CI) | Val MRR@10 | Coverage@10 | Novelty@10 (bits) | Diversity@10 | SNIPS-NDCG@10 (95% CI) | Wall Time |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **42** | 0.05502 [0.05014, 0.05969] | 0.1048 [0.09660, 0.11320] | 0.04003 | 51.23% | 9.31 | 0.7510 | 0.03443 [0.03074, 0.03813] | 125.6s |
+| **43** | 0.06088 [0.05543, 0.06606] | 0.1138 [0.10500, 0.12220] | 0.04479 | 49.20% | 9.28 | 0.7548 | 0.03776 [0.03402, 0.04192] | 82.6s |
+| **44** | 0.05825 [0.05313, 0.06350] | 0.1098 [0.10140, 0.11900] | 0.04276 | 55.03% | 9.48 | 0.7450 | 0.03785 [0.03404, 0.04211] | 86.8s |
+| **45** | 0.05949 [0.05419, 0.06476] | 0.1096 [0.10100, 0.11820] | 0.04440 | 52.20% | 9.33 | 0.7486 | 0.03936 [0.03475, 0.04395] | 95.7s |
+| **46** | 0.05937 [0.05436, 0.06473] | 0.1144 [0.10640, 0.12380] | 0.04287 | 50.07% | 9.38 | 0.7562 | 0.03844 [0.03472, 0.04277] | 85.6s |
+| **Mean ± Std** | **0.05860 ± 0.00198** | **0.1105 ± 0.00346** | **0.04297** | **51.55%** | **9.36** | **0.7511** | **0.03757 ± 0.00168** | — |
+
+- **Champion Selected:** **Seed 44** (Val NDCG@10 = `0.05825`, closest to 5-seed mean `0.05860`).
+- **Ranker vs Two-Tower Comparison:**
+  - Raw Val NDCG@10 Paired Difference: **`-0.00281`** (95% Bootstrap CI: **`[-0.00803, +0.00205]`**, not statistically different from zero).
+  - SNIPS-NDCG@10 Lift: Ranker achieves **`0.03785`** vs Two-Tower **`0.03379`** (**+12.0% debiased ranking lift**).
+  - Catalog Coverage Lift: Expands from **`43.47%`** (Two-Tower) to **`55.03%`** (Ranker), representing a **+26.6% relative gain in catalog exploration** via quota candidate multi-source blending.
+
