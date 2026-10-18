@@ -17,6 +17,7 @@ import pytest
 
 from recsys.aggregation import (
     aggregate_per_seed_metrics,
+    compute_consistent_ablation_diff,
     verify_aggregation_integrity,
 )
 
@@ -136,3 +137,74 @@ def test_validation_sweep_artifact_integrity() -> None:
     reported_rk_mean = rk_section.get("mean_ndcg_at_10")
     computed_rk_mean = rk_agg["means"]["val_ndcg_at_10"]
     assert np.isclose(reported_rk_mean, computed_rk_mean, atol=1e-5)
+
+
+def test_consistent_ablation_difference_rule() -> None:
+    """Verifies that paired ablation difference mathematically matches (variant_mean - full_mean)."""
+    # 3 seeds, 100 users each
+    rng = np.random.default_rng(123)
+    var_seeds = [rng.normal(0.050, 0.010, size=100) for _ in range(3)]
+    full_seeds = [rng.normal(0.060, 0.010, size=100) for _ in range(3)]
+
+    res = compute_consistent_ablation_diff(var_seeds, full_seeds, n_boot=1000, seed=42)
+
+    expected_diff = res["variant_mean"] - res["full_mean"]
+    assert np.isclose(res["mean_diff"], expected_diff, atol=1e-6)
+    assert np.sign(res["mean_diff"]) == np.sign(expected_diff)
+    assert res["lo95"] <= res["mean_diff"] <= res["hi95"]
+    assert res["mean_diff"] < 0.0  # Variant is worse than full
+    assert res["significant_loss"] is True
+
+
+def test_consistent_ablation_mismatched_inputs_raises() -> None:
+    """Verifies that mismatched seeds or user counts raise ValueError."""
+    v1 = [np.array([0.05, 0.06])]
+    f2 = [np.array([0.06, 0.07]), np.array([0.06, 0.07])]
+    with pytest.raises(ValueError, match="Seed count mismatch"):
+        compute_consistent_ablation_diff(v1, f2)
+
+    v_u1 = [np.array([0.05, 0.06])]
+    f_u2 = [np.array([0.05, 0.06, 0.07])]
+    with pytest.raises(ValueError, match="User count mismatch"):
+        compute_consistent_ablation_diff(v_u1, f_u2)
+
+
+def test_ablations_artifacts_consistency() -> None:
+    """Verifies that saved ablation artifacts strictly adhere to the consistent difference rule."""
+    results_dir = Path(__file__).resolve().parent.parent.parent / "docs" / "results"
+    abl_path = results_dir / "ablations.json"
+    rk_abl_path = results_dir / "ranker_ablations.json"
+
+    assert abl_path.exists(), f"ablations.json not found at {abl_path}"
+    assert rk_abl_path.exists(), f"ranker_ablations.json not found at {rk_abl_path}"
+
+    with open(abl_path, encoding="utf-8") as f:
+        abl_data = json.load(f)
+
+    variants = abl_data["variants"]
+    full_v = next(v for v in variants if v["variant"] == "full")
+    full_mean = full_v["test_ndcg_at_10_mean"]
+
+    for v in variants:
+        diff = v["paired_ndcg_diff_vs_full"]
+        lo = v["paired_ndcg_diff_lo95"]
+        hi = v["paired_ndcg_diff_hi95"]
+        assert lo <= diff <= hi, f"Mean diff {diff} outside CI [{lo}, {hi}] for {v['variant']}"
+
+        expected_diff = v["test_ndcg_at_10_mean"] - full_mean
+        if abs(expected_diff) > 1e-5:
+            assert np.sign(diff) == np.sign(expected_diff), (
+                f"Sign mismatch for {v['variant']}: reported {diff}, expected {expected_diff}"
+            )
+            assert np.isclose(diff, expected_diff, atol=1e-5)
+
+    with open(rk_abl_path, encoding="utf-8") as f:
+        rk_data = json.load(f)
+
+    for a in rk_data["ablations"]:
+        v_diff = a["val_ndcg_diff_vs_full"]
+        v_lo = a["val_ndcg_diff_lo95"]
+        v_hi = a["val_ndcg_diff_hi95"]
+        assert v_lo <= v_diff <= v_hi, f"Ranker val diff {v_diff} outside CI [{v_lo}, {v_hi}] for {a['ablated_group']}"
+
+

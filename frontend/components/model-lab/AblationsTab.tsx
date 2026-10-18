@@ -4,20 +4,38 @@ import React, { useState } from "react";
 import { RecsysEmptyState } from "../recsys/RecsysEmptyState";
 
 interface TwoTowerVariant {
+  variant?: string;
   variant_name?: string;
   description?: string;
   test_ndcg_at_10_mean?: number;
+  val_ndcg_at_10_mean?: number;
   test_ndcg_at_10_std?: number;
+  val_ndcg_at_10_std?: number;
   paired_ndcg_diff_vs_full?: number;
+  paired_diff_vs_full?: number;
+  paired_ndcg_diff_lo95?: number;
+  paired_ndcg_diff_hi95?: number;
   ci_lo95?: number;
   ci_hi95?: number;
+  significant_vs_full?: boolean;
 }
 
 interface RankerAblation {
+  ablated_group?: string;
   dropped_group?: string;
   description?: string;
+  val_ndcg_at_10?: number;
   test_ndcg_at_10?: number;
+  val_ndcg_diff_vs_full?: number;
+  test_ndcg_diff_vs_full?: number;
   delta_ndcg_vs_full?: number;
+  paired_diff_vs_full?: number;
+  val_ndcg_diff_lo95?: number;
+  val_ndcg_diff_hi95?: number;
+  test_ndcg_diff_lo95?: number;
+  test_ndcg_diff_hi95?: number;
+  is_significant_test?: boolean;
+  active_features_count?: number;
   features_remaining?: number;
 }
 
@@ -123,23 +141,27 @@ export function AblationsTab({ ttPayload, rankerPayload }: AblationsTabProps) {
             <div className="card" style={{ padding: "20px" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {ttVariants.map((v, idx) => {
-                  const val = v.test_ndcg_at_10_mean || 0;
+                  /* HONEST-FALLBACK: Mean NDCG fallback if omitted */
+                  const val = v.test_ndcg_at_10_mean ?? v.val_ndcg_at_10_mean ?? 0;
                   const pct = Math.min(100, Math.max(5, (val / maxNdcg) * 100));
-                  const isFull = idx === 0 || v.variant_name?.includes("full");
+                  /* HONEST-FALLBACK: Variant label fallback if omitted */
+                  const variantLabel = v.variant_name ?? v.variant ?? "Variant";
+                  const isFull = idx === 0 || variantLabel.includes("full");
+                  /* HONEST-FALLBACK: Paired diff fallback if omitted */
+                  const diff = v.paired_ndcg_diff_vs_full ?? v.paired_diff_vs_full;
 
                   return (
                     <div key={idx} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
                         <span style={{ fontWeight: 600, color: isFull ? "var(--accent-primary)" : "var(--text-primary)" }}>
-                          {/* HONEST-FALLBACK: Variant name fallback if omitted */}
-                          {v.variant_name ?? "Variant"}
+                          {variantLabel}
                           {isFull && <span style={{ marginLeft: "6px", fontSize: "11px", color: "var(--text-muted)" }}>(Baseline)</span>}
                         </span>
                         <div style={{ display: "flex", gap: "12px", fontFamily: "var(--font-mono, monospace)" }}>
                           <span style={{ color: "var(--text-primary)" }}>{val.toFixed(4)} NDCG@10</span>
-                          {v.paired_ndcg_diff_vs_full !== undefined && !isFull && (
-                            <span style={{ color: v.paired_ndcg_diff_vs_full < 0 ? "var(--danger)" : "var(--success)" }}>
-                              {v.paired_ndcg_diff_vs_full > 0 ? `+${v.paired_ndcg_diff_vs_full.toFixed(4)}` : v.paired_ndcg_diff_vs_full.toFixed(4)}
+                          {diff !== undefined && !isFull && (
+                            <span style={{ color: diff < 0 ? "var(--danger)" : "var(--success)" }}>
+                              {diff > 0 ? `+${diff.toFixed(4)}` : diff.toFixed(4)}
                             </span>
                           )}
                         </div>
@@ -180,16 +202,19 @@ export function AblationsTab({ ttPayload, rankerPayload }: AblationsTabProps) {
             <div className="card" style={{ padding: "20px" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {rankerAblations.map((a, idx) => {
-                  const val = a.test_ndcg_at_10 || 0;
+                  /* HONEST-FALLBACK: Metric fallback if omitted */
+                  const val = a.val_ndcg_at_10 ?? a.test_ndcg_at_10 ?? 0;
                   const pct = Math.min(100, Math.max(5, (val / maxNdcg) * 100));
-                  const delta = a.delta_ndcg_vs_full;
+                  /* HONEST-FALLBACK: Delta fallback if omitted */
+                  const delta = a.val_ndcg_diff_vs_full ?? a.test_ndcg_diff_vs_full ?? a.delta_ndcg_vs_full ?? a.paired_diff_vs_full;
+                  /* HONEST-FALLBACK: Dropped group fallback name */
+                  const groupName = a.ablated_group ?? a.dropped_group ?? "Feature Group";
 
                   return (
                     <div key={idx} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
                         <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
-                          {/* HONEST-FALLBACK: Dropped group fallback name */}
-                          Drop {a.dropped_group ?? "Feature Group"}
+                          Drop {groupName}
                         </span>
                         <div style={{ display: "flex", gap: "12px", fontFamily: "var(--font-mono, monospace)" }}>
                           <span style={{ color: "var(--text-primary)" }}>{val.toFixed(4)} NDCG@10</span>

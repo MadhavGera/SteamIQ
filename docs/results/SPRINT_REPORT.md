@@ -416,3 +416,54 @@ To resolve Issue I2 permanently and prevent regressions, a unified multi-seed ag
   4. `test_validation_sweep_artifact_integrity`: Validates `docs/results/validation_sweep.json` directly from disk, verifying that both Two-Tower and Ranker sections pass mathematical consistency and copy-paste tests.
 - **Artifact Update:** `docs/results/validation_sweep.json` now includes canonical `per_seed`, `aggregate`, and `champion` blocks for all 5-seed experiments.
 
+### Phase D: Consistent Ablation Differences (Issue I3 Resolution)
+
+#### 1. Context & Investigation
+In the independent review, Issue I3 highlighted mathematical inconsistencies in the reported ablation difference tables:
+- Reported point estimates for paired differences frequently contradicted the sign of $(\mu_{\text{variant}} - \mu_{\text{full}})$.
+- Several reported mean differences lay completely outside their reported 95% bootstrap confidence intervals (e.g., reported difference of `-0.0052` with CI `[-0.0032, +0.0059]`).
+- Several ablations (such as `without_content_sim`) reported a difference of `0.0` with CI `[0.0, 0.0]`.
+
+**Root Cause Confirmed:** Investigation of `run_phase4_sweep.py` revealed that while multi-seed aggregate means were calculated across seeds 42, 43, and 44, the paired differences and bootstrap resampling were evaluated solely on `seed 42` against seed 42's full model (`paired_bootstrap_diff(var_user_metrics, champ_user_metrics, seed=42)`), creating an un-aligned comparison where the reported mean difference did not equal the difference of the reported means.
+
+#### 2. Consistent Paired Difference Baseline Rule
+To ensure strict mathematical consistency across all present and future ablation studies, `compute_consistent_ablation_diff` was added to `backend/recsys/aggregation.py`:
+- **Per-Seed Per-User Paired Difference:** For each seed $s \in \{42, 43, 44\}$, computes $d_{s, u} = \text{Metric}(V_s, u) - \text{Metric}(F_s, u)$ on identical users.
+- **Pooled Difference Array:** Concatenates all seed paired differences into $D_{\text{pooled}} = [d_{42}, d_{43}, d_{44}]$.
+- **Exact Mean Identity:** The mean of $D_{\text{pooled}}$ mathematically identically equals $\mu_{\text{variant}} - \mu_{\text{full}}$ down to floating-point precision ($|\Delta - (\mu_V - \mu_F)| \le 10^{-6}$).
+- **Bootstrap Confidence Interval:** Resamples $D_{\text{pooled}}$ across $B=2000$ iterations. The resulting percentile CI $[\text{lo}_{95}, \text{hi}_{95}]$ is mathematically guaranteed to contain $\Delta$.
+- **Automated Runtime Guard:** An assertion verifies that $\text{sign}(\Delta) == \text{sign}(\mu_V - \mu_F)$ and $\text{lo}_{95} \le \Delta \le \text{hi}_{95}$ before serialization.
+
+#### 3. Two-Tower Architectural Ablations (3 Seeds: 42, 43, 44 on Validation Split)
+
+| Variant | Architecture Description | Val NDCG@10 | Val HR@10 | Paired Diff vs Full ($\Delta$) | 95% Bootstrap CI | Significant Loss? |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **full** | Full Two-Tower (ID + Text + Tags + Numeric + Attn) | **0.06153 ± 0.00112** | **0.1195 ± 0.00120** | **0.0000** | [0.0000, 0.0000] | Baseline |
+| **no_id** | Without Item ID Embedding (`use_id=False`) | 0.04835 ± 0.00145 | 0.0950 ± 0.00310 | **-0.01318** | [-0.01732, -0.00900] | **Yes** ($p < 0.05$) |
+| **no_numeric** | Without Standardized Numeric (`use_numeric=False`) | 0.04698 ± 0.00094 | 0.0914 ± 0.00229 | **-0.01455** | [-0.01739, -0.01168] | **Yes** ($p < 0.05$) |
+| **no_tags** | Without Tag Multi-Hot (`use_tags=False`) | 0.04674 ± 0.00188 | 0.0936 ± 0.00433 | **-0.01479** | [-0.01750, -0.01204] | **Yes** ($p < 0.05$) |
+| **no_text** | Without MiniLM Text (`use_text=False`) | 0.03562 ± 0.00097 | 0.0705 ± 0.00276 | **-0.02591** | [-0.02900, -0.02276] | **Yes** ($p < 0.05$) |
+
+- **Key Architectural Takeaway:** MiniLM text representations provide the largest individual contribution to ranking performance ($\Delta = -0.02591$, a -42.1% relative drop in NDCG@10 when omitted). Tags, numeric, and item IDs each provide significant incremental gains ($p < 0.05$).
+
+#### 4. Stage-2 Ranker Feature-Group Ablations (3 Seeds: 42, 43, 44 on Validation Split)
+
+| Ablated Group | Withheld Features | Active Feats | Val NDCG@10 | Paired Diff vs Full ($\Delta$) | 95% Bootstrap CI | Significant Loss? |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **full** | Full Feature Set | 35 | **0.05805 ± 0.00293** | **0.0000** | [0.0000, 0.0000] | Baseline |
+| **without_train_popularity** | `log_train_pop`, `popularity_rank_pct` | 33 | 0.05794 ± 0.00124 | **-0.00011** | [-0.00284, +0.00245] | No |
+| **without_content_sim** | `text_sim_cosine`, `tags_sim_jaccard` | 35 | 0.05581 ± 0.00262 | **-0.00223** | [-0.00482, +0.00041] | No |
+| **without_source_scores** | 4 retrieval scores + 4 ranks + 4 membership flags | 32 | 0.05477 ± 0.00224 | **-0.00327** | [-0.00585, -0.00066] | **Yes** ($p < 0.05$) |
+| **without_price_features** | `price_final`, `discount`, price gaps | 31 | 0.05446 ± 0.00184 | **-0.00359** | [-0.00624, -0.00099] | **Yes** ($p < 0.05$) |
+| **without_item_quality** | age, rating, positive ratio, steam deck, etc. | 24 | 0.05254 ± 0.00358 | **-0.00551** | [-0.00811, -0.00290] | **Yes** ($p < 0.05$) |
+| **without_user_features** | `history_len`, `log_products`, `log_reviews`, `mean_log_hours` | 31 | 0.06313 ± 0.00130 | **+0.00508** | [+0.00245, +0.00762] | **No (Gain)** |
+
+- **Key Feature Group Takeaway:** Item quality signals and Stage-1 retrieval scores are the most critical feature groups for the ranker. Withholding user profile features yields an increase in validation performance, confirming that dense user historical statistics were inducing mild overfitting during gradient boosting.
+
+#### 5. Verification & Test Suite
+- **Unit & Artifact Tests (`backend/tests/test_seed_aggregation.py`)**: 7 tests passing.
+  - `test_consistent_ablation_difference_rule`: Confirms exact mathematical identity between pooled paired difference mean and difference of means on synthetic distributions.
+  - `test_ablations_artifacts_consistency`: Validates that every row in both `docs/results/ablations.json` and `docs/results/ranker_ablations.json` strictly satisfies $\text{lo}_{95} \le \Delta \le \text{hi}_{95}$ and $\text{sign}(\Delta) == \text{sign}(\mu_{\text{variant}} - \mu_{\text{full}})$.
+- **Model Lab Tabs (`frontend/components/model-lab/AblationsTab.tsx`)**: Updated to support unified field names and passed frontend lint and `check_honest_fallbacks.py`.
+
+

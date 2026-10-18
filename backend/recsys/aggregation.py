@@ -154,3 +154,96 @@ def verify_aggregation_integrity(
                 "identically match champion values on all varying metrics while per-seed values differ! "
                 "Do not copy champion metrics into multi-seed rows."
             )
+
+
+def compute_consistent_ablation_diff(
+    variant_user_metrics_per_seed: list[np.ndarray],
+    full_user_metrics_per_seed: list[np.ndarray],
+    n_boot: int = 2000,
+    seed: int = 42,
+) -> dict[str, Any]:
+    """
+    Computes mathematically consistent paired differences for multi-seed ablation studies (Issue I3).
+
+    Rule:
+    1. Per-seed, per-user paired difference: diff_{s, u} = variant_{s, u} - full_{s, u}
+       (evaluated on the identical users for each seed).
+    2. Exact sample mean difference: mean(diff) = mean(variant) - mean(full).
+       Sign of reported difference is mathematically guaranteed to match sign of (variant_mean - full_mean).
+    3. Bootstrap 95% confidence interval is computed over the pooled user paired differences.
+    """
+    if len(variant_user_metrics_per_seed) != len(full_user_metrics_per_seed):
+        raise ValueError(
+            f"Seed count mismatch: variant has {len(variant_user_metrics_per_seed)} seeds, "
+            f"full has {len(full_user_metrics_per_seed)} seeds"
+        )
+    if not variant_user_metrics_per_seed:
+        return {
+            "mean_diff": 0.0,
+            "lo95": 0.0,
+            "hi95": 0.0,
+            "ci": [0.0, 0.0],
+            "significant_loss": False,
+            "significant_gain": False,
+            "variant_mean": 0.0,
+            "full_mean": 0.0,
+            "variant_std": 0.0,
+            "full_std": 0.0,
+        }
+
+    n_seeds = len(variant_user_metrics_per_seed)
+    var_means = []
+    full_means = []
+    seed_paired_diffs = []
+
+    for s_idx in range(n_seeds):
+        v_arr = np.asarray(variant_user_metrics_per_seed[s_idx], dtype=np.float64)
+        f_arr = np.asarray(full_user_metrics_per_seed[s_idx], dtype=np.float64)
+        if len(v_arr) != len(f_arr):
+            raise ValueError(
+                f"User count mismatch at seed index {s_idx}: variant has {len(v_arr)}, full has {len(f_arr)}"
+            )
+        var_means.append(float(np.mean(v_arr)))
+        full_means.append(float(np.mean(f_arr)))
+        seed_paired_diffs.append(v_arr - f_arr)
+
+    variant_mean = float(np.mean(var_means))
+    full_mean = float(np.mean(full_means))
+    variant_std = float(np.std(var_means)) if n_seeds > 1 else 0.0
+    full_std = float(np.std(full_means)) if n_seeds > 1 else 0.0
+
+    pooled_diff = np.concatenate(seed_paired_diffs)
+    mean_diff = float(np.mean(pooled_diff))
+
+    # Bootstrap CI over pooled differences
+    rng = np.random.default_rng(seed)
+    n = len(pooled_diff)
+    if n > 1:
+        boot_idx = rng.integers(0, n, size=(n_boot, n))
+        boot_means = np.mean(pooled_diff[boot_idx], axis=1)
+        lo95 = float(np.percentile(boot_means, 2.5))
+        hi95 = float(np.percentile(boot_means, 97.5))
+    else:
+        lo95 = mean_diff
+        hi95 = mean_diff
+
+    # Assert mathematical consistency
+    expected_diff = variant_mean - full_mean
+    if abs(mean_diff - expected_diff) > 1e-6:
+        raise ValueError(
+            f"Mathematical inconsistency in ablation difference: mean_diff={mean_diff}, "
+            f"variant_mean - full_mean={expected_diff}"
+        )
+
+    return {
+        "mean_diff": mean_diff,
+        "lo95": lo95,
+        "hi95": hi95,
+        "ci": [lo95, hi95],
+        "significant_loss": bool(hi95 < 0.0),
+        "significant_gain": bool(lo95 > 0.0),
+        "variant_mean": variant_mean,
+        "full_mean": full_mean,
+        "variant_std": variant_std,
+        "full_std": full_std,
+    }
