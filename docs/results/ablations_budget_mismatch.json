@@ -1,0 +1,107 @@
+{
+  "metadata": {
+    "report_key": "ablations",
+    "dataset_version": "c662b8232dc0",
+    "git_commit": "f3058c96c8d73cbd86adfc5a59c27addbedeffe6",
+    "n_eval_users": 5000,
+    "seed": 42,
+    "generated_at": "2026-10-18T08:14:16.069184+00:00"
+  },
+  "variants": [
+    {
+      "variant": "full",
+      "description": "Full Two-Tower Model (ID + Text + Tags + Numeric + Attn)",
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "test_ndcg_at_10_mean": 0.06153053477934167,
+      "test_ndcg_at_10_std": 0.0011245453839399666,
+      "test_hr_at_10_mean": 0.11953333333333334,
+      "test_hr_at_10_std": 0.0012036980056845193,
+      "tail_ndcg_at_10_mean": 0.006186184478855904,
+      "tail_ndcg_at_10_std": 0.0010527731078276495,
+      "paired_ndcg_diff_vs_full": 0.0,
+      "paired_ndcg_diff_lo95": 0.0,
+      "paired_ndcg_diff_hi95": 0.0,
+      "significant_vs_full": false
+    },
+    {
+      "variant": "no_text",
+      "description": "Without MiniLM Text Projection (--no-text)",
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "test_ndcg_at_10_mean": 0.03561715970053685,
+      "test_ndcg_at_10_std": 0.000972489682171219,
+      "test_hr_at_10_mean": 0.07053333333333334,
+      "test_hr_at_10_std": 0.0027632509034750314,
+      "tail_ndcg_at_10_mean": 0.0,
+      "tail_ndcg_at_10_std": 0.0,
+      "paired_ndcg_diff_vs_full": -0.02591337507880481,
+      "paired_ndcg_diff_lo95": -0.02899501990626135,
+      "paired_ndcg_diff_hi95": -0.022760898161257037,
+      "significant_vs_full": true
+    },
+    {
+      "variant": "no_tags",
+      "description": "Without Tag Multi-Hot Projection (--no-tags)",
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "test_ndcg_at_10_mean": 0.04673751752893731,
+      "test_ndcg_at_10_std": 0.0018759993516207088,
+      "test_hr_at_10_mean": 0.09360000000000002,
+      "test_hr_at_10_std": 0.004329742101634538,
+      "tail_ndcg_at_10_mean": 0.00087367448381103,
+      "tail_ndcg_at_10_std": 0.00032688426515111715,
+      "paired_ndcg_diff_vs_full": -0.01479301725040436,
+      "paired_ndcg_diff_lo95": -0.017504279866824325,
+      "paired_ndcg_diff_hi95": -0.012035056783919309,
+      "significant_vs_full": true
+    },
+    {
+      "variant": "no_numeric",
+      "description": "Without Standardized Numeric Projection (--no-numeric)",
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "test_ndcg_at_10_mean": 0.04697883796874441,
+      "test_ndcg_at_10_std": 0.0009430714374214785,
+      "test_hr_at_10_mean": 0.0914,
+      "test_hr_at_10_std": 0.002286190426597632,
+      "tail_ndcg_at_10_mean": 0.0,
+      "tail_ndcg_at_10_std": 0.0,
+      "paired_ndcg_diff_vs_full": -0.014551696810597255,
+      "paired_ndcg_diff_lo95": -0.017386289797171224,
+      "paired_ndcg_diff_hi95": -0.011675342165592533,
+      "significant_vs_full": true
+    },
+    {
+      "variant": "no_id",
+      "description": "Without Item ID Embedding (--no-id)",
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "test_ndcg_at_10_mean": 0.04835260222925406,
+      "test_ndcg_at_10_std": 0.001453366944423901,
+      "test_hr_at_10_mean": 0.09500000000000001,
+      "test_hr_at_10_std": 0.0031026870075253547,
+      "tail_ndcg_at_10_mean": 0.0007876146169543853,
+      "tail_ndcg_at_10_std": 0.0004529749236875227,
+      "paired_ndcg_diff_vs_full": -0.0131779325500876,
+      "paired_ndcg_diff_lo95": -0.01592337430238912,
+      "paired_ndcg_diff_hi95": -0.010561120498637203,
+      "significant_vs_full": true
+    }
+  ]
+}

@@ -24,29 +24,34 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from pathlib import Path
 
-import numpy as np
+backend_dir = Path(__file__).resolve().parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
 
-from recsys.aggregation import compute_consistent_ablation_diff
-from recsys.data import RecsysData
-from recsys.evaluate import evaluate_model, get_evaluation_user_split
-from recsys.models.als import ALSRecommender
-from recsys.models.content import ContentRecommender
-from recsys.models.itemknn import ItemKNNRecommender
-from recsys.models.two_tower import TwoTowerConfig, TwoTowerModel
-from recsys.ranker import (
+import numpy as np  # noqa: E402
+
+from recsys.aggregation import compute_consistent_ablation_diff  # noqa: E402
+from recsys.data import RecsysData  # noqa: E402
+from recsys.evaluate import evaluate_model, get_evaluation_user_split  # noqa: E402
+from recsys.models.als import ALSRecommender  # noqa: E402
+from recsys.models.content import ContentRecommender  # noqa: E402
+from recsys.models.itemknn import ItemKNNRecommender  # noqa: E402
+from recsys.models.two_tower import TwoTowerConfig, TwoTowerModel  # noqa: E402
+from recsys.ranker import (  # noqa: E402
     FEATURE_COLUMNS,
     RankerConfig,
     RankerModel,
     train_ranker,
 )
-from recsys.report import (
+from recsys.report import (  # noqa: E402
     build_ablations_payload,
     build_ranker_ablations_payload,
     save_report_json,
 )
-from recsys.train_two_tower import train_two_tower_model
+from recsys.train_two_tower import train_two_tower_model  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("steamiq.recsys.ablations")
@@ -122,6 +127,10 @@ def run_phase4_ablations(
             "variant": "full",
             "description": "Full Two-Tower Model (ID + Text + Tags + Numeric + Attn)",
             "seeds": seeds_3,
+            "val_ndcg_at_10_mean": float(np.mean(full_tt_ndcgs)),
+            "val_ndcg_at_10_std": float(np.std(full_tt_ndcgs)),
+            "val_hr_at_10_mean": float(np.mean(full_tt_hrs)),
+            "val_hr_at_10_std": float(np.std(full_tt_hrs)),
             "test_ndcg_at_10_mean": float(np.mean(full_tt_ndcgs)),
             "test_ndcg_at_10_std": float(np.std(full_tt_ndcgs)),
             "test_hr_at_10_mean": float(np.mean(full_tt_hrs)),
@@ -145,11 +154,11 @@ def run_phase4_ablations(
 
         for s in seeds_3:
             s_dir = art_dir / f"seed_{s}"
-            if (s_dir / "two_tower.pt").exists():
+            if (s_dir / "two_tower.pt").exists() and (s_dir / "training_curves.json").exists():
                 logger.info("Loading cached Two-Tower ablation '%s' Seed %d from %s...", var_key, s, s_dir)
                 v_m = TwoTowerModel.load(s_dir, data=data)
             else:
-                logger.info("Training Two-Tower ablation '%s' Seed %d...", var_key, s)
+                logger.info("Training Two-Tower ablation '%s' Seed %d (Full Budget: 15 epochs, all pairs, patience 5)...", var_key, s)
                 v_cfg = TwoTowerConfig(
                     n_items=data.n_items,
                     text_dim=384,
@@ -167,19 +176,21 @@ def run_phase4_ablations(
                     no_pop_proxies=True,
                     **overrides,
                 )
-                v_m, _ = train_two_tower_model(
+                v_m, v_curves = train_two_tower_model(
                     data=data,
                     tuning_users=tuning_users,
                     cfg=v_cfg,
-                    epochs=8,
+                    epochs=15,
                     batch_size=2048,
                     lr=2e-3,
-                    patience=3,
-                    pairs_per_epoch=60000,
+                    patience=5,
+                    pairs_per_epoch=None,
                     seed=s,
                 )
                 s_dir.mkdir(parents=True, exist_ok=True)
                 v_m.save(s_dir)
+                with open(s_dir / "training_curves.json", "w", encoding="utf-8") as f:
+                    json.dump(v_curves, f, indent=2)
 
             v_ev = evaluate_model(v_m, data, split="val", k_list=(10,), user_indices=eval_users, seed=s)
             var_ndcgs.append(float(v_ev.metrics["ndcg_at_10"]))
@@ -215,6 +226,10 @@ def run_phase4_ablations(
             "variant": var_key,
             "description": desc,
             "seeds": seeds_3,
+            "val_ndcg_at_10_mean": diff_res["variant_mean"],
+            "val_ndcg_at_10_std": diff_res["variant_std"],
+            "val_hr_at_10_mean": float(np.mean(var_hrs)),
+            "val_hr_at_10_std": float(np.std(var_hrs)),
             "test_ndcg_at_10_mean": diff_res["variant_mean"],
             "test_ndcg_at_10_std": diff_res["variant_std"],
             "test_hr_at_10_mean": float(np.mean(var_hrs)),

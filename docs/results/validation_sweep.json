@@ -655,55 +655,55 @@
   "two_tower_ablations": {
     "no_text": {
       "description": "Without MiniLM Text Projection (--no-text)",
-      "val_ndcg_at_10_mean": 0.03561715970053685,
-      "val_ndcg_at_10_std": 0.000972489682171219,
-      "val_hr_at_10_mean": 0.07053333333333334,
-      "val_hr_at_10_std": 0.0027632509034750314,
-      "paired_diff_vs_full": -0.02591337507880481,
+      "val_ndcg_at_10_mean": 0.05242831231406853,
+      "val_ndcg_at_10_std": 0.0014775191482210128,
+      "val_hr_at_10_mean": 0.1042,
+      "val_hr_at_10_std": 0.002303620339089469,
+      "paired_diff_vs_full": -0.009102222465273122,
       "paired_diff_ci": [
-        -0.02899501990626135,
-        -0.022760898161257037
+        -0.011663503684165863,
+        -0.006694151954598608
       ],
       "significant_loss": true
     },
     "no_tags": {
       "description": "Without Tag Multi-Hot Projection (--no-tags)",
-      "val_ndcg_at_10_mean": 0.04673751752893731,
-      "val_ndcg_at_10_std": 0.0018759993516207088,
-      "val_hr_at_10_mean": 0.09360000000000002,
-      "val_hr_at_10_std": 0.004329742101634538,
-      "paired_diff_vs_full": -0.01479301725040436,
+      "val_ndcg_at_10_mean": 0.05918295417206095,
+      "val_ndcg_at_10_std": 0.00047964211165487676,
+      "val_hr_at_10_mean": 0.11599999999999999,
+      "val_hr_at_10_std": 0.0009933109617167584,
+      "paired_diff_vs_full": -0.002347580607280711,
       "paired_diff_ci": [
-        -0.017504279866824325,
-        -0.012035056783919309
+        -0.004333275891342964,
+        -0.0004711498645245723
       ],
       "significant_loss": true
     },
     "no_numeric": {
       "description": "Without Standardized Numeric Projection (--no-numeric)",
-      "val_ndcg_at_10_mean": 0.04697883796874441,
-      "val_ndcg_at_10_std": 0.0009430714374214785,
-      "val_hr_at_10_mean": 0.0914,
-      "val_hr_at_10_std": 0.002286190426597632,
-      "paired_diff_vs_full": -0.014551696810597255,
+      "val_ndcg_at_10_mean": 0.061139172159470366,
+      "val_ndcg_at_10_std": 0.002134104120361937,
+      "val_hr_at_10_mean": 0.11746666666666666,
+      "val_hr_at_10_std": 0.004891716354091771,
+      "paired_diff_vs_full": -0.0003913626198713075,
       "paired_diff_ci": [
-        -0.017386289797171224,
-        -0.011675342165592533
+        -0.0023401704985491194,
+        0.00149931322271871
       ],
-      "significant_loss": true
+      "significant_loss": false
     },
     "no_id": {
       "description": "Without Item ID Embedding (--no-id)",
-      "val_ndcg_at_10_mean": 0.04835260222925406,
-      "val_ndcg_at_10_std": 0.001453366944423901,
-      "val_hr_at_10_mean": 0.09500000000000001,
-      "val_hr_at_10_std": 0.0031026870075253547,
-      "paired_diff_vs_full": -0.0131779325500876,
+      "val_ndcg_at_10_mean": 0.06204684408627379,
+      "val_ndcg_at_10_std": 0.0003981340924135779,
+      "val_hr_at_10_mean": 0.12073333333333335,
+      "val_hr_at_10_std": 0.0006182412330330477,
+      "paired_diff_vs_full": 0.0005163093069321353,
       "paired_diff_ci": [
-        -0.01592337430238912,
-        -0.010561120498637203
+        -0.0017709537824173549,
+        0.002684420992877206
       ],
-      "significant_loss": true
+      "significant_loss": false
     }
   },
   "ranker_ablations": {

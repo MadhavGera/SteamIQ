@@ -2,10 +2,10 @@
   "metadata": {
     "report_key": "ranker_ablations",
     "dataset_version": "c662b8232dc0",
-    "git_commit": "f3058c96c8d73cbd86adfc5a59c27addbedeffe6",
+    "git_commit": "c767c0c661d1307b8f84f407108510be314ef379",
     "n_eval_users": 5000,
     "seed": 42,
-    "generated_at": "2026-10-18T08:14:16.131055+00:00"
+    "generated_at": "2026-10-18T12:42:45.553048+00:00"
   },
   "full_ranker_features_count": 35,
   "ablations": [
