@@ -1,0 +1,176 @@
+{
+  "metadata": {
+    "check_name": "lock_integrity_and_equivalence",
+    "lock_commit": "30093e5",
+    "checked_at": "2026-10-18T12:02:34.152318+00:00"
+  },
+  "diff_classification": {
+    "total_files_modified_since_lock": 17,
+    "files": [
+      {
+        "status": "M",
+        "file": "README.md",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "M",
+        "file": "backend/jobs/bootstrap_database.py",
+        "classification": "formatting only (modern union syntax list | np.ndarray)"
+      },
+      {
+        "status": "M",
+        "file": "backend/jobs/run_candidate_experiments.py",
+        "classification": "formatting only (unused import removal and with-open block)"
+      },
+      {
+        "status": "M",
+        "file": "backend/jobs/run_phase5_cold_start.py",
+        "classification": "behavior-affecting: Phase K disjoint cohort holdout and fair baselines"
+      },
+      {
+        "status": "M",
+        "file": "backend/recsys/coldstart.py",
+        "classification": "behavior-affecting: Phase K disjoint cohort holdout and fair baselines"
+      },
+      {
+        "status": "M",
+        "file": "backend/recsys/evaluate.py",
+        "classification": "formatting only (collapsed nested if statement, identical logic)"
+      },
+      {
+        "status": "M",
+        "file": "backend/recsys/report_schema.py",
+        "classification": "behavior-affecting: Phase J ablation full-budget evaluation"
+      },
+      {
+        "status": "M",
+        "file": "backend/tests/golden/test_snips_golden.py",
+        "classification": "tests (new unit/regression suites)"
+      },
+      {
+        "status": "M",
+        "file": "backend/tests/test_candidate_quotas.py",
+        "classification": "tests (new unit/regression suites)"
+      },
+      {
+        "status": "A",
+        "file": "backend/tests/test_fair_cold_start.py",
+        "classification": "tests (new unit/regression suites)"
+      },
+      {
+        "status": "M",
+        "file": "backend/tests/test_routed_hybrid.py",
+        "classification": "tests (new unit/regression suites)"
+      },
+      {
+        "status": "M",
+        "file": "docs/claims-and-evidence.md",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "A",
+        "file": "docs/model-cards/recsys_sasrec.md",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "M",
+        "file": "docs/model-cards/recsys_two_tower_clean.md",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "M",
+        "file": "docs/model-cards/recsys_two_tower_ranker_v2_trainstats.md",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "M",
+        "file": "docs/results/SPRINT_REPORT.md",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "M",
+        "file": "docs/results/cold_start.json",
+        "classification": "documentation / reports"
+      }
+    ]
+  },
+  "validation_equivalence_check": {
+    "model_name": "recsys_two_tower_clean",
+    "champion_seed": 44,
+    "n_eval_users": 5000,
+    "split": "val",
+    "tolerance": 1e-06,
+    "metrics_comparison": {
+      "ndcg_at_10": {
+        "current": 0.061058742910936645,
+        "frozen": 0.061058742910936645,
+        "abs_diff": 0.0,
+        "matches_6_decimals": true
+      },
+      "hit_rate_at_10": {
+        "current": 0.119,
+        "frozen": 0.119,
+        "abs_diff": 0.0,
+        "matches_6_decimals": true
+      },
+      "mrr_at_10": {
+        "current": 0.04363912698412698,
+        "frozen": 0.04363912698412698,
+        "abs_diff": 0.0,
+        "matches_6_decimals": true
+      },
+      "snips_ndcg_at_10": {
+        "current": 0.03379283753462918,
+        "frozen": 0.03379283753462918,
+        "abs_diff": 0.0,
+        "matches_6_decimals": true
+      }
+    },
+    "all_metrics_equivalent_to_6_decimals": true
+  },
+  "metadata_consistency_check": {
+    "expected_dataset_version": "c662b8232dc0",
+    "expected_eval_users": 5000,
+    "all_dataset_versions_match": true,
+    "all_eval_user_counts_match": true,
+    "reports": {
+      "leaderboard.json": {
+        "present": true,
+        "dataset_version": "c662b8232dc0",
+        "dataset_version_matches": true,
+        "n_eval_users": 5000,
+        "n_eval_users_matches": true,
+        "seed": 42
+      },
+      "slices.json": {
+        "present": true,
+        "dataset_version": "c662b8232dc0",
+        "dataset_version_matches": true,
+        "n_eval_users": 5000,
+        "n_eval_users_matches": true,
+        "seed": 42
+      },
+      "beyond_accuracy.json": {
+        "present": true,
+        "dataset_version": "c662b8232dc0",
+        "dataset_version_matches": true,
+        "n_eval_users": 5000,
+        "n_eval_users_matches": true,
+        "seed": 42
+      },
+      "cold_start.json": {
+        "present": true,
+        "dataset_version": "c662b8232dc0",
+        "dataset_version_matches": true,
+        "n_eval_users": 5000,
+        "n_eval_users_matches": true,
+        "seed": 42
+      }
+    }
+  },
+  "verdict": {
+    "lock_integrity_passed": true,
+    "validation_equivalence_passed": true,
+    "metadata_consistency_passed": true
+  }
+}
