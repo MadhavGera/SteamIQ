@@ -185,6 +185,7 @@ class SASRecModel(BaseRecommender):
         self.module: SASRecModule | None = None
         self._item_vectors: np.ndarray | None = None
         self._text_embs_tensor: torch.Tensor | None = None
+        self._text_table: torch.Tensor | None = None
         self.device = torch.device("cpu")
         self.training_time_sec: float = 0.0
         self.epoch_sec_list: list[float] = []
@@ -203,6 +204,14 @@ class SASRecModel(BaseRecommender):
         """
         if self.module is None:
             raise RuntimeError("SASRecModule is not initialized.")
+        if data is not None and data.item_text_emb is not None and self.config.use_text:
+            self._text_embs_tensor = torch.from_numpy(data.item_text_emb.astype(np.float32)).to(self.device)
+            self._text_table = torch.zeros(
+                (data.n_items + 1, data.item_text_emb.shape[1]),
+                dtype=torch.float32,
+                device=self.device,
+            )
+            self._text_table[1:] = self._text_embs_tensor
         self.module.eval()
         with torch.no_grad():
             vecs = self.module.all_item_vectors(self._text_embs_tensor)
@@ -242,7 +251,10 @@ class SASRecModel(BaseRecommender):
         self.module.eval()
         with torch.no_grad():
             seq_tensor = torch.from_numpy(seq_arr).to(self.device)
-            user_vecs = self.module.encode_history(seq_tensor).cpu().numpy()
+            text_embs = None
+            if self.config.use_text and self._text_table is not None:
+                text_embs = F.embedding(seq_tensor, self._text_table)
+            user_vecs = self.module.encode_history(seq_tensor, text_embs=text_embs).cpu().numpy()
 
         items = item_vecs if item_vecs is not None else self._item_vectors
         if items is None:
@@ -293,6 +305,15 @@ class SASRecModel(BaseRecommender):
         if weights_file.exists():
             state_dict = torch.load(weights_file, map_location=instance.device)
             instance.module.load_state_dict(state_dict)
+
+        if data is not None and data.item_text_emb is not None and instance.config.use_text:
+            instance._text_embs_tensor = torch.from_numpy(data.item_text_emb.astype(np.float32)).to(instance.device)
+            instance._text_table = torch.zeros(
+                (data.n_items + 1, data.item_text_emb.shape[1]),
+                dtype=torch.float32,
+                device=instance.device,
+            )
+            instance._text_table[1:] = instance._text_embs_tensor
 
         vecs_file = path / "item_vectors.npy"
         if vecs_file.exists():

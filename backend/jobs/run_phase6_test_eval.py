@@ -80,6 +80,7 @@ def run_phase6_test_eval(
     seed: int = 42,
     force: bool = False,
     reason: str | None = None,
+    only: str | None = None,
 ) -> dict[str, Any]:
     t0_all = time.perf_counter()
     resolved_data_dir = Path(data_dir) if data_dir else Path(settings.resolved_recsys_data_dir)
@@ -111,7 +112,6 @@ def run_phase6_test_eval(
     logger.info("Loading RecsysData from %s...", resolved_data_dir)
     data = RecsysData.load(resolved_data_dir)
 
-    # Write .test_eval_lock immediately with frozen manifest
     lock_manifest = {
         "two_tower_champion": "recsys_two_tower_clean (seed 44)",
         "ranker_champion": "recsys_two_tower_ranker_clean (seed 44)",
@@ -122,16 +122,30 @@ def run_phase6_test_eval(
         "popularity": "recsys_popularity (baseline)",
         "content": "recsys_content (baseline)",
     }
-    lock_payload = {
-        "locked_at": datetime.now(UTC).isoformat(),
-        "runner": "backend/jobs/run_phase6_test_eval.py",
-        "dataset_version": data.dataset_version,
-        "seed": seed,
-        "frozen_manifest": lock_manifest,
-        "reason": reason or "Phase H authoritative single final test split evaluation",
-    }
-    lock_file.write_text(json.dumps(lock_payload, indent=2), encoding="utf-8")
-    logger.info("Test split locked via %s with frozen manifest.", lock_file)
+    if not lock_file.exists():
+        lock_payload = {
+            "locked_at": datetime.now(UTC).isoformat(),
+            "runner": "backend/jobs/run_phase6_test_eval.py",
+            "dataset_version": data.dataset_version,
+            "seed": seed,
+            "frozen_manifest": lock_manifest,
+            "reason": reason or "Phase H authoritative single final test split evaluation",
+        }
+        lock_file.write_text(json.dumps(lock_payload, indent=2), encoding="utf-8")
+        logger.info("Test split locked via %s with frozen manifest.", lock_file)
+    else:
+        try:
+            existing_lock = json.loads(lock_file.read_text(encoding="utf-8"))
+        except Exception:
+            existing_lock = {"locked_at": datetime.now(UTC).isoformat(), "frozen_manifest": lock_manifest}
+        hist = existing_lock.setdefault("history", [])
+        hist.append({
+            "action": f"test_eval_{only or 'full'}",
+            "timestamp": datetime.now(UTC).isoformat(),
+            "reason": reason,
+        })
+        lock_file.write_text(json.dumps(existing_lock, indent=2), encoding="utf-8")
+        logger.info("Updated test split lock history in %s.", lock_file)
 
     eval_users, tuning_users = get_evaluation_user_split(
         data,
@@ -141,6 +155,125 @@ def run_phase6_test_eval(
         persistence_dir=resolved_data_dir,
     )
     logger.info("Evaluation users: %d | Tuning users: %d", len(eval_users), len(tuning_users))
+
+    # NARROW EVALUATION: SASRec Challenger Only
+    if only == "sasrec":
+        logger.info("\n" + "=" * 70)
+        logger.info("Executing NARROW Test Split Evaluation: SASRec Challenger Only")
+        logger.info("=" * 70)
+
+        art_sasrec_dir = resolved_data_dir / "artifacts" / "recsys_sasrec"
+        seeds_3 = [42, 43, 44]
+        sasrec_test_evals: dict[int, Any] = {}
+        sasrec_models: dict[int, SASRecModel] = {}
+        for s in seeds_3:
+            s_dir = art_sasrec_dir / f"seed_{s}"
+            if s_dir.exists():
+                logger.info("Loading SASRec seed %d from %s...", s, s_dir)
+                sasrec_m = SASRecModel.load(s_dir, data=data)
+                sasrec_models[s] = sasrec_m
+                s_res = evaluate_model(
+                    model=sasrec_m,
+                    data=data,
+                    split="test",
+                    k_list=(10, 20),
+                    user_indices=eval_users,
+                    seed=s,
+                )
+                sasrec_test_evals[s] = s_res
+                logger.info(
+                    "  SASRec Seed %d -> Test NDCG@10: %.5f | HR@10: %.5f",
+                    s,
+                    float(s_res.metrics.get("ndcg_at_10", 0.0)),
+                    float(s_res.metrics.get("hit_rate_at_10", 0.0)),
+                )
+
+        sasrec_per_seed = [
+            {"seed": s, **{k: v for k, v in sasrec_test_evals[s].metrics.items() if not k.endswith("_ranks")}}
+            for s in seeds_3 if s in sasrec_test_evals
+        ]
+        sasrec_test_agg = aggregate_per_seed_metrics(sasrec_per_seed, deterministic=False) if sasrec_per_seed else {}
+
+        leaderboard_path = docs_results_dir / "leaderboard.json"
+        with open(leaderboard_path, encoding="utf-8") as f:
+            leaderboard_payload = json.load(f)
+
+        bench_path = docs_results_dir / "sasrec_benchmark.json"
+        champ_seed = 43
+        if bench_path.exists():
+            try:
+                with open(bench_path, encoding="utf-8") as f:
+                    b_data = json.load(f)
+                champ_seed = b_data.get("metadata", {}).get("champion_seed", champ_seed)
+            except Exception:
+                pass
+
+        champ_sasrec_model = sasrec_models.get(champ_seed)
+        champ_sasrec_eval = sasrec_test_evals.get(champ_seed)
+        champ_sasrec_val_eval = None
+        if champ_sasrec_eval is not None and champ_sasrec_model is not None:
+            champ_sasrec_val_eval = evaluate_model(
+                champ_sasrec_model, data, split="val", k_list=(10, 20), user_indices=eval_users, seed=champ_seed
+            )
+
+        tt_clean_dir = resolved_data_dir / "artifacts" / "recsys_two_tower_clean" / "seed_44"
+        tt_champ = TwoTowerModel.load(tt_clean_dir, data=data)
+        tt_test_eval = evaluate_model(tt_champ, data, split="test", k_list=(10, 20), user_indices=eval_users, seed=44)
+
+        sas_ranks = np.asarray(champ_sasrec_eval.per_user.get("rank", champ_sasrec_eval.per_user.get("ranks")), dtype=np.int64)
+        tt_ranks = np.asarray(tt_test_eval.per_user.get("rank", tt_test_eval.per_user.get("ranks")), dtype=np.int64)
+        sas_ndcg_u = ndcg_at_k(sas_ranks, 10)
+        tt_ndcg_u = ndcg_at_k(tt_ranks, 10)
+        sasrec_vs_tt_m, sasrec_vs_tt_lo, sasrec_vs_tt_hi = paired_bootstrap_diff(sas_ndcg_u, tt_ndcg_u, n_boot=2000, seed=seed)
+
+        for m_entry in leaderboard_payload["models"]:
+            if m_entry.get("model_name") == "recsys_sasrec":
+                m_entry["champion_seed"] = champ_seed
+                m_entry["model_run_id"] = f"seed_{champ_seed}"
+                if champ_sasrec_val_eval is not None:
+                    m_entry["val_metrics"] = {k: v for k, v in champ_sasrec_val_eval.metrics.items() if not k.endswith("_ranks")}
+                if champ_sasrec_eval is not None:
+                    m_entry["test_metrics"] = {k: v for k, v in champ_sasrec_eval.metrics.items() if not k.endswith("_ranks")}
+                m_entry["multi_seed_aggregate"] = sasrec_test_agg
+
+        for p_test in leaderboard_payload.get("paired_hypothesis_tests", []):
+            if "sasrec" in p_test.get("comparison", "").lower():
+                p_test["model_a_ndcg"] = float(champ_sasrec_eval.metrics.get("ndcg_at_10", 0.0))
+                p_test["model_b_ndcg"] = float(tt_test_eval.metrics.get("ndcg_at_10", 0.0))
+                p_test["paired_diff"] = sasrec_vs_tt_m
+                p_test["lo95"] = sasrec_vs_tt_lo
+                p_test["hi95"] = sasrec_vs_tt_hi
+                p_test["verdict"] = "better" if sasrec_vs_tt_lo > 0.0 else ("worse" if sasrec_vs_tt_hi < 0.0 else "no significant difference")
+
+        save_report_json(docs_results_dir / "leaderboard.json", leaderboard_payload)
+        save_report_json(reports_dir / "leaderboard.json", leaderboard_payload)
+
+        # Re-render leaderboard.md
+        ablations_p = json.loads((docs_results_dir / "ablations.json").read_text(encoding="utf-8")) if (docs_results_dir / "ablations.json").exists() else None
+        rk_abl_p = json.loads((docs_results_dir / "ranker_ablations.json").read_text(encoding="utf-8")) if (docs_results_dir / "ranker_ablations.json").exists() else None
+        slices_p = json.loads((docs_results_dir / "slices.json").read_text(encoding="utf-8")) if (docs_results_dir / "slices.json").exists() else None
+        cold_p = json.loads((docs_results_dir / "cold_start.json").read_text(encoding="utf-8")) if (docs_results_dir / "cold_start.json").exists() else None
+        beyond_p = json.loads((docs_results_dir / "beyond_accuracy.json").read_text(encoding="utf-8")) if (docs_results_dir / "beyond_accuracy.json").exists() else None
+
+        md_content = generate_leaderboard_markdown(
+            leaderboard_payload=leaderboard_payload,
+            ablations_payload=ablations_p,
+            ranker_ablations_payload=rk_abl_p,
+            slices_payload=slices_p,
+            cold_start_payload=cold_p,
+            beyond_accuracy_payload=beyond_p,
+        )
+        (docs_results_dir / "leaderboard.md").write_text(md_content, encoding="utf-8")
+        (reports_dir / "leaderboard.md").write_text(md_content, encoding="utf-8")
+        logger.info("Successfully updated leaderboard.md for SASRec challenger.")
+
+        return {
+            "only": "sasrec",
+            "sasrec_test_ndcg_mean": sasrec_test_agg.get("summary", {}).get("ndcg_at_10", {}).get("mean", 0.0),
+            "sasrec_champion_test_ndcg": float(champ_sasrec_eval.metrics.get("ndcg_at_10", 0.0)),
+            "sasrec_vs_tt_diff": sasrec_vs_tt_m,
+            "sasrec_vs_tt_ci": [sasrec_vs_tt_lo, sasrec_vs_tt_hi],
+        }
 
     # Load Phase 4 validation sweep results to preserve exact validation provenance
     val_sweep_path = docs_results_dir / "validation_sweep.json"
@@ -924,9 +1057,10 @@ def main():
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--force", action="store_true", help="Force re-evaluation if test lock exists")
     parser.add_argument("--reason", type=str, default=None, help="Documented reason for re-evaluation (min 10 chars)")
+    parser.add_argument("--only", type=str, default=None, choices=["sasrec", None], help="Only evaluate specific model (e.g. sasrec)")
     args = parser.parse_args()
 
-    run_phase6_test_eval(data_dir=args.data_dir, seed=args.seed, force=args.force, reason=args.reason)
+    run_phase6_test_eval(data_dir=args.data_dir, seed=args.seed, force=args.force, reason=args.reason, only=args.only)
 
 
 if __name__ == "__main__":

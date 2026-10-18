@@ -13,5 +13,12 @@
     "popularity": "recsys_popularity (baseline)",
     "content": "recsys_content (baseline)"
   },
-  "reason": "Phase H authoritative single final test split evaluation"
+  "reason": "Phase H authoritative single final test split evaluation",
+  "history": [
+    {
+      "action": "test_eval_sasrec",
+      "timestamp": "2026-10-18T16:57:19.216684+00:00",
+      "reason": "round3: retrained sasrec to convergence; challenger only, no selection decision depends on it"
+    }
+  ]
 }

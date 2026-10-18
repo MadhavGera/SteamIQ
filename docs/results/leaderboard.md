@@ -18,7 +18,7 @@ Multi-seed mean ± std reported for deployable neural models; 95% bootstrap perc
 | `recsys_two_tower_clean` | **val** | 1 | 0.0611 [0.0557, 0.0662] | 0.0338 [0.0305, 0.0373] | 0.1190 [0.1104, 0.1280] | 0.0436 | 0.4347 | 0.7588 | `champion` |
 | `recsys_two_tower_ranker_clean` | **test** | 1 | 0.0532 [0.0480, 0.0587] | 0.0311 [0.0274, 0.0350] | 0.1004 [0.0916, 0.1094] | 0.0390 | 0.5423 | 0.7495 | `candidate` |
 | `recsys_two_tower_ranker_clean` | **val** | 1 | 0.0582 [0.0531, 0.0635] | 0.0378 [0.0340, 0.0421] | 0.1098 [0.1014, 0.1190] | 0.0428 | 0.5503 | 0.7450 | `candidate` |
-| `recsys_sasrec` | **test** | 1 | 0.0165 [0.0139, 0.0192] | 0.0040 [0.0034, 0.0048] | 0.0344 [0.0296, 0.0394] | 0.0111 | 0.0350 | 0.7099 | `challenger` |
+| `recsys_sasrec` | **test** | 1 | 0.0206 [0.0176, 0.0236] | 0.0052 [0.0044, 0.0060] | 0.0424 [0.0370, 0.0480] | 0.0139 | 0.0137 | 0.7446 | `challenger` |
 | `recsys_itemknn` | **test** | 1 | 0.0433 [0.0389, 0.0480] | 0.0216 [0.0188, 0.0247] | 0.0826 [0.0748, 0.0900] | 0.0315 | 0.6150 | 0.7255 | `candidate` |
 | `recsys_als` | **test** | 1 | 0.0356 [0.0315, 0.0396] | 0.0160 [0.0141, 0.0179] | 0.0724 [0.0654, 0.0796] | 0.0246 | 0.3233 | 0.7772 | `candidate` |
 | `recsys_popularity` | **test** | 1 | 0.0151 [0.0125, 0.0178] | 0.0035 [0.0029, 0.0042] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.0070 | 0.6948 | `candidate` |
@@ -42,8 +42,8 @@ Multi-seed mean ± std reported for deployable neural models; 95% bootstrap perc
 | `recsys_popularity` | **test** | 0.0326 [0.0274, 0.0376] | 0.0614 [0.0548, 0.0680] | 0.0151 [0.0125, 0.0178] | 0.0035 | 0.0225 [0.0196, 0.0254] | 0.0100 | 0.0070 | 0.6948 | candidate |
 | `recsys_content` | **val** | 0.0318 [0.0272, 0.0368] | 0.0478 [0.0422, 0.0532] | 0.0182 [0.0152, 0.0215] | 0.0170 | 0.0222 [0.0191, 0.0254] | 0.0141 | 0.6937 | 0.5086 | candidate |
 | `recsys_content` | **test** | 0.0258 [0.0216, 0.0304] | 0.0394 [0.0340, 0.0452] | 0.0141 [0.0116, 0.0171] | 0.0106 | 0.0176 [0.0149, 0.0207] | 0.0106 | 0.6337 | 0.5046 | candidate |
-| `recsys_sasrec` | **val** | 0.0446 [0.0388, 0.0504] | 0.0738 [0.0670, 0.0802] | 0.0216 [0.0187, 0.0246] | 0.0062 | 0.0290 [0.0259, 0.0321] | 0.0148 | 0.0340 | 0.7095 | challenger |
-| `recsys_sasrec` | **test** | 0.0344 [0.0296, 0.0394] | 0.0682 [0.0616, 0.0756] | 0.0165 [0.0139, 0.0192] | 0.0040 | 0.0250 [0.0223, 0.0280] | 0.0111 | 0.0350 | 0.7099 | challenger |
+| `recsys_sasrec` | **val** | 0.0502 [0.0444, 0.0564] | 0.0844 [0.0770, 0.0918] | 0.0225 [0.0196, 0.0255] | 0.0066 | 0.0311 [0.0280, 0.0344] | 0.0143 | 0.0127 | 0.7454 | challenger |
+| `recsys_sasrec` | **test** | 0.0424 [0.0370, 0.0480] | 0.0688 [0.0618, 0.0758] | 0.0206 [0.0176, 0.0236] | 0.0052 | 0.0272 [0.0242, 0.0304] | 0.0139 | 0.0137 | 0.7446 | challenger |
 | `recsys_two_tower` | **val** | 0.1002 [0.0924, 0.1086] | 0.1594 [0.1488, 0.1700] | 0.0532 [0.0482, 0.0582] | 0.0266 | 0.0682 [0.0630, 0.0734] | 0.0391 | 0.4483 | 0.7677 | Reference (all-time stats) |
 | `recsys_two_tower` | **test** | 0.1002 [0.0924, 0.1086] | 0.1594 [0.1488, 0.1700] | 0.0532 [0.0482, 0.0582] | 0.0266 | 0.0682 [0.0630, 0.0734] | 0.0391 | 0.4483 | 0.7677 | Reference (all-time stats) |
 | `recsys_two_tower_ranker` | **val** | 0.0938 [0.0858, 0.1018] | 0.1514 [0.1408, 0.1614] | 0.0484 [0.0437, 0.0530] | 0.0290 | 0.0628 [0.0581, 0.0678] | 0.0348 | 0.5727 | 0.7383 | Reference (all-time stats) |
@@ -56,10 +56,10 @@ Multi-seed mean ± std reported for deployable neural models; 95% bootstrap perc
 | Variant | Description | Seeds | Test NDCG@10 (mean ± std) | Test HR@10 (mean ± std) | Tail NDCG@10 (mean ± std) | Paired Diff vs Full (95% CI) | Significant? |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | `full` | Full Two-Tower Model (ID + Text + Tags + Numeric + Attn) | 42,43,44 | 0.0615 ± 0.0011 | 0.1195 ± 0.0012 | 0.0062 ± 0.0011 | +0.0000 [+0.0000, +0.0000] | NO |
-| `no_text` | Without MiniLM Text Projection (--no-text) | 42,43,44 | 0.0356 ± 0.0010 | 0.0705 ± 0.0028 | 0.0000 ± 0.0000 | -0.0259 [-0.0290, -0.0228] | YES (p<0.05) |
-| `no_tags` | Without Tag Multi-Hot Projection (--no-tags) | 42,43,44 | 0.0467 ± 0.0019 | 0.0936 ± 0.0043 | 0.0009 ± 0.0003 | -0.0148 [-0.0175, -0.0120] | YES (p<0.05) |
-| `no_numeric` | Without Standardized Numeric Projection (--no-numeric) | 42,43,44 | 0.0470 ± 0.0009 | 0.0914 ± 0.0023 | 0.0000 ± 0.0000 | -0.0146 [-0.0174, -0.0117] | YES (p<0.05) |
-| `no_id` | Without Item ID Embedding (--no-id) | 42,43,44 | 0.0484 ± 0.0015 | 0.0950 ± 0.0031 | 0.0008 ± 0.0005 | -0.0132 [-0.0159, -0.0106] | YES (p<0.05) |
+| `no_text` | Without MiniLM Text Projection (--no-text) | 42,43,44 | 0.0524 ± 0.0015 | 0.1042 ± 0.0023 | 0.0010 ± 0.0001 | -0.0091 [-0.0117, -0.0067] | YES (p<0.05) |
+| `no_tags` | Without Tag Multi-Hot Projection (--no-tags) | 42,43,44 | 0.0592 ± 0.0005 | 0.1160 ± 0.0010 | 0.0047 ± 0.0003 | -0.0023 [-0.0043, -0.0005] | YES (p<0.05) |
+| `no_numeric` | Without Standardized Numeric Projection (--no-numeric) | 42,43,44 | 0.0611 ± 0.0021 | 0.1175 ± 0.0049 | 0.0034 ± 0.0010 | -0.0004 [-0.0023, +0.0015] | NO |
+| `no_id` | Without Item ID Embedding (--no-id) | 42,43,44 | 0.0620 ± 0.0004 | 0.1207 ± 0.0006 | 0.0046 ± 0.0012 | +0.0005 [-0.0018, +0.0027] | NO |
 
 ---
 
@@ -113,14 +113,17 @@ Multi-seed mean ± std reported for deployable neural models; 95% bootstrap perc
 | `content` | 0.0206 [0.0092, 0.0366] | 0.0085 [0.0034, 0.0152] | 0.0049 | Content Hybrid |
 | `two_tower_masked` | 0.0481 [0.0297, 0.0686] | 0.0227 [0.0132, 0.0332] | 0.0150 | Content Hybrid |
 
-### Part C: True Item Holdout (10% Torso/Tail Retrained, N = 601 users, 0 held-out items)
+### Part C: True Item Holdout (10% Torso/Tail Retrained, N = 5000 users, 0 held-out items)
 
 | Model | HR@10 (95% CI) | NDCG@10 (95% CI) | MRR@10 | Training Interactions |
 | :--- | :---: | :---: | :---: | :--- |
-| `random` | 0.0033 [0.0033, 0.0033] | 0.0015 [0.0015, 0.0015] | 0.0010 | Zero Train Overlap |
-| `content` | 0.0449 [0.0283, 0.0616] | 0.0283 [0.0174, 0.0404] | 0.0230 | Zero Train Overlap |
-| `two_tower` | 0.0200 [0.0083, 0.0316] | 0.0094 [0.0042, 0.0151] | 0.0062 | Retrained (0 Interactions for Held-out Items) |
-| `routed_hybrid` | 0.0449 [0.0283, 0.0616] | 0.0335 [0.0198, 0.0475] | 0.0302 | Zero Train Overlap |
+| `cold_only_random` | 0.0000 [0.0000, 0.0000] | 0.0228 [0.0000, 0.0000] | 0.0000 | Zero Train Overlap |
+| `catalog_random` | 0.0033 [0.0000, 0.0000] | 0.0015 [0.0000, 0.0000] | 0.0000 | Zero Train Overlap |
+| `random` | 0.0033 [0.0000, 0.0000] | 0.0015 [0.0000, 0.0000] | 0.0000 | Zero Train Overlap |
+| `content` | 0.0505 [0.0288, 0.0721] | 0.0313 [0.0183, 0.0464] | 0.0000 | Zero Train Overlap |
+| `two_tower` | 0.0264 [0.0120, 0.0409] | 0.0131 [0.0057, 0.0221] | 0.0000 | Retrained (0 Interactions for Held-out Items) |
+| `routed_hybrid` | 0.0529 [0.0337, 0.0745] | 0.0367 [0.0212, 0.0530] | 0.0000 | Zero Train Overlap |
+| `boost_cold_equal` | 0.3702 [0.3245, 0.4183] | 0.2182 [0.1864, 0.2491] | 0.0000 | Zero Train Overlap |
 
 ---
 
