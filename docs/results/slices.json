@@ -2,10 +2,10 @@
   "metadata": {
     "report_key": "slices",
     "dataset_version": "c662b8232dc0",
-    "git_commit": "e2708d5932b015a628b7a98e42e00d02bec8b5b3",
+    "git_commit": "3304ee921892a9db818f11e294209cf1958372de",
     "n_eval_users": 5000,
     "seed": 42,
-    "generated_at": "2026-10-17T18:37:26.023952+00:00"
+    "generated_at": "2026-10-18T10:05:26.501182+00:00"
   },
   "slice_definitions": {
     "pop_head": "Top 20% most popular items in training set (Target item popularity)",
@@ -21,12 +21,12 @@
       "split": "test",
       "slice_name": "overall",
       "n_users": 5000,
-      "model_a_ndcg": 0.048485951609726144,
-      "model_b_ndcg": 0.041541720534210014,
-      "paired_diff": 0.006944231075516133,
-      "lo95": 0.002356816069547833,
-      "hi95": 0.011933533948726944,
-      "verdict": "better",
+      "model_a_ndcg": 0.053201792977088165,
+      "model_b_ndcg": 0.05133246148368835,
+      "paired_diff": 0.0018693314933998187,
+      "lo95": -0.0024425922746413023,
+      "hi95": 0.006237024294536178,
+      "verdict": "no significant difference",
       "rank_source": "fresh evaluate_model"
     },
     {
@@ -34,11 +34,11 @@
       "split": "test",
       "slice_name": "pop_head",
       "n_users": 2992,
-      "model_a_ndcg": 0.07148235828578674,
-      "model_b_ndcg": 0.06856508359633606,
-      "paired_diff": 0.002917274689450675,
-      "lo95": -0.005158241566487064,
-      "hi95": 0.010207002742694593,
+      "model_a_ndcg": 0.07317038022295248,
+      "model_b_ndcg": 0.07756354783292095,
+      "paired_diff": -0.004393167609968473,
+      "lo95": -0.011543392154634428,
+      "hi95": 0.0023145095093356134,
       "verdict": "no significant difference"
     },
     {
@@ -46,11 +46,11 @@
       "split": "test",
       "slice_name": "pop_torso",
       "n_users": 1034,
-      "model_a_ndcg": 0.022763766832539247,
-      "model_b_ndcg": 0.00048355899419729207,
-      "paired_diff": 0.022280207838341955,
-      "lo95": 0.014748085450472109,
-      "hi95": 0.0300519418241808,
+      "model_a_ndcg": 0.03654064887310326,
+      "model_b_ndcg": 0.019596404008817195,
+      "paired_diff": 0.016944244864286064,
+      "lo95": 0.00908066996891525,
+      "hi95": 0.024644217824161156,
       "verdict": "better"
     },
     {
@@ -58,23 +58,23 @@
       "split": "test",
       "slice_name": "pop_tail",
       "n_users": 974,
-      "model_a_ndcg": 0.005150726029477624,
-      "model_b_ndcg": 0.0021169122698280743,
-      "paired_diff": 0.0030338137596495496,
-      "lo95": -0.0009245433624474667,
-      "hi95": 0.007500401640984555,
-      "verdict": "no significant difference"
+      "model_a_ndcg": 0.009548415116610092,
+      "model_b_ndcg": 0.004445062173742566,
+      "paired_diff": 0.0051033529428675265,
+      "lo95": 0.00025805261206983274,
+      "hi95": 0.010447049059217572,
+      "verdict": "better"
     },
     {
       "comparison": "Ranker vs Two-Tower",
       "split": "test",
       "slice_name": "hist_3_4",
       "n_users": 2069,
-      "model_a_ndcg": 0.05261167032816025,
-      "model_b_ndcg": 0.048368482233563215,
-      "paired_diff": 0.004243188094597043,
-      "lo95": -0.003203864581654883,
-      "hi95": 0.012750966134027934,
+      "model_a_ndcg": 0.058769838230676316,
+      "model_b_ndcg": 0.05966173900237612,
+      "paired_diff": -0.0008919007716997952,
+      "lo95": -0.0073731719868573055,
+      "hi95": 0.005891663205917343,
       "verdict": "no significant difference"
     },
     {
@@ -82,11 +82,11 @@
       "split": "test",
       "slice_name": "hist_5_9",
       "n_users": 1744,
-      "model_a_ndcg": 0.04135189635095697,
-      "model_b_ndcg": 0.03561976746101974,
-      "paired_diff": 0.005732128889937232,
-      "lo95": -0.0021236660887579673,
-      "hi95": 0.013168918023930856,
+      "model_a_ndcg": 0.04524689970423124,
+      "model_b_ndcg": 0.04397997597873745,
+      "paired_diff": 0.0012669237254937878,
+      "lo95": -0.005773233079381499,
+      "hi95": 0.008516703081338419,
       "verdict": "no significant difference"
     },
     {
@@ -94,12 +94,12 @@
       "split": "test",
       "slice_name": "hist_10_plus",
       "n_users": 1187,
-      "model_a_ndcg": 0.051776331005558715,
-      "model_b_ndcg": 0.038343166367135084,
-      "paired_diff": 0.013433164638423633,
-      "lo95": 0.003333673861200389,
-      "hi95": 0.023499500537260305,
-      "verdict": "better"
+      "model_a_ndcg": 0.05518414195618556,
+      "model_b_ndcg": 0.04761675763741151,
+      "paired_diff": 0.0075673843187740565,
+      "lo95": -0.001996375016496876,
+      "hi95": 0.01616793479314402,
+      "verdict": "no significant difference"
     }
   ]
 }

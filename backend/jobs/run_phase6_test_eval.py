@@ -22,46 +22,49 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import numpy as np
+backend_dir = Path(__file__).resolve().parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
 
-from core.config import settings
-from recsys.aggregation import aggregate_per_seed_metrics, verify_aggregation_integrity
-from recsys.coldstart import (
-    _build_test_foldin_data,
-    get_item_holdout_split,
-    get_simulated_new_items_test_users,
-    get_sparse_target_test_users,
+import numpy as np  # noqa: E402
+
+from core.config import settings  # noqa: E402
+from recsys.aggregation import (  # noqa: E402
+    aggregate_per_seed_metrics,
+    verify_aggregation_integrity,
 )
-from recsys.data import RecsysData
-from recsys.evaluate import (
+from recsys.coldstart import (  # noqa: E402
+    _build_test_foldin_data,
+)
+from recsys.data import RecsysData  # noqa: E402
+from recsys.evaluate import (  # noqa: E402
     _build_user_interaction_maps,
     evaluate_model,
     get_evaluation_user_split,
 )
-from recsys.metrics import (
+from recsys.metrics import (  # noqa: E402
     bootstrap_ci,
-    compute_ranks,
     diversity_at_k,
     get_top_k_indices,
-    hit_rate_at_k,
     mmr_rerank,
-    mrr_at_k,
     ndcg_at_k,
     paired_bootstrap_diff,
 )
-from recsys.models.als import ALSRecommender
-from recsys.models.content import ContentRecommender
-from recsys.models.itemknn import ItemKNNRecommender
-from recsys.models.popularity import PopularityRecommender
-from recsys.models.two_tower import TwoTowerModel
-from recsys.ranker import RankerModel
-from recsys.report import (
+from recsys.models.als import ALSRecommender  # noqa: E402
+from recsys.models.content import ContentRecommender  # noqa: E402
+from recsys.models.itemknn import ItemKNNRecommender  # noqa: E402
+from recsys.models.popularity import PopularityRecommender  # noqa: E402
+from recsys.models.sequential import SASRecModel  # noqa: E402
+from recsys.models.two_tower import TwoTowerModel  # noqa: E402
+from recsys.ranker import RankerModel  # noqa: E402
+from recsys.report import (  # noqa: E402
     build_beyond_accuracy_payload,
-    build_cold_start_payload,
     build_leaderboard_payload,
     build_slices_payload,
     generate_leaderboard_markdown,
@@ -75,6 +78,8 @@ logger = logging.getLogger("steamiq.jobs.run_phase6_test_eval")
 def run_phase6_test_eval(
     data_dir: Path | str | None = None,
     seed: int = 42,
+    force: bool = False,
+    reason: str | None = None,
 ) -> dict[str, Any]:
     t0_all = time.perf_counter()
     resolved_data_dir = Path(data_dir) if data_dir else Path(settings.resolved_recsys_data_dir)
@@ -83,8 +88,50 @@ def run_phase6_test_eval(
     docs_results_dir.mkdir(parents=True, exist_ok=True)
     reports_dir.mkdir(parents=True, exist_ok=True)
 
+    # -------------------------------------------------------------------------
+    # Lock Guard (Issue I7 & Test Split Discipline)
+    # -------------------------------------------------------------------------
+    lock_file = docs_results_dir / ".test_eval_lock"
+    if lock_file.exists():
+        if not force:
+            err_msg = (
+                f"ABORT: Test split evaluation is strictly locked by {lock_file}.\n"
+                "To preserve statistical validity and prevent data leakage, the test split "
+                "must only be evaluated once.\n"
+                "If re-evaluation is strictly required, pass --force and --reason '<audit justification>'."
+            )
+            logger.error(err_msg)
+            raise RuntimeError(err_msg)
+        if not reason or len(reason.strip()) < 10:
+            err_msg = "--force requires --reason with a documented audit explanation (at least 10 chars)."
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        logger.warning("OVERRIDE: Unlocking test split evaluation. Audit reason: %s", reason)
+
     logger.info("Loading RecsysData from %s...", resolved_data_dir)
     data = RecsysData.load(resolved_data_dir)
+
+    # Write .test_eval_lock immediately with frozen manifest
+    lock_manifest = {
+        "two_tower_champion": "recsys_two_tower_clean (seed 44)",
+        "ranker_champion": "recsys_two_tower_ranker_clean (seed 44)",
+        "routed_hybrid": "RoutedHybridRecommender (N=5 per-user z-score calibration)",
+        "sasrec_champion": "recsys_sasrec (seed 43)",
+        "itemknn": "recsys_itemknn (5 seeds, deterministic)",
+        "als": "recsys_als (5 seeds)",
+        "popularity": "recsys_popularity (baseline)",
+        "content": "recsys_content (baseline)",
+    }
+    lock_payload = {
+        "locked_at": datetime.now(UTC).isoformat(),
+        "runner": "backend/jobs/run_phase6_test_eval.py",
+        "dataset_version": data.dataset_version,
+        "seed": seed,
+        "frozen_manifest": lock_manifest,
+        "reason": reason or "Phase H authoritative single final test split evaluation",
+    }
+    lock_file.write_text(json.dumps(lock_payload, indent=2), encoding="utf-8")
+    logger.info("Test split locked via %s with frozen manifest.", lock_file)
 
     eval_users, tuning_users = get_evaluation_user_split(
         data,
@@ -314,6 +361,44 @@ def run_phase6_test_eval(
             logger.warning("Could not evaluate reference Ranker: %s", e)
 
     # =========================================================================
+    # 3.b Evaluate SASRec Challenger (Seeds 42, 43, 44) on Test Split
+    # =========================================================================
+    logger.info("\n>>> [3.b/7] Evaluating SASRec Challenger across 3 seeds on TEST split...")
+    art_sasrec_dir = resolved_data_dir / "artifacts" / "recsys_sasrec"
+    sasrec_test_evals: dict[int, Any] = {}
+    sasrec_models: dict[int, SASRecModel] = {}
+    for s in seeds_3:
+        s_dir = art_sasrec_dir / f"seed_{s}"
+        if s_dir.exists():
+            logger.info("Loading SASRec seed %d from %s...", s, s_dir)
+            sasrec_m = SASRecModel.load(s_dir, data=data)
+            sasrec_models[s] = sasrec_m
+            s_res = evaluate_model(
+                model=sasrec_m,
+                data=data,
+                split="test",
+                k_list=(10, 20),
+                user_indices=eval_users,
+                seed=s,
+            )
+            sasrec_test_evals[s] = s_res
+            logger.info("  SASRec Seed %d -> Test NDCG@10: %.5f | HR@10: %.5f", s, float(s_res.metrics.get("ndcg_at_10", 0.0)), float(s_res.metrics.get("hit_rate_at_10", 0.0)))
+
+    sasrec_per_seed = [
+        {"seed": s, **{k: v for k, v in sasrec_test_evals[s].metrics.items() if not k.endswith("_ranks")}}
+        for s in seeds_3 if s in sasrec_test_evals
+    ]
+    sasrec_test_agg = aggregate_per_seed_metrics(sasrec_per_seed, deterministic=False) if sasrec_per_seed else {}
+    champ_sasrec_seed = 43  # Champion from validation benchmark
+    champ_sasrec_model = sasrec_models.get(champ_sasrec_seed)
+    champ_sasrec_eval = sasrec_test_evals.get(champ_sasrec_seed)
+    champ_sasrec_val_eval = None
+    if champ_sasrec_eval is not None and champ_sasrec_model is not None:
+        champ_sasrec_val_eval = evaluate_model(
+            champ_sasrec_model, data, split="val", k_list=(10, 20), user_indices=eval_users, seed=champ_sasrec_seed
+        )
+
+    # =========================================================================
     # 4. Paired Hypothesis Tests & Promotion Gate Evaluation
     # =========================================================================
     logger.info("\n>>> [4/7] Computing Paired Hypothesis Tests on TEST split...")
@@ -356,6 +441,14 @@ def run_phase6_test_eval(
 
     # (f) TT Champion vs Popularity
     tt_vs_pop_m, tt_vs_pop_lo, tt_vs_pop_hi = paired_bootstrap_diff(tt_ndcg_u, pop_ndcg_u, n_boot=2000, seed=seed)
+
+    # (g) SASRec Champion vs TT Champion
+    sasrec_vs_tt_m, sasrec_vs_tt_lo, sasrec_vs_tt_hi = 0.0, 0.0, 0.0
+    if champ_sasrec_eval is not None:
+        sasrec_ranks = _extract_ranks(champ_sasrec_eval)
+        sasrec_ndcg_u = ndcg_at_k(sasrec_ranks, 10)
+        sasrec_vs_tt_m, sasrec_vs_tt_lo, sasrec_vs_tt_hi = paired_bootstrap_diff(sasrec_ndcg_u, tt_ndcg_u, n_boot=2000, seed=seed)
+        logger.info("Paired Diff: SASRec Champion vs TT Champion: %+.5f [%+.5f, %+.5f]", sasrec_vs_tt_m, sasrec_vs_tt_lo, sasrec_vs_tt_hi)
 
     logger.info("Paired Diff: Ranker Champion vs TT Champion: %+.5f [%+.5f, %+.5f]", rk_vs_tt_m, rk_vs_tt_lo, rk_vs_tt_hi)
     logger.info("  Ranker Promotion Gate Result: Passed=%s (lo95 > 0: %s)", gate_passed, rk_vs_tt_lo > 0.0)
@@ -451,6 +544,8 @@ def run_phase6_test_eval(
         ("recsys_popularity", pop_test),
         ("recsys_content", cnt_test),
     ]
+    if champ_sasrec_eval is not None:
+        models_for_beyond.append(("recsys_sasrec", champ_sasrec_eval))
 
     for m_name, m_eval in models_for_beyond:
         beyond_acc_entries.append({
@@ -524,340 +619,21 @@ def run_phase6_test_eval(
 
     # =========================================================================
     # 7. Multi-Seed True Item Holdout Cold-Start Study & Routed Hybrid
-    # =========================================================================
-    logger.info("\n>>> [7/7] Running Multi-Seed True Item Holdout Cold-Start Study (seeds: %s)...", seeds_3)
-    held_out_items, held_out_set = get_item_holdout_split(data, fraction=0.10, seed=42)
-    held_out_list = [int(it) for it in held_out_items]
+    cold_start_saved_path = docs_results_dir / "cold_start.json"
+    if not cold_start_saved_path.exists():
+        cold_start_saved_path = reports_dir / "cold_start.json"
 
-    holdout_users = [int(u) for u in eval_users if int(test_target_map[int(u)]) in held_out_set]
-    n_ho_users = len(holdout_users)
-    logger.info("True Holdout Users: %d (across %d withheld items)", n_ho_users, len(held_out_set))
-
-    ho_hist, ho_targ, ho_seen = _build_test_foldin_data(data, np.array(holdout_users, dtype=np.int64))
-    ho_targ_arr = np.asarray(ho_targ, dtype=np.int64)
-
-    # Content model scores on holdout users
-    sc_ho_cnt = cnt_m.score(ho_hist).copy()
-    for i, sm in enumerate(ho_seen):
-        sc_ho_cnt[i, list(sm)] = -np.inf
-    ho_rk_cnt = compute_ranks(sc_ho_cnt, ho_targ_arr)
-
-    # Analytic Random baseline
-    n_items_float = float(data.n_items)
-    analytic_mean_rank = n_items_float / 2.0
-    analytic_hr_10 = 10.0 / n_items_float
-    analytic_ndcg_10 = float(np.sum(1.0 / np.log2(np.arange(1, 11) + 1.0)) / n_items_float)
-    analytic_mrr_10 = float(np.sum(1.0 / np.arange(1, 11)) / n_items_float)
-    analytic_hits = int(round(n_ho_users * analytic_hr_10))
-
-    random_summary = {
-        "hits_k": analytic_hits,
-        "n_users": n_ho_users,
-        "hit_rate_at_10": analytic_hr_10,
-        "hit_rate_at_10_lo95": analytic_hr_10,
-        "hit_rate_at_10_hi95": analytic_hr_10,
-        "ndcg_at_10": analytic_ndcg_10,
-        "ndcg_at_10_lo95": analytic_ndcg_10,
-        "ndcg_at_10_hi95": analytic_ndcg_10,
-        "mrr_at_10": analytic_mrr_10,
-        "mrr_at_10_lo95": analytic_mrr_10,
-        "mrr_at_10_hi95": analytic_mrr_10,
-        "mean_rank": analytic_mean_rank,
-        "mean_rank_lo95": analytic_mean_rank,
-        "mean_rank_hi95": analytic_mean_rank,
-        "median_rank": analytic_mean_rank,
-    }
-
-    # Evaluate across 3 seeds of Two-Tower masked and Routed Hybrid
-    tt_ho_ndcgs = []
-    tt_ho_hrs = []
-    tt_ho_ranks = []
-
-    hybrid_ho_ndcgs = []
-    hybrid_ho_hrs = []
-    hybrid_ho_ranks = []
-
-    for s in seeds_3:
-        tt_s = tt_models[s]
-        # Condition (c3): All proxies neutralized + ID masked
-        vecs_c3 = tt_s.item_vectors(mask_ids=held_out_list, neutralize_proxies=held_out_list)
-        sc_tt_ho = tt_s.score(
-            ho_hist, item_vecs=vecs_c3, mask_ids=held_out_list, neutralize_proxies=held_out_list
-        ).copy()
-        for i, sm in enumerate(ho_seen):
-            sc_tt_ho[i, list(sm)] = -np.inf
-
-        # Pure Two-Tower Masked ranks
-        rk_s = compute_ranks(sc_tt_ho, ho_targ_arr)
-        tt_ho_ndcgs.append(float(np.mean(ndcg_at_k(rk_s, 10))))
-        tt_ho_hrs.append(float(np.mean(hit_rate_at_k(rk_s, 10))))
-        tt_ho_ranks.append(float(np.mean(rk_s)))
-
-        # Content-Routed Hybrid:
-        # Warm items scored with Two-Tower; cold/held-out items routed to Content model scores
-        sc_hybrid = sc_tt_ho.copy()
-        for it in held_out_list:
-            sc_hybrid[:, it] = sc_ho_cnt[:, it]
-
-        rk_hyb = compute_ranks(sc_hybrid, ho_targ_arr)
-        hybrid_ho_ndcgs.append(float(np.mean(ndcg_at_k(rk_hyb, 10))))
-        hybrid_ho_hrs.append(float(np.mean(hit_rate_at_k(rk_hyb, 10))))
-        hybrid_ho_ranks.append(float(np.mean(rk_hyb)))
-
-    def summarize_ranks_helper(ranks: np.ndarray, n_u: int) -> dict[str, Any]:
-        hr_arr = hit_rate_at_k(ranks, 10)
-        nd_arr = ndcg_at_k(ranks, 10)
-        mrr_arr = mrr_at_k(ranks, 10)
-        hr_m, hr_lo, hr_hi = bootstrap_ci(hr_arr, n_boot=1000, seed=seed)
-        nd_m, nd_lo, nd_hi = bootstrap_ci(nd_arr, n_boot=1000, seed=seed)
-        mrr_m, mrr_lo, mrr_hi = bootstrap_ci(mrr_arr, n_boot=1000, seed=seed)
-        mr_m, mr_lo, mr_hi = bootstrap_ci(ranks, n_boot=1000, seed=seed)
-        return {
-            "hits_k": int(np.sum(hr_arr)),
-            "n_users": n_u,
-            "hit_rate_at_10": float(hr_m),
-            "hit_rate_at_10_lo95": float(hr_lo),
-            "hit_rate_at_10_hi95": float(hr_hi),
-            "ndcg_at_10": float(nd_m),
-            "ndcg_at_10_lo95": float(nd_lo),
-            "ndcg_at_10_hi95": float(nd_hi),
-            "mrr_at_10": float(mrr_m),
-            "mrr_at_10_lo95": float(mrr_lo),
-            "mrr_at_10_hi95": float(mrr_hi),
-            "mean_rank": float(mr_m),
-            "mean_rank_lo95": float(mr_lo),
-            "mean_rank_hi95": float(mr_hi),
-            "median_rank": float(np.median(ranks)),
-        }
-
-    cnt_ho_summary = summarize_ranks_helper(ho_rk_cnt, n_ho_users)
-
-    # Representative seed 42 summaries & conditions (a), (b), (c), (c2), (c3)
-    import torch
-
-    # Condition (a): Unmasked
-    vecs_a = champ_tt_model.item_vectors()
-    sc_a = champ_tt_model.score(ho_hist, item_vecs=vecs_a).copy()
-    for i, sm in enumerate(ho_seen):
-        sc_a[i, list(sm)] = -np.inf
-    ho_rk_a = compute_ranks(sc_a, ho_targ_arr)
-    tt_unmasked_summary = summarize_ranks_helper(ho_rk_a, n_ho_users)
-
-    # Condition (b): Masked (ID masked only)
-    vecs_b = champ_tt_model.item_vectors(mask_ids=held_out_list)
-    sc_b = champ_tt_model.score(ho_hist, item_vecs=vecs_b, mask_ids=held_out_list).copy()
-    for i, sm in enumerate(ho_seen):
-        sc_b[i, list(sm)] = -np.inf
-    ho_rk_b = compute_ranks(sc_b, ho_targ_arr)
-    tt_masked_summary = summarize_ranks_helper(ho_rk_b, n_ho_users)
-    tt_masked_summary["multi_seed_mean_ndcg"] = float(np.mean(tt_ho_ndcgs))
-    tt_masked_summary["multi_seed_std_ndcg"] = float(np.std(tt_ho_ndcgs))
-
-    # Condition (c): Masked + train_positives raw 0
-    train_counts = data.items_df["train_positives"].values.astype(np.float32)
-    mean_pop = float(np.mean(train_counts))
-    std_pop = float(np.std(train_counts) + 1e-8)
-    raw_zero_z = float((0.0 - mean_pop) / std_pop)
-
-    t_dict = champ_tt_model._item_features_tensors
-    num_t = t_dict["numeric"].clone()
-    neut_idx = torch.tensor(held_out_list, dtype=torch.long)
-    num_t[neut_idx, 3] = raw_zero_z
-    item_vecs_c = champ_tt_model.module.encode_items(
-        item_ids=t_dict["all_ids"],
-        text_embs=t_dict["text"],
-        tag_features=t_dict["tags"],
-        numeric_features=num_t,
-        mask_ids=torch.tensor(held_out_list, dtype=torch.long),
-    ).detach().cpu().numpy()
-    sc_c = champ_tt_model.score(ho_hist, item_vecs=item_vecs_c, mask_ids=held_out_list).copy()
-    for i, sm in enumerate(ho_seen):
-        sc_c[i, list(sm)] = -np.inf
-    ho_rk_c = compute_ranks(sc_c, ho_targ_arr)
-    tt_c_summary = summarize_ranks_helper(ho_rk_c, n_ho_users)
-
-    # Condition (c2): Standardized mean (train_positives z=0, reviews and rating intact)
-    num_t_c2 = t_dict["numeric"].clone()
-    num_t_c2[neut_idx, 3] = 0.0
-    item_vecs_c2 = champ_tt_model.module.encode_items(
-        item_ids=t_dict["all_ids"],
-        text_embs=t_dict["text"],
-        tag_features=t_dict["tags"],
-        numeric_features=num_t_c2,
-        mask_ids=torch.tensor(held_out_list, dtype=torch.long),
-    ).detach().cpu().numpy()
-    sc_c2 = champ_tt_model.score(ho_hist, item_vecs=item_vecs_c2, mask_ids=held_out_list).copy()
-    for i, sm in enumerate(ho_seen):
-        sc_c2[i, list(sm)] = -np.inf
-    ho_rk_c2 = compute_ranks(sc_c2, ho_targ_arr)
-    tt_c2_summary = summarize_ranks_helper(ho_rk_c2, n_ho_users)
-
-    # Condition (c3): All proxies neutralized + ID masked
-    vecs_c3_42 = champ_tt_model.item_vectors(mask_ids=held_out_list, neutralize_proxies=held_out_list)
-    sc_tt_42 = champ_tt_model.score(ho_hist, item_vecs=vecs_c3_42, mask_ids=held_out_list, neutralize_proxies=held_out_list).copy()
-    for i, sm in enumerate(ho_seen):
-        sc_tt_42[i, list(sm)] = -np.inf
-    rk_tt_42 = compute_ranks(sc_tt_42, ho_targ_arr)
-    tt_c3_summary = summarize_ranks_helper(rk_tt_42, n_ho_users)
-
-    sc_hyb_42 = sc_tt_42.copy()
-    for it in held_out_list:
-        sc_hyb_42[:, it] = sc_ho_cnt[:, it]
-    rk_hyb_42 = compute_ranks(sc_hyb_42, ho_targ_arr)
-    hybrid_summary = summarize_ranks_helper(rk_hyb_42, n_ho_users)
-    hybrid_summary["multi_seed_mean_ndcg"] = float(np.mean(hybrid_ho_ndcgs))
-    hybrid_summary["multi_seed_std_ndcg"] = float(np.std(hybrid_ho_ndcgs))
-
-    # Sparse targets subgroup study
-    sp_users, sp_targets = get_sparse_target_test_users(data, eval_users, max_train_positives=10)
-    n_sp_users = len(sp_users)
-    hist_sp, targ_sp, seen_sp = _build_test_foldin_data(data, sp_users)
-    targ_sp_arr = np.asarray(targ_sp, dtype=np.int64)
-    sp_target_ids = list(set(int(t) for t in targ_sp))
-
-    rng = np.random.default_rng(seed)
-    rk_sp_rnd = rng.integers(1, data.n_items + 1, size=n_sp_users)
-
-    sc_sp_pop = pop_m.score(hist_sp).copy()
-    for i, sm in enumerate(seen_sp):
-        sc_sp_pop[i, list(sm)] = -np.inf
-    rk_sp_pop = compute_ranks(sc_sp_pop, targ_sp_arr)
-
-    sc_sp_cnt = cnt_m.score(hist_sp).copy()
-    for i, sm in enumerate(seen_sp):
-        sc_sp_cnt[i, list(sm)] = -np.inf
-    rk_sp_cnt = compute_ranks(sc_sp_cnt, targ_sp_arr)
-
-    sc_sp_als = als_models[42].score(hist_sp).copy()
-    for i, sm in enumerate(seen_sp):
-        sc_sp_als[i, list(sm)] = -np.inf
-    rk_sp_als = compute_ranks(sc_sp_als, targ_sp_arr)
-
-    sc_sp_tti = champ_tt_model.score(hist_sp).copy()
-    for i, sm in enumerate(seen_sp):
-        sc_sp_tti[i, list(sm)] = -np.inf
-    rk_sp_tti = compute_ranks(sc_sp_tti, targ_sp_arr)
-
-    tt_vecs_sp = champ_tt_model.item_vectors(mask_ids=sp_target_ids)
-    sc_sp_ttm = champ_tt_model.score(hist_sp, item_vecs=tt_vecs_sp).copy()
-    for i, sm in enumerate(seen_sp):
-        sc_sp_ttm[i, list(sm)] = -np.inf
-    rk_sp_ttm = compute_ranks(sc_sp_ttm, targ_sp_arr)
-
-    sparse_models_summary = {
-        "random": summarize_ranks_helper(rk_sp_rnd, n_sp_users),
-        "popularity": summarize_ranks_helper(rk_sp_pop, n_sp_users),
-        "content": summarize_ranks_helper(rk_sp_cnt, n_sp_users),
-        "als": summarize_ranks_helper(rk_sp_als, n_sp_users),
-        "two_tower_intact": summarize_ranks_helper(rk_sp_tti, n_sp_users),
-        "two_tower_masked": summarize_ranks_helper(rk_sp_ttm, n_sp_users),
-    }
-
-    # Simulated new items study (C2 fair simulation)
-    new_item_ids, ni_users, ni_targets = get_simulated_new_items_test_users(
-        data, eval_users, fraction=0.10, seed=seed, variant="c2"
-    )
-    n_ni_users = len(ni_users)
-    hist_ni, targ_ni, seen_ni = _build_test_foldin_data(data, ni_users)
-    targ_ni_arr = np.asarray(targ_ni, dtype=np.int64)
-    ni_item_list = list(set(int(t) for t in new_item_ids))
-
-    rk_ni_rnd = rng.integers(1, data.n_items + 1, size=n_ni_users)
-
-    sc_ni_cnt = cnt_m.score(hist_ni).copy()
-    for i, sm in enumerate(seen_ni):
-        sc_ni_cnt[i, list(sm)] = -np.inf
-    rk_ni_cnt = compute_ranks(sc_ni_cnt, targ_ni_arr)
-
-    vecs_ni = champ_tt_model.item_vectors(mask_ids=ni_item_list, neutralize_proxies=ni_item_list)
-    sc_ni_ttm = champ_tt_model.score(
-        hist_ni, item_vecs=vecs_ni, mask_ids=ni_item_list, neutralize_proxies=ni_item_list
-    ).copy()
-    for i, sm in enumerate(seen_ni):
-        sc_ni_ttm[i, list(sm)] = -np.inf
-    rk_ni_ttm = compute_ranks(sc_ni_ttm, targ_ni_arr)
-
-    rk_ni_pop = np.full(n_ni_users, data.n_items, dtype=np.int64)
-    rk_ni_als = np.full(n_ni_users, data.n_items, dtype=np.int64)
-    rk_ni_knn = np.full(n_ni_users, data.n_items, dtype=np.int64)
-
-    sim_models_summary = {
-        "random": summarize_ranks_helper(rk_ni_rnd, n_ni_users),
-        "popularity": summarize_ranks_helper(rk_ni_pop, n_ni_users),
-        "als": summarize_ranks_helper(rk_ni_als, n_ni_users),
-        "itemknn": summarize_ranks_helper(rk_ni_knn, n_ni_users),
-        "content": summarize_ranks_helper(rk_ni_cnt, n_ni_users),
-        "two_tower_masked": summarize_ranks_helper(rk_ni_ttm, n_ni_users),
-    }
-
-    cold_start_payload = build_cold_start_payload(
-        dataset_version=data.dataset_version,
-        sparse_targets_study={
-            "study_type": "sparse_targets",
-            "primary_evidence": False,
-            "title": "Sparse Targets Subgroup Study (<= 10 Train Positives)",
-            "is_optimistic_proxy": True,
-            "n_eval_users": n_sp_users,
-            "max_train_positives": 10,
-            "models": sparse_models_summary,
-            "limitations_note": "Target item ID is masked at inference on clean Two-Tower model.",
-        },
-        simulated_new_items_study={
-            "study_type": "simulated_new_items",
-            "variant": "c2",
-            "variant_label": "C2: Fair Simulation (Random 10%, Pop Zeroed, Proxies Neutralized)",
-            "primary_evidence": False,
-            "is_optimistic_proxy": True,
-            "n_eval_users": n_ni_users,
-            "n_new_items": len(new_item_ids),
-            "fraction_masked": 0.10,
-            "models": sim_models_summary,
-            "random_reference": {
-                "hit_rate_at_10": 10.0 / data.n_items,
-                "ndcg_at_10": float(np.sum(1.0 / np.log2(np.arange(1, 11) + 1.0)) / data.n_items),
-                "formula": "10 / n_items",
-            },
-            "limitations_note": "Inference-time masking simulation on clean two-tower model with neutralized rating/review proxies.",
-        },
-        item_holdout_study={
-            "study_type": "item_holdout",
-            "primary_evidence": True,
-            "title": "True Item Holdout (10% Catalog Withheld, 300 Items — Multi-Seed Study)",
-            "n_eval_users": n_ho_users,
-            "n_held_out_items": len(held_out_set),
-            "models": {
-                "random": random_summary,
-                "content": cnt_ho_summary,
-                "two_tower_unmasked": tt_unmasked_summary,
-                "two_tower_masked": tt_masked_summary,
-                "two_tower_masked_train_pos_raw_0": tt_c_summary,
-                "two_tower_masked_standardized_z0": tt_c2_summary,
-                "two_tower_masked_all_proxies_neutralized": tt_c3_summary,
-                "routed_hybrid": hybrid_summary,
-            },
-            "multi_seed_results": {
-                "seeds": seeds_3,
-                "two_tower_masked": {
-                    "mean_ndcg_at_10": float(np.mean(tt_ho_ndcgs)),
-                    "std_ndcg_at_10": float(np.std(tt_ho_ndcgs)),
-                    "mean_rank": float(np.mean(tt_ho_ranks)),
-                },
-                "routed_hybrid": {
-                    "mean_ndcg_at_10": float(np.mean(hybrid_ho_ndcgs)),
-                    "std_ndcg_at_10": float(np.std(hybrid_ho_ndcgs)),
-                    "mean_rank": float(np.mean(hybrid_ho_ranks)),
-                },
-            },
-            "random_reference": {
-                "hit_rate_at_10": 10.0 / data.n_items,
-                "ndcg_at_10": float(np.sum(1.0 / np.log2(np.arange(1, 11) + 1.0)) / data.n_items),
-                "formula": "10 / n_items",
-            },
-            "note": "Multi-seed true item holdout study. Held-out items had zero interactions during training.",
-        },
-        n_eval_users=len(eval_users),
-        seed=seed,
-    )
+    if cold_start_saved_path.exists():
+        logger.info("\n>>> [7/7] Preserving authoritative Multi-Cohort Cold Start Study from %s...", cold_start_saved_path)
+        with open(cold_start_saved_path, encoding="utf-8") as f:
+            cold_start_payload = json.load(f)
+    else:
+        logger.info("\n>>> [7/7] Cold-start report missing; executing Phase E multi-cohort study...")
+        from jobs.run_phase5_cold_start import run_phase5_cold_start
+        cold_start_payload = run_phase5_cold_start(
+            data_dir=resolved_data_dir,
+            docs_results_dir=docs_results_dir,
+        )
 
     # =========================================================================
     # 8. Construct Leaderboard Payload & Markdown
@@ -1011,6 +787,35 @@ def run_phase6_test_eval(
         },
     ]
 
+    # Include SASRec challenger if evaluated
+    if champ_sasrec_eval is not None and champ_sasrec_model is not None:
+        models_payload_data.append({
+            "model_name": "recsys_sasrec",
+            "family": "recsys_sasrec",
+            "stage": "challenger",
+            "champion_seed": champ_sasrec_seed,
+            "model_run_id": f"phase_f_seed_{champ_sasrec_seed}",
+            "rank_source": "fresh evaluate_model",
+            "hyperparameters": champ_sasrec_model.hyperparameters() if hasattr(champ_sasrec_model, "hyperparameters") else {},
+            "val_metrics": champ_sasrec_val_eval.metrics if champ_sasrec_val_eval else {},
+            "test_metrics": champ_sasrec_eval.metrics,
+            "val_slices": champ_sasrec_eval.slices,
+            "test_slices": champ_sasrec_eval.slices,
+            "per_seed": sasrec_per_seed,
+            "aggregate": sasrec_test_agg,
+            "multi_seed_3seeds": {
+                "test_mean_ndcg_at_10": sasrec_test_agg.get("means", {}).get("ndcg_at_10", 0.0),
+                "test_std_ndcg_at_10": sasrec_test_agg.get("stds", {}).get("ndcg_at_10", 0.0),
+                "test_mean_hr_at_10": sasrec_test_agg.get("means", {}).get("hit_rate_at_10", 0.0),
+                "test_std_hr_at_10": sasrec_test_agg.get("stds", {}).get("hit_rate_at_10", 0.0),
+            },
+            "paired_diff_vs_champion": {
+                "diff_ndcg_at_10": sasrec_vs_tt_m,
+                "lo95": sasrec_vs_tt_lo,
+                "hi95": sasrec_vs_tt_hi,
+            },
+        })
+
     # Include reference all-time models if available
     if ref_tt_eval is not None:
         models_payload_data.append({
@@ -1117,9 +922,11 @@ def main():
     parser = argparse.ArgumentParser(description="Phase 6 Final Test Evaluation & Cold-Start Study")
     parser.add_argument("--data-dir", type=str, default=None, help="Recsys precomputed data directory")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    parser.add_argument("--force", action="store_true", help="Force re-evaluation if test lock exists")
+    parser.add_argument("--reason", type=str, default=None, help="Documented reason for re-evaluation (min 10 chars)")
     args = parser.parse_args()
 
-    run_phase6_test_eval(data_dir=args.data_dir, seed=args.seed)
+    run_phase6_test_eval(data_dir=args.data_dir, seed=args.seed, force=args.force, reason=args.reason)
 
 
 if __name__ == "__main__":

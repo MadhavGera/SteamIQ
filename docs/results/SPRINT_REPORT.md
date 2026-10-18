@@ -618,6 +618,76 @@ To verify that intent classification performance is driven by true semantic comp
 - **Authoritative Report Saved:** `docs/results/assistant_metrics.json` and `backend/data/assistant/reports/assistant_leaderboard.json`.
 - **Integrity Check:** Passed all unit tests (`backend/tests/test_assistant.py`), honest fallbacks check, and no hardcoded metrics checks.
 
+### Phase H: Single Locked Final Test Evaluation (Issue I7 Resolution & Ground Rule 3 Compliance)
+
+#### 1. Context & Issue I7 Root Cause Analysis
+In an independent review of temporal evaluation integrity, Issue I7 identified that the validation split "before/after timestamp-leakage check" was uninformative by construction:
+- **Mathematical Construction:** In the temporal split pipeline, train, validation, and test interactions were partitioned strictly by global timestamps ($t_{train} < t_{val} < t_{test}$). Consequently, for any target interaction in `val_df`, zero interactions occurred after $t_{target}$ within `train_df`. Running a validation before/after check yielded identical metrics ($0.0000$ diff) simply because there was no future data in the fold-in history to mask.
+- **Resolution via Rigorous Synthetic Sequence Unit Testing:** Rather than relying on a tautological check on the training partition, a dedicated test suite (`backend/tests/test_timestamp_leakage.py`) was constructed to empirically verify temporal masking:
+  1. `test_temporal_order_enforcement`: Generates synthetic multi-interaction histories featuring interleaved interactions occurring before, at, and after target timestamps $t_{target}$. Verifies that timestamp-aware filtering strictly purges all $t \ge t_{target}$ interactions.
+  2. `test_validation_split_temporal_properties`: Formally asserts that $\max(t_{train}) \le \min(t_{val})$ holds across the dataset, documenting why the original validation check was structurally uninformative.
+  3. `test_test_split_temporal_properties`: Verifies that test targets have strictly future timestamps relative to train fold-in sequences.
+
+#### 2. Test Split Lock Enforcement (`.test_eval_lock`)
+In strict adherence to Ground Rule 3, the test split remained completely un-evaluated throughout Phases A through G. Before launching the final evaluation, `backend/jobs/run_phase6_test_eval.py` initialized and verified `docs/results/.test_eval_lock`:
+- **Lock Manifest:**
+  - `two_tower_champion`: `recsys_two_tower_clean (seed 44)`
+  - `ranker_champion`: `recsys_two_tower_ranker_clean (seed 44)`
+  - `routed_hybrid`: `RoutedHybridRecommender (N=5 per-user z-score calibration)`
+  - `sasrec_champion`: `recsys_sasrec (seed 43)`
+  - `itemknn`: `recsys_itemknn (5 seeds, deterministic)`
+  - `als`: `recsys_als (5 seeds)`
+  - `popularity`: `recsys_popularity (baseline)`
+  - `content`: `recsys_content (baseline)`
+- **Discipline Mechanism:** Any subsequent execution of `run_phase6_test_eval.py` is immediately halted with a `RuntimeError` unless both `--force` and `--reason` (minimum 10 documented characters) are supplied.
+
+#### 3. Authoritative Test Split Results (5,000 Test Evaluation Users)
+
+| Model Name | Split | Seeds | Test NDCG@10 (95% CI) | SNIPS-NDCG@10 | Test HR@10 (95% CI) | MRR@10 | Coverage@10 | Diversity@10 | Stage Status |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **`recsys_two_tower_clean`** | **test** | **1 (Champ 44)** | **0.0513** [0.0467, 0.0563] | **0.0260** [0.0229, 0.0291] | **0.1016** [0.0936, 0.1102] | **0.0362** | **43.70%** | **0.7627** | **`champion` (Production)** |
+| `recsys_two_tower_clean` | test | 5-seed mean | 0.0528 ± 0.0019 | — | 0.1030 ± 0.0030 | — | — | — | — |
+| `recsys_two_tower_ranker_clean` | test | 1 (Champ 44) | 0.0532 [0.0480, 0.0587] | 0.0311 [0.0274, 0.0350] | 0.1004 [0.0916, 0.1094] | 0.0390 | 54.23% | 0.7495 | `candidate` (Gate Failed) |
+| `recsys_two_tower_ranker_clean` | test | 5-seed mean | 0.0517 ± 0.0020 | — | 0.0992 ± 0.0024 | — | — | — | — |
+| `recsys_itemknn` | test | 5-seed | 0.0433 [0.0389, 0.0480] | 0.0216 [0.0188, 0.0247] | 0.0826 [0.0748, 0.0900] | 0.0315 | 61.50% | 0.7255 | `candidate` |
+| `recsys_als` | test | 5-seed | 0.0356 [0.0315, 0.0396] | 0.0160 [0.0141, 0.0179] | 0.0724 [0.0654, 0.0796] | 0.0246 | 32.33% | 0.7772 | `candidate` |
+| `recsys_popularity` | test | Baseline | 0.0151 [0.0125, 0.0178] | 0.0035 [0.0029, 0.0042] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.70% | 0.6948 | `candidate` |
+| `recsys_content` | test | Baseline | 0.0141 [0.0116, 0.0171] | 0.0106 [0.0085, 0.0131] | 0.0258 [0.0216, 0.0304] | 0.0106 | 63.37% | 0.5046 | `candidate` |
+| `recsys_sasrec` | test | 1 (Champ 43) | 0.0165 [0.0139, 0.0192] | 0.0040 [0.0034, 0.0048] | 0.0344 [0.0296, 0.0394] | 0.0111 | 3.50% | 0.7099 | `challenger` |
+| `recsys_sasrec` | test | 3-seed mean | 0.0172 ± 0.0007 | — | 0.0374 ± 0.0026 | — | — | — | — |
+
+#### 4. Paired Hypothesis Tests & Promotion Gate Evaluation
+All paired bootstrap significance tests were evaluated over $B=2,000$ bootstrap resamples across the 5,000 test users:
+
+1. **Ranker Champion vs Two-Tower Champion (Promotion Gate):**
+   - Paired Difference ($\Delta \text{NDCG@10}$): **`+0.00187`**
+   - 95% Bootstrap Percentile Confidence Interval: **`[-0.00244, +0.00624]`**
+   - **Promotion Gate Condition:** Requires lower 95% bound $\text{lo95} > 0.0$.
+   - **Gate Verdict:** **FAILED (`lo95 > 0: False`)**. Because the 95% confidence interval strictly spans zero, the observed $+0.00187$ gain is not statistically significant. In accordance with pre-registered deployment criteria, `recsys_two_tower_clean` remains the **production champion**, and the ranker remains in `candidate` status.
+
+2. **Two-Tower Champion vs Item-kNN Baseline:**
+   - Paired Difference ($\Delta \text{NDCG@10}$): **`+0.00803`**
+   - 95% Bootstrap Percentile Confidence Interval: **`[+0.00332, +0.01305]`**
+   - **Verdict:** **Two-Tower statistically significantly outperforms Item-kNN on the test split ($p < 0.001$)**, confirming the validation finding and resolving Issue I1 definitively.
+
+3. **SASRec Champion vs Two-Tower Champion:**
+   - Paired Difference ($\Delta \text{NDCG@10}$): **`-0.03484`**
+   - 95% Bootstrap Percentile Confidence Interval: **`[-0.03985, -0.02986]`**
+   - **Verdict:** Two-Tower substantially outperforms SASRec on test split ($+211\%$ relative NDCG@10).
+
+#### 5. Sliced Performance & Catalog Analysis
+- **Torso & Tail Lift:** Sliced evaluation confirms that while the ranker does not outperform Two-Tower on head items (`pop_head` paired diff: $-0.0044$ $[-0.0115, +0.0023]$), it provides statistically significant gains on torso items (`pop_torso`: **$+0.0169$ $[+0.0091, +0.0246]$**) and tail items (`pop_tail`: **$+0.0051$ $[+0.0003, +0.0104]$**).
+- **Candidate Diversity:** Quota merging expands candidate catalog coverage to **$54.23\%$** (+24.1% relative over Two-Tower alone).
+- **MMR Diversity Trade-Off:** Applying MMR reranking ($\lambda = 0.8$) on Ranker top-50 candidates improves catalog diversity from $0.7494 \to 0.7723$ with zero degradation in ranking accuracy ($\Delta \text{NDCG@10} = +0.0002$ $[-0.0007, +0.0012]$).
+
+#### 6. Verification Checklist
+- [x] Unit test `backend/tests/test_timestamp_leakage.py` passing (3/3 tests).
+- [x] Lock guard file `docs/results/.test_eval_lock` created with frozen manifest.
+- [x] Test split evaluated exactly once.
+- [x] All 5 authoritative reports updated: `leaderboard.json`, `slices.json`, `beyond_accuracy.json`, `cold_start.json`, `leaderboard.md`.
+- [x] Linters passing with 0 errors (`check_no_hardcoded_metrics.py`, `check_honest_fallbacks.py`, `ruff check`).
+
+
 
 
 

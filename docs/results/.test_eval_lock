@@ -1,0 +1,17 @@
+{
+  "locked_at": "2026-10-18T10:01:15.915531+00:00",
+  "runner": "backend/jobs/run_phase6_test_eval.py",
+  "dataset_version": "c662b8232dc0",
+  "seed": 42,
+  "frozen_manifest": {
+    "two_tower_champion": "recsys_two_tower_clean (seed 44)",
+    "ranker_champion": "recsys_two_tower_ranker_clean (seed 44)",
+    "routed_hybrid": "RoutedHybridRecommender (N=5 per-user z-score calibration)",
+    "sasrec_champion": "recsys_sasrec (seed 43)",
+    "itemknn": "recsys_itemknn (5 seeds, deterministic)",
+    "als": "recsys_als (5 seeds)",
+    "popularity": "recsys_popularity (baseline)",
+    "content": "recsys_content (baseline)"
+  },
+  "reason": "Phase H authoritative single final test split evaluation"
+}
