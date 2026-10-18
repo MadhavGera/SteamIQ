@@ -171,3 +171,87 @@ def test_routed_hybrid_zero_only_and_capped_boost():
     # Item 1 must retain primary score (10.0)
     assert np.isclose(sc[0, 1], 10.0)
 
+
+def test_compute_ranks_pessimistic_tie_handling():
+    """Verify that compute_ranks is strictly pessimistic on tied scores."""
+    from recsys.metrics import compute_ranks
+
+    # Case 1: All items have identical scores
+    # Scores: 10 items all with score 1.0, target is item 3
+    scores = np.ones((1, 10), dtype=np.float32)
+    targets = np.array([3], dtype=np.int64)
+    ranks = compute_ranks(scores, targets)
+    # In pessimistic tie-breaking, rank must be 10 (the worst possible rank)
+    assert ranks[0] == 10, f"Expected rank 10 for completely tied items, got {ranks[0]}"
+
+    # Case 2: Target is tied with 4 other items at top score 5.0, others have score 0.0
+    scores2 = np.zeros((1, 10), dtype=np.float32)
+    scores2[0, [0, 1, 2, 3, 4]] = 5.0
+    targets2 = np.array([2], dtype=np.int64)
+    ranks2 = compute_ranks(scores2, targets2)
+    # Target item 2 ties with items 0, 1, 3, 4. Pessimistic rank must be 5.
+    assert ranks2[0] == 5, f"Expected rank 5 for 5 tied top items, got {ranks2[0]}"
+
+
+def test_cold_start_artifact_integrity_and_hashes():
+    """Verify that cold_start.json has inference-time holdout nature and pinned SHA-256 config hashes."""
+    import hashlib
+    import json
+
+    report_path = Path("docs/results/cold_start.json")
+    assert report_path.exists(), "docs/results/cold_start.json does not exist"
+
+    with open(report_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    holdout = data["item_holdout_study"]
+    assert "inference-time item holdout (model not retrained)" in holdout["holdout_nature"]
+
+    configs = holdout["baseline_configs"]
+    hashes = holdout["baseline_hashes"]
+
+    expected_models = [
+        "cold_only_random",
+        "catalog_random",
+        "two_tower",
+        "content",
+        "routed_hybrid",
+        "routed_hybrid_zero_only",
+        "boost_cold_equal",
+        "boost_cold_capped",
+    ]
+    for model_name in expected_models:
+        assert model_name in configs, f"Missing config for {model_name}"
+        assert model_name in hashes, f"Missing hash for {model_name}"
+        # Verify SHA-256 matches
+        raw = json.dumps(configs[model_name], sort_keys=True).encode("utf-8")
+        computed_hash = hashlib.sha256(raw).hexdigest()[:16]
+        assert hashes[model_name] == computed_hash, f"Hash mismatch for {model_name}"
+
+
+def test_cohort_eval3_vs_pooled_reconciliation():
+    """
+    Verify the Round 3 vs Round 4 baseline reporting reconciliation:
+    - On cohort eval_3 (132 users), Two-Tower is 0.00619 and Content is 0.04365 across both rounds.
+    - On pooled evaluation (416 users), Two-Tower is 0.01315 and Content is 0.03131.
+    """
+    import json
+
+    report_path = Path("docs/results/cold_start.json")
+    with open(report_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    holdout = data["item_holdout_study"]
+    eval_3 = holdout["per_cohort"]["eval_3"]
+    assert eval_3["n_users"] == 132
+
+    # Verify eval_3 metrics match Round 3 numbers exactly
+    assert np.isclose(eval_3["models"]["two_tower"]["ndcg_at_10"], 0.00619, atol=1e-4)
+    assert np.isclose(eval_3["models"]["content"]["ndcg_at_10"], 0.04365, atol=1e-4)
+
+    # Verify pooled metrics match Round 4 pooled numbers
+    pooled = holdout["models"]
+    assert np.isclose(pooled["two_tower"]["ndcg_at_10"], 0.01315, atol=1e-4)
+    assert np.isclose(pooled["content"]["ndcg_at_10"], 0.03131, atol=1e-4)
+
+

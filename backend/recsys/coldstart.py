@@ -19,6 +19,8 @@ Rule 4: Zero FastAPI and zero database imports.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 from typing import Any
 
@@ -1316,6 +1318,91 @@ def evaluate_multi_cohort_holdout_study(
         f"(Group b paired Delta = {pooled_diff_b_hyb_vs_tt['diff_mean']:+.4f} [{pooled_diff_b_hyb_vs_tt['diff_lo95']:+.4f}, {pooled_diff_b_hyb_vs_tt['diff_hi95']:+.4f}])."
     )
 
+    def _compute_config_hash(cfg: dict[str, Any]) -> str:
+        raw = json.dumps(cfg, sort_keys=True).encode("utf-8")
+        return hashlib.sha256(raw).hexdigest()[:16]
+
+    baseline_configs = {
+        "cold_only_random": {
+            "model_name": "cold_only_random",
+            "description": "Analytic closed-form expectation over unmasked cold items",
+            "formula": "E[NDCG@10] = sum_{r=1}^{min(10, N)} (1/log2(r+1)) / (N * IDCG)",
+            "split": split,
+            "n_candidates": cohort_size,
+        },
+        "catalog_random": {
+            "model_name": "catalog_random",
+            "description": "Uniform random selection across entire catalog",
+            "split": split,
+            "n_items": int(n_items),
+        },
+        "random": {
+            "model_name": "catalog_random",
+            "description": "Uniform random selection across entire catalog",
+            "split": split,
+            "n_items": int(n_items),
+        },
+        "two_tower": {
+            "model_name": "recsys_two_tower_clean",
+            "description": "Two-Tower retriever with inference-time item neutralization (model not retrained)",
+            "holdout_type": "inference_time_neutralized_model_not_retrained",
+            "mask_ids": "held_out_items",
+            "neutralize_proxies": "held_out_items",
+            "seed": 44,
+            "split": split,
+        },
+        "content": {
+            "model_name": "recsys_content",
+            "description": "Cold-item content recommender with TF-IDF tags and description embeddings",
+            "weight_tags": 0.5,
+            "similarity": "cosine",
+            "split": split,
+        },
+        "routed_hybrid": {
+            "model_name": "routed_hybrid",
+            "description": "Tuned routed hybrid combining Two-Tower and Content",
+            "cold_threshold": locked_config["cold_threshold"],
+            "route_zero_only": locked_config["route_zero_only"],
+            "cap_sigma": locked_config.get("cap_sigma", 3.0),
+            "split": split,
+        },
+        "routed_hybrid_zero_only": {
+            "model_name": "routed_hybrid_zero_only",
+            "description": "Zero-interaction routing variant",
+            "cold_threshold": 0,
+            "route_zero_only": True,
+            "cap_sigma": 3.0,
+            "split": split,
+        },
+        "boost_cold_equal": {
+            "model_name": "boost_cold_equal",
+            "description": "Uniform score boost (+50.0) applied to all cold items",
+            "boost_constant": 50.0,
+            "tie_handling": "pessimistic_vectorized",
+            "split": split,
+        },
+        "boost_cold_capped": {
+            "model_name": "boost_cold_capped",
+            "description": "Variance-scaled score boost (+1.5 * user_std) on cold items",
+            "boost_multiplier": 1.5,
+            "tie_handling": "pessimistic_vectorized",
+            "split": split,
+        },
+    }
+    baseline_hashes = {k: _compute_config_hash(v) for k, v in baseline_configs.items()}
+
+    # Attach configs and hashes to pooled summary models
+    for m_k, s_dict in [
+        ("content", pooled_a_cnt),
+        ("two_tower", pooled_a_tt),
+        ("routed_hybrid", pooled_a_hyb),
+        ("routed_hybrid_zero_only", pooled_a_hyb_zero),
+        ("boost_cold_equal", pooled_a_bst),
+        ("boost_cold_capped", pooled_a_bst_cap),
+    ]:
+        s_dict["config"] = baseline_configs[m_k]
+        s_dict["config_hash"] = baseline_hashes[m_k]
+
     return {
         "study_type": "item_holdout_multi_cohort_disjoint",
         "primary_evidence": True,
@@ -1331,6 +1418,15 @@ def evaluate_multi_cohort_holdout_study(
             "locked_config": locked_config,
         },
         "evaluation_cohort_items": {k: cohorts[k] for k in eval_cohort_keys},
+        "holdout_nature": "inference-time item holdout (model not retrained)",
+        "holdout_note": (
+            "Two-Tower neural weights were pre-trained on full training split; at inference time, "
+            "withheld item ID embeddings and popularity proxies are strictly zeroed and neutralized "
+            "(mask_ids=ho_list, neutralize_proxies=ho_list). This isolates the generalization of text, "
+            "tag, and numeric representations without requiring destructive catalog retraining."
+        ),
+        "baseline_configs": baseline_configs,
+        "baseline_hashes": baseline_hashes,
         "evidence_grade": grade_info["grade"],
         "evidence_status": grade_info["grade"],
         "evidence_rule": grade_info["rule"],

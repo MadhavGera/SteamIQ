@@ -11,7 +11,7 @@
       44
     ],
     "cold_threshold": 5,
-    "generated_at": "2026-10-18T18:35:34.665716+00:00"
+    "generated_at": "2026-10-18T20:58:11.570814+00:00"
   },
   "item_holdout_study": {
     "study_type": "item_holdout_multi_cohort_disjoint",
@@ -930,6 +930,86 @@
         2809
       ]
     },
+    "holdout_nature": "inference-time item holdout (model not retrained)",
+    "holdout_note": "Two-Tower neural weights were pre-trained on full training split; at inference time, withheld item ID embeddings and popularity proxies are strictly zeroed and neutralized (mask_ids=ho_list, neutralize_proxies=ho_list). This isolates the generalization of text, tag, and numeric representations without requiring destructive catalog retraining.",
+    "baseline_configs": {
+      "cold_only_random": {
+        "model_name": "cold_only_random",
+        "description": "Analytic closed-form expectation over unmasked cold items",
+        "formula": "E[NDCG@10] = sum_{r=1}^{min(10, N)} (1/log2(r+1)) / (N * IDCG)",
+        "split": "val",
+        "n_candidates": 200
+      },
+      "catalog_random": {
+        "model_name": "catalog_random",
+        "description": "Uniform random selection across entire catalog",
+        "split": "val",
+        "n_items": 3000
+      },
+      "random": {
+        "model_name": "catalog_random",
+        "description": "Uniform random selection across entire catalog",
+        "split": "val",
+        "n_items": 3000
+      },
+      "two_tower": {
+        "model_name": "recsys_two_tower_clean",
+        "description": "Two-Tower retriever with inference-time item neutralization (model not retrained)",
+        "holdout_type": "inference_time_neutralized_model_not_retrained",
+        "mask_ids": "held_out_items",
+        "neutralize_proxies": "held_out_items",
+        "seed": 44,
+        "split": "val"
+      },
+      "content": {
+        "model_name": "recsys_content",
+        "description": "Cold-item content recommender with TF-IDF tags and description embeddings",
+        "weight_tags": 0.5,
+        "similarity": "cosine",
+        "split": "val"
+      },
+      "routed_hybrid": {
+        "model_name": "routed_hybrid",
+        "description": "Tuned routed hybrid combining Two-Tower and Content",
+        "cold_threshold": 0,
+        "route_zero_only": true,
+        "cap_sigma": null,
+        "split": "val"
+      },
+      "routed_hybrid_zero_only": {
+        "model_name": "routed_hybrid_zero_only",
+        "description": "Zero-interaction routing variant",
+        "cold_threshold": 0,
+        "route_zero_only": true,
+        "cap_sigma": 3.0,
+        "split": "val"
+      },
+      "boost_cold_equal": {
+        "model_name": "boost_cold_equal",
+        "description": "Uniform score boost (+50.0) applied to all cold items",
+        "boost_constant": 50.0,
+        "tie_handling": "pessimistic_vectorized",
+        "split": "val"
+      },
+      "boost_cold_capped": {
+        "model_name": "boost_cold_capped",
+        "description": "Variance-scaled score boost (+1.5 * user_std) on cold items",
+        "boost_multiplier": 1.5,
+        "tie_handling": "pessimistic_vectorized",
+        "split": "val"
+      }
+    },
+    "baseline_hashes": {
+      "cold_only_random": "6a902498022970a2",
+      "catalog_random": "cdcb28cfd80e2a9b",
+      "random": "cdcb28cfd80e2a9b",
+      "two_tower": "9c93424e8370cf72",
+      "content": "25d8da81806ff991",
+      "routed_hybrid": "87dda3f2b5368282",
+      "routed_hybrid_zero_only": "74571d425757e2f0",
+      "boost_cold_equal": "d95aac4f228581ce",
+      "boost_cold_capped": "c92d86a4ed2adff2"
+    },
     "evidence_grade": "WEAK",
     "evidence_status": "WEAK",
     "evidence_rule": "STRONG only if Group (a) NDCG@10 lower CI bound > 2x cold-only random baseline AND Group (b) paired difference CI does not show a significant loss (hi95 >= 0). MODERATE if Group (a) lower CI bound > 1x cold-only random. Otherwise WEAK.",
@@ -970,7 +1050,15 @@
             "hit_rate_at_10_hi95": 0.07211538461538461,
             "mean_rank": 1136.8221153846155,
             "mean_rank_lo95": 1045.02265625,
-            "mean_rank_hi95": 1222.5140625
+            "mean_rank_hi95": 1222.5140625,
+            "config": {
+              "model_name": "recsys_content",
+              "description": "Cold-item content recommender with TF-IDF tags and description embeddings",
+              "weight_tags": 0.5,
+              "similarity": "cosine",
+              "split": "val"
+            },
+            "config_hash": "25d8da81806ff991"
           },
           "two_tower": {
             "n_users": 416,
@@ -982,7 +1070,17 @@
             "hit_rate_at_10_hi95": 0.040865384615384616,
             "mean_rank": 781.8485576923077,
             "mean_rank_lo95": 711.9621995192307,
-            "mean_rank_hi95": 852.1881610576922
+            "mean_rank_hi95": 852.1881610576922,
+            "config": {
+              "model_name": "recsys_two_tower_clean",
+              "description": "Two-Tower retriever with inference-time item neutralization (model not retrained)",
+              "holdout_type": "inference_time_neutralized_model_not_retrained",
+              "mask_ids": "held_out_items",
+              "neutralize_proxies": "held_out_items",
+              "seed": 44,
+              "split": "val"
+            },
+            "config_hash": "9c93424e8370cf72"
           },
           "routed_hybrid": {
             "n_users": 416,
@@ -994,7 +1092,16 @@
             "hit_rate_at_10_hi95": 0.07932692307692307,
             "mean_rank": 1131.7764423076924,
             "mean_rank_lo95": 1045.2309495192308,
-            "mean_rank_hi95": 1216.1953124999998
+            "mean_rank_hi95": 1216.1953124999998,
+            "config": {
+              "model_name": "routed_hybrid",
+              "description": "Tuned routed hybrid combining Two-Tower and Content",
+              "cold_threshold": 0,
+              "route_zero_only": true,
+              "cap_sigma": null,
+              "split": "val"
+            },
+            "config_hash": "87dda3f2b5368282"
           },
           "routed_hybrid_zero_only": {
             "n_users": 416,
@@ -1006,7 +1113,16 @@
             "hit_rate_at_10_hi95": 0.07932692307692307,
             "mean_rank": 1131.7764423076924,
             "mean_rank_lo95": 1045.2309495192308,
-            "mean_rank_hi95": 1216.1953124999998
+            "mean_rank_hi95": 1216.1953124999998,
+            "config": {
+              "model_name": "routed_hybrid_zero_only",
+              "description": "Zero-interaction routing variant",
+              "cold_threshold": 0,
+              "route_zero_only": true,
+              "cap_sigma": 3.0,
+              "split": "val"
+            },
+            "config_hash": "74571d425757e2f0"
           },
           "boost_cold_equal": {
             "n_users": 416,
@@ -1018,7 +1134,15 @@
             "hit_rate_at_10_hi95": 0.4182692307692308,
             "mean_rank": 39.81971153846154,
             "mean_rank_lo95": 35.45192307692307,
-            "mean_rank_hi95": 44.46923076923077
+            "mean_rank_hi95": 44.46923076923077,
+            "config": {
+              "model_name": "boost_cold_equal",
+              "description": "Uniform score boost (+50.0) applied to all cold items",
+              "boost_constant": 50.0,
+              "tie_handling": "pessimistic_vectorized",
+              "split": "val"
+            },
+            "config_hash": "d95aac4f228581ce"
           },
           "boost_cold_capped": {
             "n_users": 416,
@@ -1030,7 +1154,15 @@
             "hit_rate_at_10_hi95": 0.3798076923076923,
             "mean_rank": 160.0528846153846,
             "mean_rank_lo95": 130.95733173076923,
-            "mean_rank_hi95": 190.78287259615385
+            "mean_rank_hi95": 190.78287259615385,
+            "config": {
+              "model_name": "boost_cold_capped",
+              "description": "Variance-scaled score boost (+1.5 * user_std) on cold items",
+              "boost_multiplier": 1.5,
+              "tie_handling": "pessimistic_vectorized",
+              "split": "val"
+            },
+            "config_hash": "c92d86a4ed2adff2"
           }
         },
         "paired_diff_hybrid_vs_two_tower": {
@@ -1150,7 +1282,15 @@
         "hit_rate_at_10_hi95": 0.07211538461538461,
         "mean_rank": 1136.8221153846155,
         "mean_rank_lo95": 1045.02265625,
-        "mean_rank_hi95": 1222.5140625
+        "mean_rank_hi95": 1222.5140625,
+        "config": {
+          "model_name": "recsys_content",
+          "description": "Cold-item content recommender with TF-IDF tags and description embeddings",
+          "weight_tags": 0.5,
+          "similarity": "cosine",
+          "split": "val"
+        },
+        "config_hash": "25d8da81806ff991"
       },
       "two_tower": {
         "n_users": 416,
@@ -1162,7 +1302,17 @@
         "hit_rate_at_10_hi95": 0.040865384615384616,
         "mean_rank": 781.8485576923077,
         "mean_rank_lo95": 711.9621995192307,
-        "mean_rank_hi95": 852.1881610576922
+        "mean_rank_hi95": 852.1881610576922,
+        "config": {
+          "model_name": "recsys_two_tower_clean",
+          "description": "Two-Tower retriever with inference-time item neutralization (model not retrained)",
+          "holdout_type": "inference_time_neutralized_model_not_retrained",
+          "mask_ids": "held_out_items",
+          "neutralize_proxies": "held_out_items",
+          "seed": 44,
+          "split": "val"
+        },
+        "config_hash": "9c93424e8370cf72"
       },
       "routed_hybrid": {
         "n_users": 416,
@@ -1174,7 +1324,16 @@
         "hit_rate_at_10_hi95": 0.07932692307692307,
         "mean_rank": 1131.7764423076924,
         "mean_rank_lo95": 1045.2309495192308,
-        "mean_rank_hi95": 1216.1953124999998
+        "mean_rank_hi95": 1216.1953124999998,
+        "config": {
+          "model_name": "routed_hybrid",
+          "description": "Tuned routed hybrid combining Two-Tower and Content",
+          "cold_threshold": 0,
+          "route_zero_only": true,
+          "cap_sigma": null,
+          "split": "val"
+        },
+        "config_hash": "87dda3f2b5368282"
       },
       "routed_hybrid_zero_only": {
         "n_users": 416,
@@ -1186,7 +1345,16 @@
         "hit_rate_at_10_hi95": 0.07932692307692307,
         "mean_rank": 1131.7764423076924,
         "mean_rank_lo95": 1045.2309495192308,
-        "mean_rank_hi95": 1216.1953124999998
+        "mean_rank_hi95": 1216.1953124999998,
+        "config": {
+          "model_name": "routed_hybrid_zero_only",
+          "description": "Zero-interaction routing variant",
+          "cold_threshold": 0,
+          "route_zero_only": true,
+          "cap_sigma": 3.0,
+          "split": "val"
+        },
+        "config_hash": "74571d425757e2f0"
       },
       "boost_cold_equal": {
         "n_users": 416,
@@ -1198,7 +1366,15 @@
         "hit_rate_at_10_hi95": 0.4182692307692308,
         "mean_rank": 39.81971153846154,
         "mean_rank_lo95": 35.45192307692307,
-        "mean_rank_hi95": 44.46923076923077
+        "mean_rank_hi95": 44.46923076923077,
+        "config": {
+          "model_name": "boost_cold_equal",
+          "description": "Uniform score boost (+50.0) applied to all cold items",
+          "boost_constant": 50.0,
+          "tie_handling": "pessimistic_vectorized",
+          "split": "val"
+        },
+        "config_hash": "d95aac4f228581ce"
       },
       "boost_cold_capped": {
         "n_users": 416,
@@ -1210,7 +1386,15 @@
         "hit_rate_at_10_hi95": 0.3798076923076923,
         "mean_rank": 160.0528846153846,
         "mean_rank_lo95": 130.95733173076923,
-        "mean_rank_hi95": 190.78287259615385
+        "mean_rank_hi95": 190.78287259615385,
+        "config": {
+          "model_name": "boost_cold_capped",
+          "description": "Variance-scaled score boost (+1.5 * user_std) on cold items",
+          "boost_multiplier": 1.5,
+          "tie_handling": "pessimistic_vectorized",
+          "split": "val"
+        },
+        "config_hash": "c92d86a4ed2adff2"
       }
     },
     "per_cohort": {
