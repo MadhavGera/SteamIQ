@@ -97,8 +97,8 @@ class SASRecModule(nn.Module):
 
         self.log_tau = nn.Parameter(torch.tensor(math.log(config.init_tau), dtype=torch.float32))
 
-        # Register causal mask buffer
-        causal = torch.triu(torch.full((config.max_len, config.max_len), float("-inf")), diagonal=1)
+        # Register causal mask buffer (bool: True where attention is masked/forbidden)
+        causal = torch.triu(torch.ones((config.max_len, config.max_len), dtype=torch.bool), diagonal=1)
         self.register_buffer("causal_mask", causal)
 
         self._init_weights()
@@ -139,11 +139,32 @@ class SASRecModule(nn.Module):
         x = self.emb_layernorm(item_emb + self.pos_embedding(pos_ids))
         x = self.emb_dropout(x)
 
-        causal_mask = self.causal_mask[: self.max_len, : self.max_len]
-        out = self.encoder(x, mask=causal_mask)
+        # Unified causal + padding attention mask [B * n_heads, max_len, max_len]
+        # Start with causal upper triangle (True = masked / cannot attend)
+        B = seq_ids.size(0)
+        L = self.max_len
+        causal = self.causal_mask[:L, :L]
+        mask = causal.unsqueeze(0).expand(B, L, L).clone()
+        pad_keys = (seq_ids == 0).unsqueeze(1)  # [B, 1, L]
+        mask = mask | pad_keys
 
-        # Extract sequence representation from the rightmost (last) position
-        user_vec = out[:, -1, :]
+        # For pad query positions where all keys are masked, unmask self (i, i) to prevent NaN in softmax
+        all_masked = mask.all(dim=-1)
+        if all_masked.any():
+            b_idx, i_idx = torch.where(all_masked)
+            mask[b_idx, i_idx, i_idx] = False
+
+        attn_mask = mask.repeat_interleave(self.config.n_heads, dim=0)
+        out = self.encoder(x, mask=attn_mask)
+
+        # Extract sequence representation from the last non-pad position
+        non_pad = (seq_ids != 0)
+        seq_len = seq_ids.size(1)
+        indices = torch.arange(seq_len, device=device).unsqueeze(0).expand_as(seq_ids)
+        masked_indices = torch.where(non_pad, indices, -1)
+        last_non_pad_idx = masked_indices.max(dim=1).values
+        last_non_pad_idx = torch.where(last_non_pad_idx >= 0, last_non_pad_idx, seq_len - 1)
+        user_vec = out[torch.arange(seq_ids.size(0), device=device), last_non_pad_idx]
         return F.normalize(user_vec, p=2, dim=-1)
 
     def encode_target(

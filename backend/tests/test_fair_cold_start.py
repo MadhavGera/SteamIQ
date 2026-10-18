@@ -122,3 +122,52 @@ def test_grading_rule_synthetic_cases():
     )
     assert res4["grade"] == "WEAK"
     assert res4["beats_single_cold_random"] is False
+
+
+def test_routed_hybrid_zero_only_and_capped_boost():
+    """Verify route_zero_only and cap_sigma routing behavior."""
+    from recsys.models.base import BaseRecommender
+    from recsys.models.routed_hybrid import RoutedHybridRecommender
+
+    class MockPrimary(BaseRecommender):
+        name = "mock_primary"
+        def fit(self, data): pass
+        def save(self, path): pass
+        @classmethod
+        def load(cls, path): return cls()
+        def score(self, histories, **kwargs):
+            # 3 items, base score = 10.0
+            return np.full((len(histories), 3), 10.0, dtype=np.float32)
+
+    class MockCold(BaseRecommender):
+        name = "mock_cold"
+        def fit(self, data): pass
+        def save(self, path): pass
+        @classmethod
+        def load(cls, path): return cls()
+        def score(self, histories, **kwargs):
+            # item 0 has high content score
+            res = np.zeros((len(histories), 3), dtype=np.float32)
+            res[:, 0] = 5.0
+            return res
+
+    prim = MockPrimary()
+    cold = MockCold()
+
+    # Route zero only: item 0 has 0 pop, item 1 has 3 pop, item 2 has 10 pop
+    hyb = RoutedHybridRecommender(
+        primary_model=prim,
+        cold_model=cold,
+        cold_threshold=5,
+        route_zero_only=True,
+        cap_sigma=1.0,
+    )
+    hyb.item_train_pop = np.array([0, 3, 10], dtype=np.int64)
+
+    # With route_zero_only=True, only item 0 is routed to cold model; item 1 (pop=3) is NOT routed
+    # Even though pop=3 < cold_threshold=5
+    sc = hyb.score([np.array([1, 2])])
+    assert sc.shape == (1, 3)
+    # Item 1 must retain primary score (10.0)
+    assert np.isclose(sc[0, 1], 10.0)
+

@@ -23,38 +23,38 @@
 ---
 
 ## 3. Quantitative Performance & Empirical Evidence
-Evaluated across 5,000 held-out evaluation users with 95% bootstrap confidence intervals (Champion Seed 43 and 3-seed sweep across seeds 42–44):
+Evaluated across 5,000 held-out evaluation users with 95% bootstrap confidence intervals (Champion Seed 43 and 3-seed sweep across seeds 42–44 following Round 4 token alignment and causal mask bugfix):
 
 | Metric | Champion Validation (95% CI) | Champion Test (95% CI) | 3-Seed Validation (Mean ± Std) | 3-Seed Test (Mean ± Std) |
 |---|:---:|:---:|:---:|:---:|
-| **NDCG@10** | 0.0216 [0.0187, 0.0246] | **0.0165** [0.0139, 0.0192] | 0.0217 ± 0.0005 | 0.0172 ± 0.0007 |
-| **Hit Rate@10** | 0.0446 [0.0388, 0.0504] | **0.0344** [0.0296, 0.0394] | 0.0453 ± 0.0006 | 0.0374 ± 0.0026 |
-| **MRR@10** | 0.0148 [0.0124, 0.0172] | **0.0111** [0.0090, 0.0133] | 0.0147 ± 0.0003 | 0.0117 ± 0.0006 |
-| **SNIPS-NDCG@10** | 0.0062 [0.0053, 0.0071] | **0.0040** [0.0034, 0.0048] | 0.0062 ± 0.0001 | 0.0043 ± 0.0003 |
-| **Catalog Coverage@10** | 3.40% | **3.50%** | 2.96% | 3.20% |
-| **Novelty@10** | 7.72 bits | **7.73 bits** | 7.73 bits | 7.73 bits |
-| **Diversity@10** | 0.7095 | **0.7099** | 0.7120 | 0.7110 |
+| **NDCG@10** | 0.0488 [0.0443, 0.0535] | **0.0420** [0.0379, 0.0465] | 0.0491 ± 0.0007 | 0.0424 ± 0.0004 |
+| **Hit Rate@10** | 0.0974 [0.0888, 0.1056] | **0.0824** [0.0750, 0.0900] | 0.0988 ± 0.0016 | 0.0833 ± 0.0010 |
+| **MRR@10** | 0.0341 [0.0304, 0.0382] | **0.0297** [0.0263, 0.0336] | 0.0342 ± 0.0005 | 0.0301 ± 0.0003 |
+| **SNIPS-NDCG@10** | 0.0202 [0.0181, 0.0223] | **0.0143** [0.0127, 0.0159] | 0.0206 ± 0.0003 | 0.0145 ± 0.0002 |
+| **Catalog Coverage@10** | 17.90% | **18.13%** | 18.21% ± 0.35% | 18.20% ± 0.09% |
+| **Novelty@10** | 8.57 bits | **8.64 bits** | 8.58 ± 0.01 bits | 8.64 ± 0.02 bits |
+| **Diversity@10** | 0.7460 | **0.7485** | 0.7491 ± 0.0032 | 0.7517 ± 0.0031 |
 
 - **Paired Comparison vs Two-Tower Champion (Seed 44):**
-  - Validation Paired Diff: **`-0.0393`** (95% CI: `[-0.0450, -0.0340]`)
-  - Test Paired Diff: **`-0.0348`** (95% CI: `[-0.0399, -0.0299]`)
-  - **Verdict:** Two-Tower outperforms SASRec by $+211\%$ relative NDCG@10 on test split ($p < 0.001$).
+  - Validation Paired Diff: **`-0.0123`** (95% CI: `[-0.0172, -0.0078]`)
+  - Test Paired Diff: **`-0.0093`** (95% CI: `[-0.0142, -0.0044]`)
+  - **Verdict:** Two-Tower retains a statistically significant lead over SASRec due to rich multimodal feature blending (text + tags + continuous signals), but the gap is dramatically narrower than in earlier rounds (-0.0093 vs -0.0348 previously) following token alignment correction.
 
 ---
 
 ## 4. Serving Latency & Candidate Union Recall
 - **Measured CPU Inference Latency (1,000 requests on Intel Tiger Lake):**
-  - Median ($P_{50}$): **1.07 ms**
-  - 90th Percentile ($P_{90}$): **1.42 ms**
-  - 95th Percentile ($P_{95}$): **1.71 ms** (SLA target $< 50\text{ ms}$)
-  - 99th Percentile ($P_{99}$): **2.51 ms**
+  - Median ($P_{50}$): **2.29 ms**
+  - 90th Percentile ($P_{90}$): **2.96 ms**
+  - 95th Percentile ($P_{95}$): **3.23 ms** (SLA target $< 50\text{ ms}$)
+  - 99th Percentile ($P_{99}$): **4.05 ms**
 - **Candidate Pool Recall Lift (1,000 users, Top-100 candidates):**
   - Two-Tower alone Recall@100: **41.80%**
-  - SASRec alone Recall@100: **26.70%**
-  - Union (Two-Tower + SASRec, 200 candidates): **48.70%** (**+16.5% relative recall lift**)
+  - SASRec alone Recall@100: **38.40%**
+  - Union (Two-Tower + SASRec, 200 candidates): **49.70%** (**+18.9% relative recall lift**)
 
 ---
 
 ## 5. Limitations & Caveats
-1. **Short History Sparsity:** Sequential self-attention mechanisms require longer history sequences to build rich contextual representations; gaming libraries with $<5$ interactions provide limited chronological signals.
-2. **Catalog Concentration:** Coverage is restricted to active game sequences (3.5% catalog coverage@10), concentrating top recommendations on frequently transitioned titles.
+1. **Multimodal Representation Advantage:** Pure sequential self-attention over item IDs learns high-quality transition patterns (reaching NDCG@10 = 0.0541 on short histories), but does not fully replace multimodal tag and description embeddings on sparse catalogs.
+2. **Complementary Stage 1 Retrieval Role:** While Two-Tower serves as the primary retriever, SASRec provides strong complementary coverage: blending SASRec top-100 candidates lifts candidate pool recall from 41.8% to 49.7% (+18.9% relative lift).

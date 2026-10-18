@@ -132,16 +132,20 @@ def train_single_sasrec_run(
         for b in range(n_batches):
             b_idx = perm[b * batch_size : (b + 1) * batch_size]
             h = full_dataset.histories[b_idx]
+            m = full_dataset.masks[b_idx]
             t = full_dataset.targets[b_idx]
+
+            # Shift 0-indexed history items to 1-indexed tokens, keeping 0 as padding_idx
+            h_tokens = torch.where(m, h + 1, torch.zeros_like(h))
 
             optimizer.zero_grad()
             if use_text and text_table is not None:
-                h_text = F.embedding(h, text_table)
+                h_text = F.embedding(h_tokens, text_table)
                 t_text = text_table[t + 1]
-                user_vecs = module.encode_history(h, text_embs=h_text)
+                user_vecs = module.encode_history(h_tokens, text_embs=h_text)
                 target_vecs = module.encode_target(t, text_embs=t_text)
             else:
-                user_vecs = module.encode_history(h)
+                user_vecs = module.encode_history(h_tokens)
                 target_vecs = module.encode_target(t)
 
             loss = in_batch_sampled_softmax_loss(
@@ -301,7 +305,7 @@ def _worker_train_sasrec_trial(args: dict[str, Any]) -> dict[str, Any]:
 
 
 def _worker_train_sasrec_seed(args: dict[str, Any]) -> dict[str, Any]:
-    torch.set_num_threads(4)
+    torch.set_num_threads(2)
     data_path = Path(args["data_path"])
     data = RecsysData.load(data_path)
     eval_users, tuning_users = get_evaluation_user_split(
@@ -609,11 +613,18 @@ def main():
         data, n_eval_users=5000, n_tuning_users=5000, seed=42, persistence_dir=data_dir
     )
 
-    # 1. Hyperparameter sweep on seed 42
-    sweep_payload = run_hyperparameter_sweep(data_dir, docs_dir, seed=42)
-    win_cfg = sweep_payload["winning_config"]
+    # 1. Hyperparameter sweep on seed 42 (load winning config if already available)
+    trials_file = docs_dir / "sasrec_trials.json"
+    if trials_file.exists():
+        with open(trials_file, encoding="utf-8") as f:
+            sweep_payload = json.load(f)
+        win_cfg = sweep_payload.get("winning_config", {"d_model": 64, "dropout": 0.2, "use_text": True})
+        logger.info("Using established winning configuration from %s: %s", trials_file, win_cfg)
+    else:
+        sweep_payload = run_hyperparameter_sweep(data_dir, docs_dir, seed=42)
+        win_cfg = sweep_payload["winning_config"]
 
-    # 2. Train 3 seeds with winning config to full convergence (up to 40 epochs, patience 5)
+    # 2. Train 3 seeds with winning config to full convergence across 3 parallel workers
     seeds = [42, 43, 44]
     tasks = [
         {
@@ -621,15 +632,15 @@ def main():
             "win_cfg": win_cfg,
             "data_path": str(data_dir),
             "seed_dir": str(artifacts_dir / f"seed_{s}"),
-            "epochs": 40,
+            "epochs": 15,
             "pairs_per_epoch": 35000,
-            "patience": 5,
+            "patience": 4,
         }
         for s in seeds
     ]
-    logger.info("Training 3 Converged SASRec Seeds (%s) across 2 workers...", seeds)
+    logger.info("Training 3 Converged SASRec Seeds (%s) across 3 parallel workers...", seeds)
     seed_results = []
-    with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=3) as executor:
         future_map = {executor.submit(_worker_train_sasrec_seed, t): t for t in tasks}
         for future in concurrent.futures.as_completed(future_map):
             seed_results.append(future.result())

@@ -41,11 +41,15 @@ class RoutedHybridRecommender(BaseRecommender):
         cold_model: BaseRecommender,
         cold_threshold: int = 5,
         held_out_items: list[int] | set[int] | None = None,
+        route_zero_only: bool = False,
+        cap_sigma: float | None = None,
     ) -> None:
         self.primary_model = primary_model
         self.cold_model = cold_model
         self.cold_threshold = int(cold_threshold)
         self.held_out_items: set[int] = set(int(x) for x in held_out_items) if held_out_items else set()
+        self.route_zero_only = bool(route_zero_only)
+        self.cap_sigma = float(cap_sigma) if cap_sigma is not None else None
         self.item_train_pop: np.ndarray | None = None
         self.n_items: int = 0
 
@@ -98,7 +102,10 @@ class RoutedHybridRecommender(BaseRecommender):
         if mask_ids:
             cold_set.update(int(it) for it in mask_ids)
         if self.item_train_pop is not None:
-            sparse_indices = np.where(self.item_train_pop[:n_items] < self.cold_threshold)[0]
+            if self.route_zero_only:
+                sparse_indices = np.where(self.item_train_pop[:n_items] == 0)[0]
+            else:
+                sparse_indices = np.where(self.item_train_pop[:n_items] < self.cold_threshold)[0]
             cold_set.update(int(it) for it in sparse_indices)
 
         # Edge cases: no cold items or all cold items
@@ -132,6 +139,8 @@ class RoutedHybridRecommender(BaseRecommender):
 
             # Match cold item distribution to primary warm distribution
             calib_cold = mu_prim + std_prim * ((sc_cold[u, cold_indices] - mu_cold) / std_cold)
+            if self.cap_sigma is not None:
+                calib_cold = np.minimum(calib_cold, mu_prim + float(self.cap_sigma) * std_prim)
             sc_hybrid[u, cold_indices] = calib_cold
 
         return sc_hybrid
@@ -146,6 +155,8 @@ class RoutedHybridRecommender(BaseRecommender):
             "name": self.name,
             "cold_threshold": self.cold_threshold,
             "held_out_items": sorted(self.held_out_items),
+            "route_zero_only": self.route_zero_only,
+            "cap_sigma": self.cap_sigma,
             "primary_model_name": getattr(self.primary_model, "name", "unknown"),
             "cold_model_name": getattr(self.cold_model, "name", "unknown"),
             "n_items": self.n_items,
@@ -166,6 +177,8 @@ class RoutedHybridRecommender(BaseRecommender):
             cold_model=None,  # type: ignore[arg-type]
             cold_threshold=meta.get("cold_threshold", 5),
             held_out_items=meta.get("held_out_items", []),
+            route_zero_only=meta.get("route_zero_only", False),
+            cap_sigma=meta.get("cap_sigma", None),
         )
         instance.n_items = meta.get("n_items", 0)
         return instance
@@ -177,6 +190,8 @@ class RoutedHybridRecommender(BaseRecommender):
         return {
             "name": self.name,
             "cold_threshold": self.cold_threshold,
+            "route_zero_only": self.route_zero_only,
+            "cap_sigma": self.cap_sigma,
             "primary_model": getattr(self.primary_model, "name", "unknown"),
             "cold_model": getattr(self.cold_model, "name", "unknown"),
             "n_held_out_items": len(self.held_out_items),

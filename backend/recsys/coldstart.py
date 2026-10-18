@@ -942,12 +942,18 @@ def evaluate_multi_cohort_holdout_study(
     tuning_items = cohorts["tuning"]
     tuning_set = set(tuning_items)
 
-    # 2. Tune routing threshold N on tuning cohort
-    logger.info("Tuning routing threshold N in {5, 10, 20, 50} on tuning cohort (%d items)...", len(tuning_items))
-    candidate_Ns = [5, 10, 20, 50]
-    best_N = 5
-    best_tuning_ndcg = -1.0
-    tuning_trials: dict[str, Any] = {}
+    # 2. Tune routing variants on tuning cohort
+    logger.info("Tuning routing variants on tuning cohort (%d items)...", len(tuning_items))
+    candidate_configs = [
+        {"name": "zero_only", "route_zero_only": True, "cold_threshold": 0, "cap_sigma": None},
+        {"name": "zero_only_capped_3.0", "route_zero_only": True, "cold_threshold": 0, "cap_sigma": 3.0},
+        {"name": "zero_only_capped_2.8", "route_zero_only": True, "cold_threshold": 0, "cap_sigma": 2.8},
+        {"name": "threshold_5", "route_zero_only": False, "cold_threshold": 5, "cap_sigma": None},
+        {"name": "threshold_5_capped_3.0", "route_zero_only": False, "cold_threshold": 5, "cap_sigma": 3.0},
+        {"name": "threshold_10", "route_zero_only": False, "cold_threshold": 10, "cap_sigma": None},
+        {"name": "threshold_20", "route_zero_only": False, "cold_threshold": 20, "cap_sigma": None},
+        {"name": "threshold_50", "route_zero_only": False, "cold_threshold": 50, "cap_sigma": None},
+    ]
 
     tuning_users_a = [int(u) for u in eval_users_arr if int(target_map.get(int(u), -1)) in tuning_set]
     tuning_users_b = [int(u) for u in eval_users_arr if int(target_map.get(int(u), -1)) not in tuning_set][:500]
@@ -957,15 +963,28 @@ def evaluate_multi_cohort_holdout_study(
 
     if isinstance(primary_model, TwoTowerModel):
         mvec_tune = primary_model.item_vectors(mask_ids=tuning_items, neutralize_proxies=tuning_items)
+        sc_tt_b = primary_model.score(h_tb, item_vecs=mvec_tune, mask_ids=tuning_items, neutralize_proxies=tuning_items).copy()
     else:
         mvec_tune = None
+        sc_tt_b = primary_model.score(h_tb).copy()
 
-    for n_val in candidate_Ns:
+    for i, sm in enumerate(sm_tb):
+        sc_tt_b[i, list(sm)] = -np.inf
+    rks_tt_b = compute_ranks(sc_tt_b, np.array(t_tb))
+    nd_tt_b = float(np.mean(ndcg_at_k(rks_tt_b, 10)))
+
+    tuning_trials: dict[str, Any] = {}
+    best_cfg = candidate_configs[0]
+    best_tuning_ndcg = -1.0
+
+    for cfg_opt in candidate_configs:
         hyb_tune = RoutedHybridRecommender(
             primary_model=primary_model,
             cold_model=cold_model,
-            cold_threshold=n_val,
+            cold_threshold=cfg_opt["cold_threshold"],
             held_out_items=tuning_set,
+            route_zero_only=cfg_opt["route_zero_only"],
+            cap_sigma=cfg_opt["cap_sigma"],
         )
         hyb_tune.fit(data)
 
@@ -980,21 +999,48 @@ def evaluate_multi_cohort_holdout_study(
             sc_b[i, list(sm)] = -np.inf
         rks_b = compute_ranks(sc_b, np.array(t_tb))
         nd_b = float(np.mean(ndcg_at_k(rks_b, 10)))
+        warm_loss = float(nd_b - nd_tt_b)
 
-        tuning_trials[str(n_val)] = {"group_a_ndcg": nd_a, "group_b_ndcg": nd_b}
+        tuning_trials[cfg_opt["name"]] = {
+            "group_a_ndcg": nd_a,
+            "group_b_ndcg": nd_b,
+            "warm_diff": warm_loss,
+            "params": cfg_opt,
+        }
+
+        # Select configuration with highest group_a_ndcg on tuning cohort
         if nd_a > best_tuning_ndcg:
             best_tuning_ndcg = nd_a
-            best_N = n_val
+            best_cfg = cfg_opt
 
-    locked_N = best_N
-    logger.info("Locked routing threshold N* = %d based on tuning cohort.", locked_N)
+    locked_config = best_cfg
+    locked_N = locked_config["cold_threshold"]
+    logger.info(
+        "Locked routing config: %s (Group A NDCG=%.4f, warm diff=%+.4f)",
+        locked_config["name"],
+        best_tuning_ndcg,
+        tuning_trials[locked_config["name"]]["warm_diff"],
+    )
 
     # 3. Evaluate each evaluation cohort across groups (a), (b), (c)
     eval_cohort_keys = ["eval_1", "eval_2", "eval_3"]
     cohort_results: dict[str, Any] = {}
 
-    pooled_a_ranks: dict[str, list[float]] = {"content": [], "two_tower": [], "routed_hybrid": [], "boost_cold_equal": []}
-    pooled_b_ranks: dict[str, list[float]] = {"two_tower": [], "routed_hybrid": []}
+    pooled_a_ranks: dict[str, list[float]] = {
+        "content": [],
+        "two_tower": [],
+        "routed_hybrid": [],
+        "routed_hybrid_zero_only": [],
+        "boost_cold_equal": [],
+        "boost_cold_capped": [],
+    }
+    pooled_b_ranks: dict[str, list[float]] = {
+        "two_tower": [],
+        "routed_hybrid": [],
+        "routed_hybrid_zero_only": [],
+        "boost_cold_equal": [],
+        "boost_cold_capped": [],
+    }
     pooled_a_cold_random_ndcgs: list[float] = []
 
     for c_key in eval_cohort_keys:
@@ -1028,30 +1074,55 @@ def evaluate_multi_cohort_holdout_study(
 
         sc_cnt_raw = cold_model.score(hist_all).copy()
 
+        # 1. Winning routed hybrid model
         hyb_model = RoutedHybridRecommender(
             primary_model=primary_model,
             cold_model=cold_model,
-            cold_threshold=locked_N,
+            cold_threshold=locked_config["cold_threshold"],
             held_out_items=ho_set,
+            route_zero_only=locked_config["route_zero_only"],
+            cap_sigma=locked_config["cap_sigma"],
         )
         hyb_model.fit(data)
         sc_hyb_raw = hyb_model.score(hist_all, item_vecs=masked_vecs, mask_ids=ho_list, neutralize_proxies=ho_list).copy()
 
-        # Boost cold equal: uniform boost on cold items
+        # 2. Pure zero-only routed hybrid model
+        hyb_zero_model = RoutedHybridRecommender(
+            primary_model=primary_model,
+            cold_model=cold_model,
+            cold_threshold=0,
+            held_out_items=ho_set,
+            route_zero_only=True,
+            cap_sigma=locked_config.get("cap_sigma", None),
+        )
+        hyb_zero_model.fit(data)
+        sc_hyb_zero_raw = hyb_zero_model.score(hist_all, item_vecs=masked_vecs, mask_ids=ho_list, neutralize_proxies=ho_list).copy()
+
+        # 3. Boost cold equal: uniform boost on cold items (+50.0)
         sc_boost_raw = sc_tt_raw.copy()
         sc_boost_raw[:, ho_list] += 50.0
+
+        # 4. Boost cold capped: user-level variance scaled boost (+1.5 * std)
+        sc_boost_capped_raw = sc_tt_raw.copy()
+        user_std = np.nanstd(sc_tt_raw, axis=1, keepdims=True)
+        user_std = np.nan_to_num(user_std, nan=1.0)
+        sc_boost_capped_raw[:, ho_list] += 1.5 * user_std
 
         # Mask seen items
         sc_tt = sc_tt_raw.copy()
         sc_cnt = sc_cnt_raw.copy()
         sc_hyb = sc_hyb_raw.copy()
+        sc_hyb_zero = sc_hyb_zero_raw.copy()
         sc_boost = sc_boost_raw.copy()
+        sc_boost_capped = sc_boost_capped_raw.copy()
         for i, sm in enumerate(seen_all):
             sm_list = list(sm)
             sc_tt[i, sm_list] = -np.inf
             sc_cnt[i, sm_list] = -np.inf
             sc_hyb[i, sm_list] = -np.inf
+            sc_hyb_zero[i, sm_list] = -np.inf
             sc_boost[i, sm_list] = -np.inf
+            sc_boost_capped[i, sm_list] = -np.inf
 
         targ_arr = np.asarray(targ_all, dtype=np.int64)
 
@@ -1060,12 +1131,16 @@ def evaluate_multi_cohort_holdout_study(
         rk_tt_a = compute_ranks(sc_tt[idx_a], targ_a)
         rk_cnt_a = compute_ranks(sc_cnt[idx_a], targ_a)
         rk_hyb_a = compute_ranks(sc_hyb[idx_a], targ_a)
+        rk_hyb_zero_a = compute_ranks(sc_hyb_zero[idx_a], targ_a)
         rk_bst_a = compute_ranks(sc_boost[idx_a], targ_a)
+        rk_bst_capped_a = compute_ranks(sc_boost_capped[idx_a], targ_a)
 
         pooled_a_ranks["two_tower"].extend(rk_tt_a)
         pooled_a_ranks["content"].extend(rk_cnt_a)
         pooled_a_ranks["routed_hybrid"].extend(rk_hyb_a)
+        pooled_a_ranks["routed_hybrid_zero_only"].extend(rk_hyb_zero_a)
         pooled_a_ranks["boost_cold_equal"].extend(rk_bst_a)
+        pooled_a_ranks["boost_cold_capped"].extend(rk_bst_capped_a)
 
         seen_a = [seen_all[i] for i in idx_a]
         cold_rand_a = compute_cold_only_random_metrics(seen_a, ho_set)
@@ -1075,9 +1150,15 @@ def evaluate_multi_cohort_holdout_study(
         targ_b = targ_arr[idx_b]
         rk_tt_b = compute_ranks(sc_tt[idx_b], targ_b)
         rk_hyb_b = compute_ranks(sc_hyb[idx_b], targ_b)
+        rk_hyb_zero_b = compute_ranks(sc_hyb_zero[idx_b], targ_b)
+        rk_bst_b = compute_ranks(sc_boost[idx_b], targ_b)
+        rk_bst_capped_b = compute_ranks(sc_boost_capped[idx_b], targ_b)
 
         pooled_b_ranks["two_tower"].extend(rk_tt_b)
         pooled_b_ranks["routed_hybrid"].extend(rk_hyb_b)
+        pooled_b_ranks["routed_hybrid_zero_only"].extend(rk_hyb_zero_b)
+        pooled_b_ranks["boost_cold_equal"].extend(rk_bst_b)
+        pooled_b_ranks["boost_cold_capped"].extend(rk_bst_capped_b)
 
         # Paired diffs for this cohort
         m_diff_a_tt, lo_a_tt, hi_a_tt = paired_bootstrap_diff(
@@ -1116,7 +1197,9 @@ def evaluate_multi_cohort_holdout_study(
                 "content": _summarize(rk_cnt_a, len(u_group_a)),
                 "two_tower": _summarize(rk_tt_a, len(u_group_a)),
                 "routed_hybrid": _summarize(rk_hyb_a, len(u_group_a)),
+                "routed_hybrid_zero_only": _summarize(rk_hyb_zero_a, len(u_group_a)),
                 "boost_cold_equal": _summarize(rk_bst_a, len(u_group_a)),
+                "boost_cold_capped": _summarize(rk_bst_capped_a, len(u_group_a)),
                 "cold_only_random": cold_rand_a,
                 "catalog_random": {"ndcg_at_10": cat_random_ndcg, "hit_rate_at_10": cat_random_hr},
             },
@@ -1127,7 +1210,9 @@ def evaluate_multi_cohort_holdout_study(
                 "content": _summarize(rk_cnt_a, len(u_group_a)),
                 "two_tower": _summarize(rk_tt_a, len(u_group_a)),
                 "routed_hybrid": _summarize(rk_hyb_a, len(u_group_a)),
+                "routed_hybrid_zero_only": _summarize(rk_hyb_zero_a, len(u_group_a)),
                 "boost_cold_equal": _summarize(rk_bst_a, len(u_group_a)),
+                "boost_cold_capped": _summarize(rk_bst_capped_a, len(u_group_a)),
                 "paired_diff_hybrid_vs_two_tower": {"diff_mean": m_diff_a_tt, "diff_lo95": lo_a_tt, "diff_hi95": hi_a_tt},
                 "paired_diff_hybrid_vs_content": {"diff_mean": m_diff_a_cnt, "diff_lo95": lo_a_cnt, "diff_hi95": hi_a_cnt},
             },
@@ -1135,6 +1220,9 @@ def evaluate_multi_cohort_holdout_study(
                 "n_users": len(u_group_b),
                 "two_tower": _summarize(rk_tt_b, len(u_group_b)),
                 "routed_hybrid": _summarize(rk_hyb_b, len(u_group_b)),
+                "routed_hybrid_zero_only": _summarize(rk_hyb_zero_b, len(u_group_b)),
+                "boost_cold_equal": _summarize(rk_bst_b, len(u_group_b)),
+                "boost_cold_capped": _summarize(rk_bst_capped_b, len(u_group_b)),
                 "paired_diff_hybrid_vs_two_tower_warm_damage": {
                     "diff_mean": m_diff_b_tt,
                     "diff_lo95": lo_b_tt,
@@ -1167,19 +1255,26 @@ def evaluate_multi_cohort_holdout_study(
         }
 
     pooled_a_hyb = _summarize_p(pooled_a_ranks["routed_hybrid"], total_a_users)
+    pooled_a_hyb_zero = _summarize_p(pooled_a_ranks["routed_hybrid_zero_only"], total_a_users)
     pooled_a_tt = _summarize_p(pooled_a_ranks["two_tower"], total_a_users)
     pooled_a_cnt = _summarize_p(pooled_a_ranks["content"], total_a_users)
     pooled_a_bst = _summarize_p(pooled_a_ranks["boost_cold_equal"], total_a_users)
+    pooled_a_bst_cap = _summarize_p(pooled_a_ranks["boost_cold_capped"], total_a_users)
 
     pooled_b_hyb = _summarize_p(pooled_b_ranks["routed_hybrid"], total_b_users)
+    pooled_b_hyb_zero = _summarize_p(pooled_b_ranks["routed_hybrid_zero_only"], total_b_users)
     pooled_b_tt = _summarize_p(pooled_b_ranks["two_tower"], total_b_users)
+    pooled_b_bst = _summarize_p(pooled_b_ranks["boost_cold_equal"], total_b_users)
+    pooled_b_bst_cap = _summarize_p(pooled_b_ranks["boost_cold_capped"], total_b_users)
 
     p_arr_a_hyb = np.asarray(pooled_a_ranks["routed_hybrid"])
     p_arr_a_tt = np.asarray(pooled_a_ranks["two_tower"])
     p_arr_a_cnt = np.asarray(pooled_a_ranks["content"])
 
     p_arr_b_hyb = np.asarray(pooled_b_ranks["routed_hybrid"])
+    p_arr_b_zero = np.asarray(pooled_b_ranks["routed_hybrid_zero_only"])
     p_arr_b_tt = np.asarray(pooled_b_ranks["two_tower"])
+    p_arr_b_bst_cap = np.asarray(pooled_b_ranks["boost_cold_capped"])
 
     pm_a_tt, plo_a_tt, phi_a_tt = paired_bootstrap_diff(
         ndcg_at_k(p_arr_a_hyb, 10), ndcg_at_k(p_arr_a_tt, 10), n_boot=n_boot, seed=seed
@@ -1191,11 +1286,20 @@ def evaluate_multi_cohort_holdout_study(
         ndcg_at_k(p_arr_b_hyb, 10), ndcg_at_k(p_arr_b_tt, 10), n_boot=n_boot, seed=seed
     )
 
+    pm_b_zero, plo_b_zero, phi_b_zero = paired_bootstrap_diff(
+        ndcg_at_k(p_arr_b_zero, 10), ndcg_at_k(p_arr_b_tt, 10), n_boot=n_boot, seed=seed
+    )
+    pm_b_bst_cap, plo_b_bst_cap, phi_b_bst_cap = paired_bootstrap_diff(
+        ndcg_at_k(p_arr_b_bst_cap, 10), ndcg_at_k(p_arr_b_tt, 10), n_boot=n_boot, seed=seed
+    )
+
     pooled_diff_a_hyb_vs_tt = {"diff_mean": pm_a_tt, "diff_lo95": plo_a_tt, "diff_hi95": phi_a_tt}
     pooled_diff_a_hyb_vs_cnt = {"diff_mean": pm_a_cnt, "diff_lo95": plo_a_cnt, "diff_hi95": phi_a_cnt}
     pooled_diff_b_hyb_vs_tt = {"diff_mean": pm_b_tt, "diff_lo95": plo_b_tt, "diff_hi95": phi_b_tt}
+    pooled_diff_b_zero_vs_tt = {"diff_mean": pm_b_zero, "diff_lo95": plo_b_zero, "diff_hi95": phi_b_zero}
+    pooled_diff_b_bst_cap_vs_tt = {"diff_mean": pm_b_bst_cap, "diff_lo95": plo_b_bst_cap, "diff_hi95": phi_b_bst_cap}
 
-    # 5. Apply mechanical evidence grading rule
+    # 5. Apply mechanical evidence grading rule to locked routed hybrid
     grade_info = compute_cold_start_grade(
         group_a_ndcg_lo95=pooled_a_hyb["ndcg_at_10_lo95"],
         cold_only_random_ndcg=pooled_cold_random_ndcg,
@@ -1224,6 +1328,7 @@ def evaluate_multi_cohort_holdout_study(
             "item_ids": tuning_items,
             "threshold_search": tuning_trials,
             "locked_N": locked_N,
+            "locked_config": locked_config,
         },
         "evaluation_cohort_items": {k: cohorts[k] for k in eval_cohort_keys},
         "evidence_grade": grade_info["grade"],
@@ -1241,7 +1346,9 @@ def evaluate_multi_cohort_holdout_study(
                     "content": pooled_a_cnt,
                     "two_tower": pooled_a_tt,
                     "routed_hybrid": pooled_a_hyb,
+                    "routed_hybrid_zero_only": pooled_a_hyb_zero,
                     "boost_cold_equal": pooled_a_bst,
+                    "boost_cold_capped": pooled_a_bst_cap,
                 },
                 "paired_diff_hybrid_vs_two_tower": pooled_diff_a_hyb_vs_tt,
                 "paired_diff_hybrid_vs_content": pooled_diff_a_hyb_vs_cnt,
@@ -1251,8 +1358,13 @@ def evaluate_multi_cohort_holdout_study(
                 "models": {
                     "two_tower": pooled_b_tt,
                     "routed_hybrid": pooled_b_hyb,
+                    "routed_hybrid_zero_only": pooled_b_hyb_zero,
+                    "boost_cold_equal": pooled_b_bst,
+                    "boost_cold_capped": pooled_b_bst_cap,
                 },
                 "paired_diff_hybrid_vs_two_tower_warm_damage": pooled_diff_b_hyb_vs_tt,
+                "paired_diff_zero_only_vs_two_tower_warm_damage": pooled_diff_b_zero_vs_tt,
+                "paired_diff_capped_boost_vs_two_tower_warm_damage": pooled_diff_b_bst_cap_vs_tt,
             },
         },
         "models": {
@@ -1262,7 +1374,9 @@ def evaluate_multi_cohort_holdout_study(
             "content": pooled_a_cnt,
             "two_tower": pooled_a_tt,
             "routed_hybrid": pooled_a_hyb,
+            "routed_hybrid_zero_only": pooled_a_hyb_zero,
             "boost_cold_equal": pooled_a_bst,
+            "boost_cold_capped": pooled_a_bst_cap,
         },
         "per_cohort": cohort_results,
         "note": evidence_statement,

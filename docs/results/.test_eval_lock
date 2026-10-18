@@ -19,6 +19,11 @@
       "action": "test_eval_sasrec",
       "timestamp": "2026-10-18T16:57:19.216684+00:00",
       "reason": "round3: retrained sasrec to convergence; challenger only, no selection decision depends on it"
+    },
+    {
+      "action": "test_eval_sasrec",
+      "timestamp": "2026-10-18T20:16:32.973023+00:00",
+      "reason": "round4: retrained sasrec with token alignment and padding mask bugfix"
     }
   ]
 }

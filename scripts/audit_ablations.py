@@ -26,12 +26,15 @@ for var_name, dir_name in variants:
         epochs_completed = curves.get("epochs_completed")
         best_epoch = curves.get("best_epoch")
         
-        # From code audit:
-        # Full models were trained by run_phase4_sweep.py: epochs=15, pairs_per_epoch=all (165k), bs=2048, lr=2e-3, patience=5
+        # Note on training data scale:
+        # data_manifest.json specifies 165,741 raw training interaction rows across 20,000 users.
+        # build_next_item_training_pairs generates (L_u - 1) pairs per user sequence (i_0 has no prefix).
+        # Thus: 165,741 rows - 20,000 first items = exactly 145,741 next-item pairs per epoch.
+        # Full models were trained by run_phase4_sweep.py: epochs=15, pairs_per_epoch=all (145.7k pairs from 165.7k rows), bs=2048, lr=2e-3, patience=5
         # Ablated models were trained by run_phase4_ablations.py: epochs=8, pairs_per_epoch=60000, bs=2048, lr=2e-3, patience=3
         if var_name == "full":
             configured_epochs = 15
-            pairs_per_epoch = "all (~165k)"
+            pairs_per_epoch = "all (145.7k)"
             patience = 5
             early_stopping = "No (completed 15)"
         else:

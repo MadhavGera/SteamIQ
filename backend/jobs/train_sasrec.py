@@ -102,9 +102,10 @@ def train_single_seed_sasrec(
         sub_dataset = torch.utils.data.Subset(full_dataset, perm)
         loader = DataLoader(sub_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 
-        for h, _m, t in loader:
+        for h, m, t in loader:
             optimizer.zero_grad()
-            user_vecs = module.encode_history(h)
+            h_tokens = torch.where(m, h + 1, torch.zeros_like(h))
+            user_vecs = module.encode_history(h_tokens)
             target_vecs = module.encode_target(t)
             loss = in_batch_sampled_softmax_loss(
                 user_vecs=user_vecs,
