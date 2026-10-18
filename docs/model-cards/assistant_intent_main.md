@@ -24,21 +24,27 @@
 ---
 
 ## 3. Quantitative Performance & Empirical Evidence
-Evaluated on gold domain queries and realistic hand-written holdout queries:
+Evaluated on gold domain queries (n=347) and synthetic paraphrase holdout queries (n=167):
 
-| Metric | Value | Baseline Comparison |
+| Metric | Value | Baseline Comparison / Context |
 |---|:---:|---|
-| **Gold Test Accuracy** | 0.9251 | vs TF-IDF Baseline: 0.7954 |
-| **Gold Macro-F1** | 0.9218 | vs Keyword Baseline: 0.4670 |
-| **Realistic Holdout Accuracy** | 0.8623 | vs TF-IDF Baseline: 0.7964 |
-| **Realistic Holdout Macro-F1** | 0.8606 | 167 hand-written queries |
-| **Expected Calibration Error (ECE)** | 0.0231 | Temperature Scaling Calibrated |
-| **Selective Accuracy at $\tau$** | 0.9251 | Calibrated threshold $\tau=0.10$ |
-| **Extractive Recall@3** | 0.9538 | Review passage retrieval fallback |
+| **Gold Test Accuracy** | 0.9251 [0.8963, 0.9510] | vs TF-IDF: 0.7954 (+0.1297), Keyword: 0.4524 (+0.4726) |
+| **Gold Macro-F1** | 0.9218 | vs TF-IDF: 0.7973, Keyword: 0.4670 |
+| **Synthetic Holdout Accuracy** | 0.8623 [0.8144, 0.9162] | vs TF-IDF: 0.7964 (+0.0659), Keyword: 0.4072 (+0.4551) |
+| **Synthetic Holdout Selective Acc (@$\tau$)** | 0.9085 | Coverage: 91.62% at calibrated $\tau = 0.630$ |
+| **Gold Test Selective Acc (@$\tau$)** | 0.9592 | Coverage: 91.93% (Abstention: 8.07%) at $\tau = 0.630$ |
+| **Expected Calibration Error (ECE)** | 0.0231 | Temperature Scaling Calibrated ($T = 0.183$) |
+| **Extractive Recall@1** | 0.7385 [0.6308, 0.8462] | vs TF-IDF: 0.4154 (+0.3231) |
+| **Extractive Recall@3 / Recall@5** | 0.9538 / 1.0000 | Review passage retrieval fallback (MRR: 0.8536) |
+| **Test-Train Overlap: Exact Match** | 0 / 347 (0.00%) | Zero memorized strings |
+| **Test-Train Overlap: Template Match** | 0 / 347 (0.00%) | Zero memorized templates |
+| **Non-Overlapping Subset Accuracy** | 0.9217 (92.17%) | 332 / 347 queries (95.68% of test set) |
 
 ---
 
-## 4. Limitations & Safety
-1. **No Generative Text:** The assistant cannot engage in open-ended chitchat or generate fabricated claims.
-2. **Catalog Bound:** Cannot answer questions about games not present in the indexed catalog.
-3. **Extractive Fallback:** Questions not mapped to structured domain intents fall back to unedited quoted snippets from Steam player reviews.
+## 4. Limitations, Safety & Evaluation Honesty
+1. **Holdout Dataset Lineage:** The 167 holdout queries are synthetic paraphrases constructed by the pipeline author. A human holdout dataset scaffold is established at `backend/assistant/data/holdout_queries_human.jsonl` (empty scaffold, requires $\ge 50$ human-authored queries before evaluation).
+2. **Selective Abstention:** Threshold $\tau = 0.630$ is tuned on the validation split for target precision $\ge 0.99$ (coverage 96.7% on val). At test time, abstaining on lowest-confidence inputs boosts selective accuracy to 95.92%.
+3. **No Generative Text:** The assistant cannot engage in open-ended chitchat or generate hallucinated claims.
+4. **Catalog Bound:** Cannot answer questions about games not present in the indexed catalog.
+5. **Extractive Fallback:** Questions not mapped to structured domain intents fall back to unedited quoted snippets from Steam player reviews.

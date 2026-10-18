@@ -578,6 +578,46 @@ Evaluated on 1,000 validation users to test SASRec's utility as an optional 5th 
 - **Model Registry:** Registered all 3 runs under `model_name="recsys_sasrec"`, `family="sasrec"`, `stage="candidate"`.
 - **Saved Reports:** `docs/results/sasrec_benchmark.json` and `backend/data/recsys/reports/sasrec_benchmark.json`.
 
+### Phase G: Assistant Evaluation Honesty & Selective Abstention (Issue I6 Resolution)
+
+#### 1. Context & Retraction of "Hand-Written" Holdout Claims
+In an independent review of the assistant system, Issue I6 raised three integrity concerns:
+1. **Dataset Lineage:** The 167 queries in `holdout_queries.jsonl` were described as "hand-written" by human evaluators, when in reality they were paraphrases drafted by the pipeline developer.
+2. **Abstention Selection:** The abstention threshold was set to $\tau = 0.10$, resulting in 100.0% coverage and 0.0% abstention, rendering the selective prediction mechanism inactive.
+3. **Generalization Overlap:** It was unclear whether the assistant was truly generalizing or merely memorizing templates seen during training.
+
+#### 2. Dataset Re-tagging & Human Holdout Scaffold
+- **Re-tagging:** All 167 queries in `backend/assistant/data/holdout_queries.jsonl` were re-tagged from `"handwritten_holdout"` / `"written_by": "human"` to `"source": "synthetic_paraphrase_holdout"` and `"written_by": "synthetic"`. All reports and model cards now explicitly identify them as synthetic paraphrases.
+- **Human Holdout Scaffold:** An official scaffold was created at `backend/assistant/data/holdout_queries_human.jsonl` along with contributor guidelines at `backend/assistant/data/HOLDOUT_README.md`. The evaluation pipeline enforces a strict minimum threshold of $\ge 50$ human-authored queries before reporting human holdout metrics.
+
+#### 3. Root Cause & Tuning of Selective Abstention Threshold ($\tau$)
+- **Root Cause Analysis:** The prior selector searched for the lowest threshold achieving validation accuracy $\ge 0.95$. Because raw validation accuracy was already $97.39\%$, $\tau = 0.10$ satisfied the condition trivially at $100\%$ coverage, causing the system never to abstain on low-confidence queries.
+- **Principled Tuning on Validation Curve:** The abstention selector was updated to identify the knee of the validation curve by targeting precision $\ge 0.99$ with coverage $\ge 0.40$. On the validation split, this selects $\tau = 0.630$:
+  - Validation Coverage at $\tau=0.630$: **$96.73\%$**
+  - Validation Selective Accuracy at $\tau=0.630$: **$99.32\%$**
+- **Test-Time Selective Prediction Results:**
+  - Gold Test Selective Accuracy rises from **$92.51\%$** (raw) to **$95.92\%$** at $\tau = 0.630$ ($91.93\%$ coverage, $8.07\%$ abstention rate).
+  - Synthetic Holdout Selective Accuracy rises from **$86.23\%$** (raw) to **$90.85\%$** at $\tau = 0.630$ ($91.62\%$ coverage, $8.38\%$ abstention rate).
+  - Temperature Scaling ($T=0.183$) achieves an Expected Calibration Error of **$0.0231$** across 10 reliability bins.
+
+#### 4. Test-Train Overlap & Generalization Audit
+To verify that intent classification performance is driven by true semantic comprehension rather than template or lexical memorization, an automated overlap audit was conducted between the 347 gold test queries and the 1,400 training queries:
+
+| Overlap Category | Criteria | Matching Queries | Percentage | Accuracy on Subset |
+| :--- | :--- | :---: | :---: | :---: |
+| **Exact String Overlap** | Normalized punctuation & whitespace match | 0 / 347 | **0.00%** | — |
+| **Template Overlap** | Entity-masked normalized query match | 0 / 347 | **0.00%** | — |
+| **High Semantic Similarity** | MiniLM embedding cosine similarity $\ge 0.90$ | 15 / 347 | **4.32%** | 100.00% |
+| **Non-Overlapping Subset** | Cosine similarity $< 0.90$, no template match | 332 / 347 | **95.68%** | **92.17%** |
+| **Overall Gold Test** | Full benchmark | 347 / 347 | 100.00% | **92.51%** |
+
+*Key finding:* 95.68% of gold test queries share zero lexical, template, or high-cosine overlap with training queries. Accuracy on this strictly non-overlapping subset is **92.17%**, confirming that MiniLM embeddings generalize semantically across diverse phrasings.
+
+#### 5. Verification & Artifacts
+- **Model Card Updated:** `docs/model-cards/assistant_intent_main.md` updated with honest dataset labels, tuned abstention metrics, and overlap audit.
+- **Authoritative Report Saved:** `docs/results/assistant_metrics.json` and `backend/data/assistant/reports/assistant_leaderboard.json`.
+- **Integrity Check:** Passed all unit tests (`backend/tests/test_assistant.py`), honest fallbacks check, and no hardcoded metrics checks.
+
 
 
 
