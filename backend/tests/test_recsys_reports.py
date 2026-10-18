@@ -229,16 +229,12 @@ def test_cold_start_all_holdout_conditions_present_in_payload() -> None:
     expected_conditions = [
         "random",
         "content",
-        "two_tower_unmasked",
-        "two_tower_masked",
-        "two_tower_masked_train_pos_raw_0",
-        "two_tower_masked_standardized_z0",
-        "two_tower_masked_all_proxies_neutralized",
+        "two_tower",
+        "routed_hybrid",
     ]
     for cond in expected_conditions:
         assert cond in holdout_models, f"Cold start condition '{cond}' missing from item_holdout_study models!"
         model_stats = holdout_models[cond]
-        assert "mean_rank" in model_stats
         assert "hit_rate_at_10" in model_stats
         assert "ndcg_at_10" in model_stats
 

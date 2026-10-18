@@ -2,10 +2,10 @@
   "metadata": {
     "check_name": "lock_integrity_and_equivalence",
     "lock_commit": "30093e5",
-    "checked_at": "2026-10-18T12:02:34.152318+00:00"
+    "checked_at": "2026-10-18T16:58:58.624849+00:00"
   },
   "diff_classification": {
-    "total_files_modified_since_lock": 17,
+    "total_files_modified_since_lock": 27,
     "files": [
       {
         "status": "M",
@@ -21,6 +21,11 @@
         "status": "M",
         "file": "backend/jobs/run_candidate_experiments.py",
         "classification": "formatting only (unused import removal and with-open block)"
+      },
+      {
+        "status": "M",
+        "file": "backend/jobs/run_phase4_ablations.py",
+        "classification": "behavior-affecting: Phase J ablation full-budget evaluation"
       },
       {
         "status": "M",
@@ -58,6 +63,11 @@
         "classification": "tests (new unit/regression suites)"
       },
       {
+        "status": "A",
+        "file": "backend/tests/test_readme_metrics_consistency.py",
+        "classification": "tests (new unit/regression suites)"
+      },
+      {
         "status": "M",
         "file": "backend/tests/test_routed_hybrid.py",
         "classification": "tests (new unit/regression suites)"
@@ -89,8 +99,48 @@
       },
       {
         "status": "M",
+        "file": "docs/results/ablations.json",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "A",
+        "file": "docs/results/ablations_budget_mismatch.json",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "M",
         "file": "docs/results/cold_start.json",
         "classification": "documentation / reports"
+      },
+      {
+        "status": "A",
+        "file": "docs/results/lock_equivalence_check.json",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "M",
+        "file": "docs/results/ranker_ablations.json",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "M",
+        "file": "docs/results/validation_sweep.json",
+        "classification": "documentation / reports"
+      },
+      {
+        "status": "A",
+        "file": "scripts/audit_ablations.py",
+        "classification": "unrelated"
+      },
+      {
+        "status": "A",
+        "file": "scripts/train_two_tower_ablations_parallel.py",
+        "classification": "unrelated"
+      },
+      {
+        "status": "A",
+        "file": "scripts/verify_lock_integrity.py",
+        "classification": "unrelated"
       }
     ]
   },

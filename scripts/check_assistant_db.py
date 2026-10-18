@@ -17,8 +17,8 @@ backend_dir = Path(__file__).resolve().parent.parent / "backend"
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from sqlalchemy import create_engine, text
-from core.config import settings
+from sqlalchemy import create_engine, text  # noqa: E402
+from core.config import settings  # noqa: E402
 
 
 def get_sync_engine():

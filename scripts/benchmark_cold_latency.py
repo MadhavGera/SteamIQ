@@ -82,7 +82,7 @@ def main():
             ranker_module._SCORE_CAND_CACHE.clear()
 
             t0 = time.perf_counter()
-            resp = service.recommend(liked_app_ids=hist, model=model_key, k=10, explain=False)
+            _ = service.recommend(liked_app_ids=hist, model=model_key, k=10, explain=False)
             t1 = time.perf_counter()
             elapsed_ms = (t1 - t0) * 1000.0
             latencies.append(elapsed_ms)

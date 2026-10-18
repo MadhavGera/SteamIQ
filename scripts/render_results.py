@@ -16,7 +16,6 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
-import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -115,7 +114,7 @@ def format_reference_table(models: list[dict[str, Any]], is_readme: bool = True)
     col_name = "Status / Role" if is_readme else "Role"
     header = [
         f"| Model | Split | NDCG@10 (95% CI) | HR@10 (95% CI) | {col_name} |",
-        f"| :--- | :---: | :---: | :---: | :--- |",
+        "| :--- | :---: | :---: | :---: | :--- |",
     ]
     rows: list[str] = []
 

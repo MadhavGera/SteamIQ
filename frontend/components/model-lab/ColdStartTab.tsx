@@ -16,6 +16,7 @@ interface StudyModelRow {
 }
 
 interface ColdStartStudy {
+  title?: string;
   study_type?: string;
   variant_label?: string;
   primary_evidence?: boolean;
@@ -69,6 +70,7 @@ export function ColdStartTab({ payload }: ColdStartTabProps) {
     const noteText = study.note ?? study.limitations_note;
 
     const formatModelName = (name?: string) => {
+      if (!name) return "";
       if (name === "routed_hybrid") return "Routed Hybrid (Calibrated N=5)";
       if (name === "two_tower_masked_all_proxies_neutralized" || name === "two_tower") return "Two-Tower (Clean, Proxies Neutralized)";
       if (name === "two_tower_masked_standardized_z0") return "Two-Tower (Train Pop z=0, Reviews Intact)";
