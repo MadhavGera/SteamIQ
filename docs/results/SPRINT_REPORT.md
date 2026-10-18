@@ -229,25 +229,12 @@ The ML Evidence Hardening Sprint is an end-to-end reliability and consistency ov
   - Automated report generation (`backend/recsys/report.py`) renders `SNIPS-NDCG@10` in main and appendix markdown tables.
   - Frontend Model Lab (`frontend/components/model-lab/LeaderboardTab.tsx`) includes `SNIPS NDCG@10` column with explanatory tooltip.
 
-### Phase 8: Stretch Extension Assessment (Sequential Models & SASRec)
-- **Architectural & Feasibility Investigation:**
-  - Evaluated the architectural feasibility of incorporating a Self-Attentive Sequential Recommendation model (SASRec / BERT4Rec) into the SteamIQ pipeline.
-- **1. Computational & Training Budget (CPU vs GPU Constraints):**
-  - **Complexity:** SASRec causal self-attention scales as $\mathcal{O}(L^2 \cdot d + L \cdot d^2)$ per layer, where $L$ is sequence length ($L \in [50, 100]$) and $d$ is embedding dimensionality ($d=128$).
-  - **Training Wall-Clock on CPU:** On SteamIQ's dataset (~30,000 items and ~100,000+ interactions across splits), training SASRec with multi-head attention and negative sampling on standard commodity CPUs requires approximately 20–35 minutes per epoch without CUDA tensor core acceleration. By contrast, SteamIQ's Two-Tower retriever with masked history pooling trains in ~15–25 seconds per epoch on CPU, and the Stage-Two LightGBM ranker fits in under 30 seconds.
-  - **Multi-Seed Reproducibility:** In accordance with sprint requirements for 5-seed sweeps and rigorous ablation testing, running a 5-seed sweep of SASRec on CPU would demand >12 hours of compute per run, severely compromising CI/CD feedback cycles and test reproducibility.
-- **2. Online Serving Latency & Fold-In Overhead:**
-  - **Two-Tower Serving Parity:** In online serving (`recsys/service.py`), fold-in recommendations require a simple lookup of recent positive item vectors and pooling ($\mathcal{O}(L \cdot d)$), followed by maximum inner product search (MIPS) against static, pre-normalized item embeddings. This executes in under 8 ms on CPU.
-  - **SASRec Online Overhead:** Generating sequential representations requires passing dynamic interaction sequences through $N$ transformer layers (query/key/value projections, multi-head causal attention matrix multiplications, layer normalization, and feed-forward networks). On single-core CPU workers, this forward pass adds 40–85 ms of latency before Stage-Two ranking even begins, risking breaches of the production 100 ms p95 SLA.
-- **3. Cold-Start and Multimodal Generalization:**
-  - Standard sequential architectures (e.g. vanilla SASRec) rely purely on learned item ID tokens, rendering them completely incapable of recommending newly released titles (0.0000 recall on cold items, as demonstrated in our Phase 6 cold-start analysis).
-  - SteamIQ's hybrid Two-Tower integrates frozen 384-dimensional MiniLM semantic descriptions, multi-hot tag projections, pricing features, and review volume into item representations. This enables zero-shot projection of cold games into the user embedding space and allows the content-routed fallback mechanism to achieve NDCG@10 0.0078 on true holdout items without interaction history.
-- **4. Interpretability and Feature Attribution:**
-  - The Stage-Two LightGBM LambdaMART ranker exposes clear feature importance (SHAP attribution, source score contributions, user log product splits) and allows immediate isolation of leaked features without complete retriever retraining.
-  - End-to-end sequential neural models operate as opaque black boxes, complicating the enforcement of strict feature provenance and audit compliance.
-- **Production Recommendation & Future Roadmap:**
-  - The current two-stage architecture (Hybrid Two-Tower Retriever + Quota Merging + LightGBM Ranker) represents the optimal Pareto frontier for SteamIQ, maximizing retrieval quality (NDCG@10 0.0485, SNIPS 0.0253), coverage (43.03%), low-latency serving (<50 ms), and auditability on CPU infrastructure.
-  - Sequential self-attention is recommended as a candidate retriever in Stage 1 once GPU-accelerated training infrastructure (e.g. CUDA/TensorRT inference workers) is provisioned for production clusters.
+### Phase 8: Measured Sequential Challenger (SASRec)
+- **Empirical Implementation & Rigorous Benchmark:**
+  - In accordance with the Corrections Round (Issue I4), all unsupported speculative estimates regarding sequential training budgets and serving latencies have been replaced with direct measurements.
+  - A production-grade lightweight SASRec challenger was implemented in `backend/recsys/models/sequential.py` (2 layers, 2 heads, $d=64$, max sequence length 50, dropout 0.2, in-batch sampled softmax with logQ popularity correction).
+  - Evaluated on validation split across 3 seeds under identical timestamp-aware masking and 5,000 fixed validation users.
+  - Complete measured hardware telemetry, wall-clock timing, per-request p50/p95 latency distributions, candidate union recall, and paired validation comparisons are detailed under [Phase F: Measured SASRec Sequential Challenger](#phase-f-sasrec-sequential-challenger-issue-i4-resolution) and serialized in `docs/results/sasrec_benchmark.json`.
 
 ---
 
@@ -513,6 +500,84 @@ Evaluated across 3 distinct cohorts (seeds 42, 43, 44), drawing 300 withheld ite
   1. `test_seeds_produce_distinct_withheld_items_and_users`: Verifies pair-wise disjointness across cohorts.
   2. `test_routed_hybrid_score_calibration`: Verifies that calibrated cold items map into primary logit scale while preserving relative content ranking.
   3. `test_cold_start_artifact_integrity`: Asserts that `docs/results/cold_start.json` passes multi-cohort schema integrity and strictly exceeds random.
+
+### Phase F: SASRec Sequential Challenger (Issue I4 Resolution)
+
+#### 1. Context & Retraction of Speculative Claims
+In the initial sprint report, Phase 8 included unsupported speculative statements regarding sequential models, alleging that training on CPU would require "20–35 minutes per epoch" (>12 hours for sweeps) and that CPU serving forward passes would add "40–85 ms of latency". Under Issue I4, all speculative figures were deleted.
+
+To replace conjecture with empirical evidence, a production-grade lightweight Self-Attentive Sequential Recommendation (SASRec) challenger was fully implemented in `backend/recsys/models/sequential.py` and benchmarked via `backend/jobs/train_sasrec.py` under the identical protocol (leak-free timestamp-aware masking, 5,000 fixed validation users, sampled softmax with logQ correction).
+
+#### 2. Measured Hardware Environment & Architecture
+- **Hardware Telemetry:**
+  - CPU: Intel64 Family 6 Model 140 Stepping 1 (Tiger Lake, 4 physical cores, 8 logical threads)
+  - RAM: 11.73 GB total
+  - PyTorch: `2.12.0+cpu`
+  - OS: Windows 11 Pro (10.0.26200)
+- **Model Architecture (`backend/recsys/models/sequential.py`):**
+  - TransformerEncoder: 2 layers, 2 attention heads, $d=64$, feedforward dimension 256, dropout 0.2, GELU activation.
+  - Learned item ID embedding + learned positional embeddings ($L=50$).
+  - Trainable Parameters: **295,361** parameters.
+  - Right-aligned interaction sequences with float causal attention mask.
+
+#### 3. Measured Training Wall-Clock & Computational Budget
+Evaluated across 3 seeds (42, 43, 44) with 3 epochs and 60,000 exposure pairs per epoch (batch size 2,048):
+
+| Metric | Seed 42 | Seed 43 | Seed 44 | 3-Seed Mean ± Std |
+| :--- | :---: | :---: | :---: | :---: |
+| **Epoch 1 Duration** | 104.3s | 100.2s | 92.7s | 99.1s |
+| **Epoch 2 Duration** | 99.1s | 99.0s | 94.7s | 97.6s |
+| **Epoch 3 Duration** | 96.7s | 94.4s | 91.3s | 94.1s |
+| **Mean Seconds / Epoch** | 100.1s | 97.8s | 92.9s | **96.9s ± 3.0s** |
+| **Total Training Wall-Clock** | 300.2s (5.0 min) | 293.5s (4.9 min) | 278.7s (4.6 min) | **290.8s ± 9.0s (~4.85 min)** |
+| **Final Training Loss** | 7.6336 | 7.6297 | 7.6331 | 7.6321 ± 0.0017 |
+
+*Correction finding:* Real-world CPU training wall-clock was ~1.6 minutes per epoch (~4.85 min total per seed), not the 20–35 min/epoch previously conjectured.
+
+#### 4. Measured Online Inference Latency Distribution
+Inference latency was benchmarked on champion Seed 43 across 1,000 distinct single-user recommendation requests using precomputed item embeddings:
+
+| Latency Percentile | Measured Latency (ms) | Production SLA Constraint | Status |
+| :--- | :---: | :---: | :---: |
+| **p50 (Median)** | **1.07 ms** | < 50.0 ms | **PASSED** |
+| **p90** | **1.42 ms** | < 75.0 ms | **PASSED** |
+| **p95** | **1.71 ms** | < 100.0 ms | **PASSED** |
+| **p99** | **2.51 ms** | < 150.0 ms | **PASSED** |
+| **Mean** | **1.16 ms** | — | — |
+
+*Correction finding:* The assertion that sequential models would incur 40–85 ms CPU latency was refuted. Using right-aligned sequence buffers and precomputed L2-normalized item matrices, sequential CPU scoring executes in under **1.8 ms (p95)**.
+
+#### 5. Validation Retrieval Quality (5,000 Validation Users across 3 Seeds)
+
+| Seed | Val NDCG@10 (95% CI) | Val HR@10 (95% CI) | Val MRR@10 | Val Coverage@10 | SNIPS-NDCG@10 (95% CI) |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| **42** | 0.02115 [0.01826, 0.02419] | 0.0452 [0.0396, 0.0514] | 0.01438 | 2.80% | 0.00624 [0.00539, 0.00717] |
+| **43** (Champion) | 0.02163 [0.01866, 0.02462] | 0.0446 [0.0388, 0.0504] | 0.01479 | 3.40% | 0.00619 [0.00534, 0.00707] |
+| **44** | 0.02235 [0.01951, 0.02562] | 0.0460 [0.0406, 0.0518] | 0.01483 | 2.67% | 0.00621 [0.00543, 0.00712] |
+| **3-Seed Mean ± Std** | **0.02171 ± 0.00049** | **0.04527 ± 0.00057** | **0.01467** | **2.96%** | **0.00622 ± 0.00002** |
+
+#### 6. Direct Paired Comparison vs Two-Tower Champion
+- **Two-Tower Champion (Seed 44) Val NDCG@10:** `0.06106`
+- **SASRec Champion (Seed 43) Val NDCG@10:** `0.02163`
+- **Mean Paired Difference ($\Delta$):** **`-0.03935`** (95% Bootstrap CI: **`[-0.04496, -0.03398]`**)
+- **Verdict:** **SASRec does not beat Two-Tower on validation ($p < 0.001$)**. Two-Tower outperforms SASRec by $+181\%$ relative ranking accuracy because the dataset contains short interaction sequences (median 7 items), where dense semantic text and metadata embeddings strongly outperform pure sequential causal order. In accordance with pre-registered gating rules, SASRec is **not promoted**.
+
+#### 7. Candidate Union Recall Analysis (Stage 1 Quota Merging)
+Evaluated on 1,000 validation users to test SASRec's utility as an optional 5th candidate source inside Stage 1 quota merging:
+
+| Candidate Pool | Pool Size | Target Recall@K | Relative Lift vs Two-Tower |
+| :--- | :---: | :---: | :---: |
+| **Two-Tower Alone** | Top 100 | 41.80% | Baseline |
+| **SASRec Alone** | Top 100 | 26.70% | -36.1% |
+| **Combined Union (Two-Tower + SASRec)** | Union 200 | **48.70%** | **+16.5% relative gain** |
+
+*Strategic finding:* While SASRec underperforms Two-Tower as a standalone ranking engine on short gaming histories, it retrieves a distinct subset of chronologically relevant candidates, adding **+6.9 percentage points (+16.5% relative)** to candidate pool recall when merged into Stage 1 retrieval.
+
+#### 8. Verification & Artifacts
+- **Unit Tests (`backend/tests/test_sasrec.py`):** 3 tests passing (module tensor shapes, scoring & fold-in, serialization roundtrip).
+- **Model Registry:** Registered all 3 runs under `model_name="recsys_sasrec"`, `family="sasrec"`, `stage="candidate"`.
+- **Saved Reports:** `docs/results/sasrec_benchmark.json` and `backend/data/recsys/reports/sasrec_benchmark.json`.
+
 
 
 
