@@ -687,6 +687,64 @@ All paired bootstrap significance tests were evaluated over $B=2,000$ bootstrap 
 - [x] All 5 authoritative reports updated: `leaderboard.json`, `slices.json`, `beyond_accuracy.json`, `cold_start.json`, `leaderboard.md`.
 - [x] Linters passing with 0 errors (`check_no_hardcoded_metrics.py`, `check_honest_fallbacks.py`, `ruff check`).
 
+### Phase I: Documentation, Limitations & Release
+
+#### 1. Scope & Release Operations
+In Phase I, all documentation artifacts, model cards, evidence mapping tables, and repository references were reconciled against the authoritative Phase H evaluation outputs:
+- **`README.md`**: Updated with headline deployable numbers, diagnostic reference upper bounds, and a dedicated "Findings and Limitations" section covering Issues I1–I7.
+- **Model Cards Updated (`docs/model-cards/`)**:
+  - `recsys_two_tower_clean.md`: Updated with Champion Seed 44 metrics, 5-seed sweep means/stds, and Item-kNN statistical significance.
+  - `recsys_two_tower_ranker_v2_trainstats.md`: Updated with Promotion Gate results ($\text{lo95} > 0$ failed), candidate status, and sliced torso/tail lifts.
+  - `recsys_sasrec.md` (NEW): Created to document SASRec sequential architecture, measured 1.71 ms latency SLA, candidate union recall lift (+16.5%), and short-history limitations.
+  - `assistant_intent_main.md`: Updated in Phase G with honest dataset labels, validation-tuned abstention ($\tau = 0.630$), and generalization overlap audit.
+- **`docs/claims-and-evidence.md`**: Updated one-page reference connecting every claim to its exact reproducible report in `docs/results/`.
+- **Pre-Registered Checkers**: Validated with zero violations on `scripts/check_no_hardcoded_metrics.py` and `scripts/check_honest_fallbacks.py`.
+
+#### 2. Comprehensive Final Numbers Table Across All Models & Phases
+
+All numbers in this table are extracted directly from authoritative JSON artifacts (`leaderboard.json`, `cold_start.json`, `sasrec_benchmark.json`, `assistant_metrics.json`, `ablations.json`, `ranker_ablations.json`).
+
+| Subsystem / Model | Variant / Split | Key Metric (Primary) | 95% Bootstrap CI or Std | Secondary Metric | Status / Verdict |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **Two-Tower Clean** (`recsys_two_tower_clean`) | Test (Champ 44) | NDCG@10 = **0.0513** | [0.0467, 0.0563] | HR@10 = **0.1016**, Coverage = 43.70% | **Production Champion** |
+| **Two-Tower Clean** (`recsys_two_tower_clean`) | Test (5 Seeds) | NDCG@10 = **0.0528** | ± 0.0019 | HR@10 = **0.1030 ± 0.0030** | Multi-Seed Aggregate |
+| **Two-Tower Clean** (`recsys_two_tower_clean`) | Val (Champ 44) | NDCG@10 = **0.0611** | [0.0557, 0.0662] | HR@10 = **0.1190**, Coverage = 43.47% | Budget restored (I1) |
+| **Two-Tower Clean** (`recsys_two_tower_clean`) | Val (5 Seeds) | NDCG@10 = **0.0613** | ± 0.0010 | HR@10 = **0.1204 ± 0.0026** | Statistically beats kNN (+0.0058) |
+| **Clean Ranker** (`recsys_two_tower_ranker_clean`) | Test (Champ 44) | NDCG@10 = **0.0532** | [0.0480, 0.0587] | HR@10 = **0.1004**, Coverage = 54.23% | Candidate (Gate Failed) |
+| **Clean Ranker** (`recsys_two_tower_ranker_clean`) | Test (5 Seeds) | NDCG@10 = **0.0517** | ± 0.0020 | HR@10 = **0.0992 ± 0.0024** | Multi-Seed Aggregate |
+| **Clean Ranker** (`recsys_two_tower_ranker_clean`) | Val (Champ 44) | NDCG@10 = **0.0582** | [0.0531, 0.0635] | HR@10 = **0.1098**, Coverage = 55.03% | Candidate |
+| **Ranker vs TT Paired Difference** | Test Split | $\Delta = \mathbf{+0.0019}$ | [−0.0024, +0.0062] | $\text{lo95} > 0$: **False** | Promotion Gate FAILED |
+| **Two-Tower vs kNN Paired Difference** | Test Split | $\Delta = \mathbf{+0.0080}$ | [+0.0033, +0.0131] | $\text{lo95} > 0$: **True** ($p < 0.001$) | Statistically Significant Win |
+| **Item-kNN** (`recsys_itemknn`) | Test Split | NDCG@10 = **0.0433** | [0.0389, 0.0480] | HR@10 = **0.0826** [0.0748, 0.0900] | Baseline |
+| **Item-kNN** (`recsys_itemknn`) | Val Split | NDCG@10 = **0.0553** | [0.0505, 0.0600] | HR@10 = **0.1014** [0.0934, 0.1096] | Baseline |
+| **Implicit ALS** (`recsys_als`) | Test Split | NDCG@10 = **0.0356** | [0.0315, 0.0396] | HR@10 = **0.0724** [0.0654, 0.0796] | Baseline |
+| **Popularity** (`recsys_popularity`) | Test Split | NDCG@10 = **0.0151** | [0.0125, 0.0178] | HR@10 = **0.0326** [0.0274, 0.0376] | Baseline |
+| **Content Cosine** (`recsys_content`) | Test Split | NDCG@10 = **0.0141** | [0.0116, 0.0171] | HR@10 = **0.0258** [0.0216, 0.0304] | Baseline |
+| **SASRec Challenger** (`recsys_sasrec`) | Test (Champ 43) | NDCG@10 = **0.0165** | [0.0139, 0.0192] | HR@10 = **0.0344**, Coverage = 3.50% | Challenger |
+| **SASRec Challenger** (`recsys_sasrec`) | Test (3 Seeds) | NDCG@10 = **0.0172** | ± 0.0007 | HR@10 = **0.0374 ± 0.0026** | Multi-Seed Aggregate |
+| **SASRec Candidate Quota Merge** | Val (1,000 Users) | Recall@200 = **48.70%** | +16.5% relative | TT alone = 41.80%, SASRec = 26.70% | High Complementarity |
+| **SASRec Inference Latency** | CPU Benchmark | $P_{50} = \mathbf{1.07\text{ ms}}$ | $P_{95} = \mathbf{1.71\text{ ms}}$ | SLA target: $< 50\text{ ms}$ | SLA PASSED |
+| **Routed Cold-Start Hybrid** | True Holdout (3 Cohorts) | Pooled NDCG@10 = **0.0335** | [0.0198, 0.0475] | Random = 0.0015 (22.2x lift) | **STRONG Evidence** (I5) |
+| **Two-Tower Text Ablation** | Test (3 Seeds) | $\Delta = \mathbf{-0.0259}$ | [−0.0290, −0.0228] | Test NDCG: 0.0615 $\to$ 0.0356 | Significant ($p < 0.05$) |
+| **Two-Tower Tags Ablation** | Test (3 Seeds) | $\Delta = \mathbf{-0.0148}$ | [−0.0175, −0.0120] | Test NDCG: 0.0615 $\to$ 0.0467 | Significant ($p < 0.05$) |
+| **Two-Tower Numeric Ablation** | Test (3 Seeds) | $\Delta = \mathbf{-0.0146}$ | [−0.0174, −0.0117] | Test NDCG: 0.0615 $\to$ 0.0470 | Significant ($p < 0.05$) |
+| **Two-Tower Item ID Ablation** | Test (3 Seeds) | $\Delta = \mathbf{-0.0132}$ | [−0.0159, −0.0106] | Test NDCG: 0.0615 $\to$ 0.0484 | Significant ($p < 0.05$) |
+| **Assistant Intent Classification** | Gold Test Split | Selective Acc = **95.92%** | Coverage = 91.93% | Tuned $\tau = 0.630$ (Raw = 92.51%) | Precision Knee Selected |
+| **Assistant Generalization Audit** | Gold Test ($N=347$) | Non-overlap = **95.68%** | 332 / 347 queries | Non-overlapping Acc = **92.17%** | True Semantic Generalization |
+| **Assistant Holdout Re-tagging** | Synthetic Paraphrases | Accuracy = **90.85%** | Coverage = 91.62% | Human Scaffold created ($\ge 50$ gate) | Re-tagged honestly (I6) |
+
+#### 3. Independent Review Issue Resolution Matrix
+
+| Issue ID | Problem Description | Root Cause | Resolution Implemented | Final Verification Status |
+| :---: | :--- | :--- | :--- | :---: |
+| **I1** | Two-Tower regression vs Item-kNN in Phase 4 sweep | Budget truncation (8 epochs, 60k pairs vs 15 epochs, ~165k pairs) | Diagnosed in Phase A; full budget sweep restored in Phase B (Val: 0.0613 vs kNN 0.0553; Test: 0.0513 vs kNN 0.0433) | **RESOLVED & VERIFIED** |
+| **I2** | Copy-paste multi-seed metrics and misleading 0.0000 std | Scripts lacked full metric aggregation; auxiliary columns defaulted to champion | Created `recsys/aggregation.py` with true sample std, `"n/a"` for deterministic models, and automated integrity validator | **RESOLVED & VERIFIED** |
+| **I3** | Paired ablation diffs did not equal subtraction of means | Reported values mixed single-seed and bootstrap estimates | Enforced exact mathematical identity $\Delta \equiv \mu_V - \mu_F$ across all 5 Two-Tower variants and 6 Ranker groups | **RESOLVED & VERIFIED** |
+| **I4** | Speculative claims regarding sequential CPU latency | Unfounded theoretical estimates (alleged 20–35 min/epoch, 40–85 ms latency) | Implemented and benchmarked SASRec challenger: measured 1.6 min/epoch, $P_{95} = 1.71\text{ ms}$; union recall +16.5% | **RESOLVED & VERIFIED** |
+| **I5** | Score scale mismatch and weak evidence on cold-start holdout | Simple addition of uncalibrated scores; single-seed holdout with only 4 hits | Implemented z-score calibrated `RoutedHybridRecommender`; evaluated 3 cohorts (779 withheld items); Val NDCG 0.0335 (22.2x random; STRONG) | **RESOLVED & VERIFIED** |
+| **I6** | Holdout queries mislabeled as "hand-written" and inactive abstention | Developer paraphrases labeled human; $\tau=0.10$ caused 0% abstention | Re-tagged dataset as synthetic; tuned $\tau = 0.630$ (95.92% selective acc); audited 95.68% non-overlapping queries | **RESOLVED & VERIFIED** |
+| **I7** | Validation before/after leakage check uninformative by construction | Temporal split ensured $t_{train} < t_{val}$, so target items never had future interactions | Replaced with synthetic sequence unit test suite (`test_timestamp_leakage.py`) proving future purge; locked test evaluation | **RESOLVED & VERIFIED** |
+
 
 
 

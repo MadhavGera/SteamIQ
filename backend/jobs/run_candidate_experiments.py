@@ -25,7 +25,6 @@ from core.config import settings
 from recsys.candidates import (
     DEFAULT_CANDIDATE_COUNTS,
     DEFAULT_QUOTAS,
-    CandidateResult,
     generate_candidates,
 )
 from recsys.data import RecsysData
@@ -104,7 +103,8 @@ def run_candidate_retrieval_experiments(
 
     eval_meta_file = resolved_dir / "eval_users.json"
     if eval_meta_file.exists():
-        eval_raw = json.load(open(eval_meta_file, encoding="utf-8"))
+        with open(eval_meta_file, encoding="utf-8") as f:
+            eval_raw = json.load(f)
         eval_users = eval_raw["eval_users"] if isinstance(eval_raw, dict) else eval_raw
     else:
         eval_users = np.unique(data.val_df["user_idx"].to_numpy())

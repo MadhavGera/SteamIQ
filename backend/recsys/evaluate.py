@@ -174,9 +174,8 @@ def build_user_evaluation_inputs(
             val_item = val_target_map.get(u_int)
             val_ts = val_ts_map.get(u_int)
             full_pos = list(pos_items)
-            if val_item is not None:
-                if target_ts is None or val_ts is None or val_ts < target_ts:
-                    full_pos.append(int(val_item))
+            if val_item is not None and (target_ts is None or val_ts is None or val_ts < target_ts):
+                full_pos.append(int(val_item))
             user_hist = full_pos[-max_history:] if len(full_pos) > max_history else full_pos
             hist_len = len(full_pos)
             seen = set(full_pos) | set(neg_items)

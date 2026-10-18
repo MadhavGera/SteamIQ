@@ -56,7 +56,7 @@ async def bootstrap_database(session: AsyncSession) -> dict[str, Any]:
             records = []
             for r in df.to_dict(orient="records"):
                 raw_tags = r.get("tags")
-                if isinstance(raw_tags, (list, np.ndarray)):
+                if isinstance(raw_tags, list | np.ndarray):
                     tags_clean = [str(t) for t in raw_tags]
                 elif isinstance(raw_tags, dict):
                     tags_clean = list(raw_tags.keys())

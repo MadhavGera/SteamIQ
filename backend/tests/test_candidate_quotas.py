@@ -8,9 +8,6 @@ import numpy as np
 import pytest
 
 from recsys.candidates import (
-    DEFAULT_CANDIDATE_COUNTS,
-    DEFAULT_QUOTAS,
-    CandidateResult,
     generate_candidates,
 )
 from recsys.models.base import BaseRecommender

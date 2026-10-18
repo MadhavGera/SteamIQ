@@ -12,6 +12,7 @@ All tests verify analytical closed-form derivations calculated by hand.
 from __future__ import annotations
 
 import math
+
 import numpy as np
 import pytest
 
