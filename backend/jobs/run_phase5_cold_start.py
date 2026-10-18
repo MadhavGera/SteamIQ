@@ -14,21 +14,26 @@ Protects test split by evaluating on the 5,000 validation users.
 from __future__ import annotations
 
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from recsys.coldstart import (
+backend_dir = Path(__file__).resolve().parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
+from recsys.coldstart import (  # noqa: E402
     evaluate_multi_cohort_holdout_study,
     evaluate_simulated_new_items_study,
     evaluate_sparse_targets_study,
 )
-from recsys.data import RecsysData
-from recsys.evaluate import get_evaluation_user_split
-from recsys.models.als import ALSRecommender
-from recsys.models.content import ContentRecommender
-from recsys.models.popularity import PopularityRecommender
-from recsys.models.two_tower import TwoTowerModel
+from recsys.data import RecsysData  # noqa: E402
+from recsys.evaluate import get_evaluation_user_split  # noqa: E402
+from recsys.models.als import ALSRecommender  # noqa: E402
+from recsys.models.content import ContentRecommender  # noqa: E402
+from recsys.models.popularity import PopularityRecommender  # noqa: E402
+from recsys.models.two_tower import TwoTowerModel  # noqa: E402
 
 
 def run_phase5_cold_start(
@@ -96,27 +101,42 @@ def run_phase5_cold_start(
         cold_threshold=cold_threshold,
         split=split,
         n_boot=n_boot,
+        cohort_size=200,
+        seed=42,
     )
 
     print(f"\n{holdout_res['title']}")
     print(f"Total evaluated users: {holdout_res['n_eval_users']}")
     print(f"Total unique withheld items: {holdout_res['total_unique_items_withheld']}")
-    print(f"Evidence status: {holdout_res['evidence_status'].upper()}")
+    grade = holdout_res.get("evidence_grade", holdout_res.get("evidence_status", "UNKNOWN"))
+    print(f"Evidence status / grade: {grade.upper()}")
     print(f"Evidence statement: {holdout_res['evidence_statement']}\n")
 
     print(f"{'Model':<20s} | {'NDCG@10 (95% CI)':<28s} | {'HR@10 (95% CI)':<26s} | {'Mean Rank (95% CI)':<24s}")
     print("-" * 105)
     for m_name, s in holdout_res["models"].items():
-        nd_str = f"{s['ndcg_at_10']:.5f} [{s['ndcg_at_10_lo95']:.5f}, {s['ndcg_at_10_hi95']:.5f}]"
-        hr_str = f"{s['hit_rate_at_10']:.4f} [{s['hit_rate_at_10_lo95']:.4f}, {s['hit_rate_at_10_hi95']:.4f}]"
-        mr_str = f"{s['mean_rank']:.1f} [{s['mean_rank_lo95']:.1f}, {s['mean_rank_hi95']:.1f}]"
+        nd = s.get("ndcg_at_10", 0.0)
+        nd_lo = s.get("ndcg_at_10_lo95", nd)
+        nd_hi = s.get("ndcg_at_10_hi95", nd)
+        hr = s.get("hit_rate_at_10", 0.0)
+        hr_lo = s.get("hit_rate_at_10_lo95", hr)
+        hr_hi = s.get("hit_rate_at_10_hi95", hr)
+        mr = s.get("mean_rank", 0.0)
+        mr_lo = s.get("mean_rank_lo95", mr)
+        mr_hi = s.get("mean_rank_hi95", mr)
+        nd_str = f"{nd:.5f} [{nd_lo:.5f}, {nd_hi:.5f}]"
+        hr_str = f"{hr:.4f} [{hr_lo:.4f}, {hr_hi:.4f}]"
+        mr_str = f"{mr:.1f} [{mr_lo:.1f}, {mr_hi:.1f}]"
         print(f"{m_name:<20s} | {nd_str:<28s} | {hr_str:<26s} | {mr_str:<24s}")
 
     print("\nPer-Cohort Details:")
     for c_key, c_val in holdout_res["per_cohort"].items():
         print(f"  {c_key}: n_users={c_val['n_users']}, sample items={c_val['withheld_items_sample'][:5]}...")
         for m_name, s in c_val["models"].items():
-            print(f"    {m_name:<16s}: NDCG@10 = {s['ndcg_at_10']:.5f}, HR@10 = {s['hit_rate_at_10']:.4f}, Mean Rank = {s['mean_rank']:.1f}")
+            nd = s.get("ndcg_at_10", 0.0)
+            hr = s.get("hit_rate_at_10", 0.0)
+            mr = s.get("mean_rank", 0.0)
+            print(f"    {m_name:<16s}: NDCG@10 = {nd:.5f}, HR@10 = {hr:.4f}, Mean Rank = {mr:.1f}")
 
     print("\n" + "=" * 70)
     print("STEP 2: Run Auxiliary Diagnostic Studies on Validation Split")

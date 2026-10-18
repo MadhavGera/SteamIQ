@@ -32,6 +32,7 @@ from recsys.metrics import (
     hit_rate_at_k,
     mrr_at_k,
     ndcg_at_k,
+    paired_bootstrap_diff,
 )
 from recsys.models.base import BaseRecommender
 from recsys.models.routed_hybrid import RoutedHybridRecommender
@@ -600,6 +601,153 @@ def get_item_holdout_split(
     return held_out_items, set(int(it) for it in held_out_items)
 
 
+def get_disjoint_item_holdout_cohorts(
+    data: RecsysData,
+    n_eval_cohorts: int = 3,
+    cohort_size: int = 200,
+    seed: int = 42,
+) -> dict[str, list[int]]:
+    """
+    Builds mutually disjoint withheld-item cohorts for fair cold-start evaluation.
+    Partitions candidate items from the torso/tail into:
+      - 1 tuning cohort (tuning routing threshold N)
+      - n_eval_cohorts evaluation cohorts (mutually disjoint evaluation sets)
+
+    Guarantees:
+      - All cohorts are strictly mutually disjoint (zero item overlap).
+      - Items are drawn from the torso and tail (bottom 80% by train popularity).
+    """
+    n_items = data.n_items
+    sorted_pop = np.argsort(data.item_train_pop)  # ascending (tail to head)
+    torso_tail = sorted_pop[: int(0.80 * n_items)]
+
+    total_needed = (n_eval_cohorts + 1) * cohort_size
+    if len(torso_tail) < total_needed:
+        raise ValueError(f"Not enough torso/tail items ({len(torso_tail)}) to partition into {total_needed} items.")
+
+    rng = np.random.default_rng(seed)
+    sampled = rng.choice(torso_tail, size=total_needed, replace=False)
+
+    cohorts: dict[str, list[int]] = {
+        "tuning": [int(x) for x in sampled[:cohort_size]]
+    }
+    for i in range(n_eval_cohorts):
+        start = (i + 1) * cohort_size
+        end = (i + 2) * cohort_size
+        cohorts[f"eval_{i + 1}"] = [int(x) for x in sampled[start:end]]
+
+    # Formally assert pairwise disjointness
+    all_sets = [set(c) for c in cohorts.values()]
+    for i in range(len(all_sets)):
+        for j in range(i + 1, len(all_sets)):
+            assert all_sets[i].isdisjoint(all_sets[j]), (
+                f"Cohorts {list(cohorts.keys())[i]} and {list(cohorts.keys())[j]} overlap!"
+            )
+
+    return cohorts
+
+
+def compute_cold_only_random_metrics(
+    seen_masks: list[set[int]],
+    cold_item_set: set[int],
+) -> dict[str, float]:
+    r"""
+    Computes exact analytic expectation for random ranking among unmasked cold candidate items.
+    For each user whose target is a cold item, the cold candidate pool size is:
+        |C_u| = |cold_item_set \ seen_mask_u|
+    Expected NDCG@10 is:
+        E[NDCG@10_u] = sum_{r=1}^{min(10, |C_u|)} 1 / (|C_u| * log2(r + 1))
+    """
+    n_users = len(seen_masks)
+    if n_users == 0:
+        return {"hit_rate_at_10": 0.0, "ndcg_at_10": 0.0, "mrr_at_10": 0.0, "mean_rank": 0.0}
+
+    dcg_discounts = 1.0 / np.log2(np.arange(1, 11) + 1.0)
+    rr_discounts = 1.0 / np.arange(1, 11)
+
+    ndcgs = []
+    hrs = []
+    mrrs = []
+    mean_ranks = []
+
+    for sm in seen_masks:
+        unmasked_cold = len(cold_item_set - sm)
+        if unmasked_cold <= 0:
+            unmasked_cold = max(1, len(cold_item_set))
+
+        k_eff = min(10, unmasked_cold)
+        ndcgs.append(float(np.sum(dcg_discounts[:k_eff]) / unmasked_cold))
+        hrs.append(float(k_eff / unmasked_cold))
+        mrrs.append(float(np.sum(rr_discounts[:k_eff]) / unmasked_cold))
+        mean_ranks.append(float((unmasked_cold + 1.0) / 2.0))
+
+    mean_ndcg = float(np.mean(ndcgs))
+    mean_hr = float(np.mean(hrs))
+    mean_mrr = float(np.mean(mrrs))
+    mean_mr = float(np.mean(mean_ranks))
+
+    return {
+        "hit_rate_at_10": mean_hr,
+        "hit_rate_at_10_lo95": mean_hr,
+        "hit_rate_at_10_hi95": mean_hr,
+        "ndcg_at_10": mean_ndcg,
+        "ndcg_at_10_lo95": mean_ndcg,
+        "ndcg_at_10_hi95": mean_ndcg,
+        "mrr_at_10": mean_mrr,
+        "mrr_at_10_lo95": mean_mrr,
+        "mrr_at_10_hi95": mean_mrr,
+        "mean_rank": mean_mr,
+        "mean_rank_lo95": mean_mr,
+        "mean_rank_hi95": mean_mr,
+        "median_rank": mean_mr,
+        "formula": "Exact closed-form E[NDCG@10] over unmasked cold items per user",
+    }
+
+
+def compute_cold_start_grade(
+    group_a_ndcg_lo95: float,
+    cold_only_random_ndcg: float,
+    group_b_diff_lo95: float,
+    group_b_diff_hi95: float,
+) -> dict[str, Any]:
+    """
+    Evidence grading rule (applied mechanically):
+      - STRONG: Group (a) NDCG@10 lower CI bound > 2x cold-only random baseline
+                AND Group (b) paired difference CI does not show a significant loss (hi95 >= 0).
+      - MODERATE: Group (a) NDCG@10 lower CI bound > cold-only random baseline.
+      - WEAK: otherwise.
+    """
+    beats_double_random = bool(group_a_ndcg_lo95 > (2.0 * cold_only_random_ndcg))
+    beats_single_random = bool(group_a_ndcg_lo95 > cold_only_random_ndcg)
+    # Significant warm loss occurs if upper bound of difference is strictly negative (entire CI < 0)
+    has_significant_warm_loss = bool(group_b_diff_hi95 < 0.0)
+
+    rule_description = (
+        "STRONG only if Group (a) NDCG@10 lower CI bound > 2x cold-only random baseline "
+        "AND Group (b) paired difference CI does not show a significant loss (hi95 >= 0). "
+        "MODERATE if Group (a) lower CI bound > 1x cold-only random. Otherwise WEAK."
+    )
+
+    if beats_double_random and not has_significant_warm_loss:
+        grade = "STRONG"
+    elif beats_single_random and not has_significant_warm_loss:
+        grade = "MODERATE"
+    else:
+        grade = "WEAK"
+
+    return {
+        "grade": grade,
+        "rule": rule_description,
+        "beats_double_cold_random": beats_double_random,
+        "beats_single_cold_random": beats_single_random,
+        "has_significant_warm_loss": has_significant_warm_loss,
+        "group_a_lo95": float(group_a_ndcg_lo95),
+        "cold_only_random_threshold_2x": float(2.0 * cold_only_random_ndcg),
+        "cold_only_random_threshold_1x": float(cold_only_random_ndcg),
+        "group_b_diff_ci": [float(group_b_diff_lo95), float(group_b_diff_hi95)],
+    }
+
+
 def evaluate_item_holdout_study(
     data: RecsysData,
     models: dict[str, BaseRecommender],
@@ -763,267 +911,361 @@ def evaluate_multi_cohort_holdout_study(
     cold_threshold: int = 5,
     split: str = "val",
     n_boot: int = 1000,
+    cohort_size: int = 200,
+    seed: int = 42,
 ) -> dict[str, Any]:
     """
-    Executes True Item Holdout Evaluation across multiple distinct cohorts (seeds).
+    Executes Fair Disjoint Multi-Cohort True Item Holdout Evaluation (Phase K).
 
-    Verifies that different seeds produce different withheld-item sets and different evaluation users.
-    Compares:
-      - Analytic Random reference
-      - Content-Only (cosine similarity on text/tag embeddings)
-      - Two-Tower (clean architecture, unknown ID neutralized, proxies neutralized)
-      - Calibrated Routed Hybrid (cold_threshold N tuned on validation)
-
-    Returns structured results per-cohort and pooled across all cohorts with bootstrap CIs.
+    Protocol:
+      1. Disjoint cohorts: Partitions candidate items into 1 tuning cohort + 3 evaluation cohorts
+         with zero item overlap between any cohorts.
+      2. Tuning on tuning cohort: Selects optimal routing threshold N* in {5, 10, 20, 50} on validation.
+      3. Three user groups per cohort:
+         - Group (a): users whose target is a withheld cold item.
+         - Group (b): users whose target is a warm item (measures warm-user degradation Delta).
+         - Group (c): all users.
+      4. Fair Baselines: Content-only, Two-Tower (neutralized), Routed Hybrid, Catalog-wide Random,
+         Cold-only Random (exact expectation for Group a), and Boost-All-Cold-Equally.
+      5. Rule-based Evidence Grading: Applies compute_cold_start_grade mechanically.
     """
-    if cohort_seeds is None:
-        cohort_seeds = [42, 43, 44]
-
     eval_users_arr = np.asarray(eval_users, dtype=np.int64)
     target_df = data.val_df if split == "val" else data.test_df
     target_map = dict(zip(target_df["user_idx"].to_numpy(), target_df["item_idx"].to_numpy(), strict=True))
 
     n_items = float(data.n_items)
-    random_hr = 10.0 / n_items
-    random_ndcg = float(np.sum(1.0 / np.log2(np.arange(1, 11) + 1.0)) / n_items)
-    random_mrr = float(np.sum(1.0 / np.arange(1, 11)) / n_items)
-    random_mean_rank = n_items / 2.0
+    cat_random_hr = 10.0 / n_items
+    cat_random_ndcg = float(np.sum(1.0 / np.log2(np.arange(1, 11) + 1.0)) / n_items)
 
-    cohort_results: dict[str, Any] = {}
-    held_out_sets: list[set[int]] = []
+    # 1. Partition catalog items into 4 mutually disjoint cohorts
+    cohorts = get_disjoint_item_holdout_cohorts(data, n_eval_cohorts=3, cohort_size=cohort_size, seed=seed)
+    tuning_items = cohorts["tuning"]
+    tuning_set = set(tuning_items)
 
-    pooled_rks: dict[str, list[float]] = {
-        "content": [],
-        "two_tower": [],
-        "routed_hybrid": [],
-    }
+    # 2. Tune routing threshold N on tuning cohort
+    logger.info("Tuning routing threshold N in {5, 10, 20, 50} on tuning cohort (%d items)...", len(tuning_items))
+    candidate_Ns = [5, 10, 20, 50]
+    best_N = 5
+    best_tuning_ndcg = -1.0
+    tuning_trials: dict[str, Any] = {}
 
-    for seed in cohort_seeds:
-        ho_items, ho_set = get_item_holdout_split(data, fraction=fraction, seed=seed)
-        held_out_sets.append(ho_set)
-        ho_list = [int(it) for it in ho_items]
+    tuning_users_a = [int(u) for u in eval_users_arr if int(target_map.get(int(u), -1)) in tuning_set]
+    tuning_users_b = [int(u) for u in eval_users_arr if int(target_map.get(int(u), -1)) not in tuning_set][:500]
 
-        # Eligible users whose target is in this cohort's held-out set
-        cohort_users = [int(u) for u in eval_users_arr if int(target_map.get(int(u), -1)) in ho_set]
-        n_ho_users = len(cohort_users)
-        logger.info(
-            "Cohort seed=%d: %d held-out items, %d evaluated %s users",
-            seed,
-            len(ho_set),
-            n_ho_users,
-            split,
-        )
+    h_ta, t_ta, sm_ta = _build_test_foldin_data(data, np.array(tuning_users_a, dtype=np.int64), split=split)
+    h_tb, t_tb, sm_tb = _build_test_foldin_data(data, np.array(tuning_users_b, dtype=np.int64), split=split)
 
-        if n_ho_users == 0:
-            cohort_results[str(seed)] = {
-                "seed": seed,
-                "n_users": 0,
-                "held_out_item_count": len(ho_set),
-                "note": "No eligible users with target in held-out set",
-            }
-            continue
+    if isinstance(primary_model, TwoTowerModel):
+        mvec_tune = primary_model.item_vectors(mask_ids=tuning_items, neutralize_proxies=tuning_items)
+    else:
+        mvec_tune = None
 
-        histories, targets, seen_masks = _build_test_foldin_data(
-            data, np.array(cohort_users, dtype=np.int64), split=split
-        )
-        targ_arr = np.asarray(targets, dtype=np.int64)
-
-        # 1. Content scores
-        sc_cnt_raw = cold_model.score(histories).copy()
-        sc_cnt = sc_cnt_raw.copy()
-        for i, sm in enumerate(seen_masks):
-            sc_cnt[i, list(sm)] = -np.inf
-        rk_cnt = compute_ranks(sc_cnt, targ_arr)
-        pooled_rks["content"].extend(rk_cnt)
-
-        # 2. Two-Tower (clean architecture, unknown ID neutralized, all proxies neutralized)
-        if isinstance(primary_model, TwoTowerModel):
-            masked_vecs = primary_model.item_vectors(mask_ids=ho_list, neutralize_proxies=ho_list)
-            sc_tt_raw = primary_model.score(
-                histories,
-                item_vecs=masked_vecs,
-                mask_ids=ho_list,
-                neutralize_proxies=ho_list,
-            ).copy()
-        else:
-            sc_tt_raw = primary_model.score(histories).copy()
-
-        sc_tt = sc_tt_raw.copy()
-        for i, sm in enumerate(seen_masks):
-            sc_tt[i, list(sm)] = -np.inf
-        rk_tt = compute_ranks(sc_tt, targ_arr)
-        pooled_rks["two_tower"].extend(rk_tt)
-
-        # 3. Routed Hybrid with score calibration
-        hybrid_model = RoutedHybridRecommender(
+    for n_val in candidate_Ns:
+        hyb_tune = RoutedHybridRecommender(
             primary_model=primary_model,
             cold_model=cold_model,
-            cold_threshold=cold_threshold,
+            cold_threshold=n_val,
+            held_out_items=tuning_set,
+        )
+        hyb_tune.fit(data)
+
+        sc_a = hyb_tune.score(h_ta, item_vecs=mvec_tune, mask_ids=tuning_items, neutralize_proxies=tuning_items).copy()
+        for i, sm in enumerate(sm_ta):
+            sc_a[i, list(sm)] = -np.inf
+        rks_a = compute_ranks(sc_a, np.array(t_ta))
+        nd_a = float(np.mean(ndcg_at_k(rks_a, 10)))
+
+        sc_b = hyb_tune.score(h_tb, item_vecs=mvec_tune, mask_ids=tuning_items, neutralize_proxies=tuning_items).copy()
+        for i, sm in enumerate(sm_tb):
+            sc_b[i, list(sm)] = -np.inf
+        rks_b = compute_ranks(sc_b, np.array(t_tb))
+        nd_b = float(np.mean(ndcg_at_k(rks_b, 10)))
+
+        tuning_trials[str(n_val)] = {"group_a_ndcg": nd_a, "group_b_ndcg": nd_b}
+        if nd_a > best_tuning_ndcg:
+            best_tuning_ndcg = nd_a
+            best_N = n_val
+
+    locked_N = best_N
+    logger.info("Locked routing threshold N* = %d based on tuning cohort.", locked_N)
+
+    # 3. Evaluate each evaluation cohort across groups (a), (b), (c)
+    eval_cohort_keys = ["eval_1", "eval_2", "eval_3"]
+    cohort_results: dict[str, Any] = {}
+
+    pooled_a_ranks: dict[str, list[float]] = {"content": [], "two_tower": [], "routed_hybrid": [], "boost_cold_equal": []}
+    pooled_b_ranks: dict[str, list[float]] = {"two_tower": [], "routed_hybrid": []}
+    pooled_a_cold_random_ndcgs: list[float] = []
+
+    for c_key in eval_cohort_keys:
+        ho_list = cohorts[c_key]
+        ho_set = set(ho_list)
+
+        # User partitions
+        u_group_a = [int(u) for u in eval_users_arr if int(target_map.get(int(u), -1)) in ho_set]
+        u_group_b = [int(u) for u in eval_users_arr if int(target_map.get(int(u), -1)) not in ho_set]
+
+        logger.info(
+            "Cohort %s (%d items): Group (a)=%d, Group (b)=%d, Group (c)=%d",
+            c_key,
+            len(ho_set),
+            len(u_group_a),
+            len(u_group_b),
+            len(eval_users_arr),
+        )
+
+        hist_all, targ_all, seen_all = _build_test_foldin_data(data, eval_users_arr, split=split)
+        user_to_idx = {int(u): idx for idx, u in enumerate(eval_users_arr)}
+        idx_a = [user_to_idx[u] for u in u_group_a]
+        idx_b = [user_to_idx[u] for u in u_group_b]
+
+        if isinstance(primary_model, TwoTowerModel):
+            masked_vecs = primary_model.item_vectors(mask_ids=ho_list, neutralize_proxies=ho_list)
+            sc_tt_raw = primary_model.score(hist_all, item_vecs=masked_vecs, mask_ids=ho_list, neutralize_proxies=ho_list).copy()
+        else:
+            masked_vecs = None
+            sc_tt_raw = primary_model.score(hist_all).copy()
+
+        sc_cnt_raw = cold_model.score(hist_all).copy()
+
+        hyb_model = RoutedHybridRecommender(
+            primary_model=primary_model,
+            cold_model=cold_model,
+            cold_threshold=locked_N,
             held_out_items=ho_set,
         )
-        hybrid_model.fit(data)
-        sc_hyb_raw = hybrid_model.score(
-            histories,
-            item_vecs=masked_vecs if isinstance(primary_model, TwoTowerModel) else None,
-            mask_ids=ho_list,
-            neutralize_proxies=ho_list,
-        ).copy()
-        sc_hyb = sc_hyb_raw.copy()
-        for i, sm in enumerate(seen_masks):
-            sc_hyb[i, list(sm)] = -np.inf
-        rk_hyb = compute_ranks(sc_hyb, targ_arr)
-        pooled_rks["routed_hybrid"].extend(rk_hyb)
+        hyb_model.fit(data)
+        sc_hyb_raw = hyb_model.score(hist_all, item_vecs=masked_vecs, mask_ids=ho_list, neutralize_proxies=ho_list).copy()
 
-        def _summarize_ranks(ranks: np.ndarray, n_u: int, seed_val: int) -> dict[str, Any]:
-            hr_arr = hit_rate_at_k(ranks, 10)
-            nd_arr = ndcg_at_k(ranks, 10)
-            mrr_arr = mrr_at_k(ranks, 10)
-            hr_m, hr_lo, hr_hi = bootstrap_ci(hr_arr, n_boot=n_boot, seed=seed_val)
-            nd_m, nd_lo, nd_hi = bootstrap_ci(nd_arr, n_boot=n_boot, seed=seed_val)
-            mrr_m, mrr_lo, mrr_hi = bootstrap_ci(mrr_arr, n_boot=n_boot, seed=seed_val)
-            mr_m, mr_lo, mr_hi = bootstrap_ci(ranks, n_boot=n_boot, seed=seed_val)
+        # Boost cold equal: uniform boost on cold items
+        sc_boost_raw = sc_tt_raw.copy()
+        sc_boost_raw[:, ho_list] += 50.0
+
+        # Mask seen items
+        sc_tt = sc_tt_raw.copy()
+        sc_cnt = sc_cnt_raw.copy()
+        sc_hyb = sc_hyb_raw.copy()
+        sc_boost = sc_boost_raw.copy()
+        for i, sm in enumerate(seen_all):
+            sm_list = list(sm)
+            sc_tt[i, sm_list] = -np.inf
+            sc_cnt[i, sm_list] = -np.inf
+            sc_hyb[i, sm_list] = -np.inf
+            sc_boost[i, sm_list] = -np.inf
+
+        targ_arr = np.asarray(targ_all, dtype=np.int64)
+
+        # Group (a) Ranks & Metrics
+        targ_a = targ_arr[idx_a]
+        rk_tt_a = compute_ranks(sc_tt[idx_a], targ_a)
+        rk_cnt_a = compute_ranks(sc_cnt[idx_a], targ_a)
+        rk_hyb_a = compute_ranks(sc_hyb[idx_a], targ_a)
+        rk_bst_a = compute_ranks(sc_boost[idx_a], targ_a)
+
+        pooled_a_ranks["two_tower"].extend(rk_tt_a)
+        pooled_a_ranks["content"].extend(rk_cnt_a)
+        pooled_a_ranks["routed_hybrid"].extend(rk_hyb_a)
+        pooled_a_ranks["boost_cold_equal"].extend(rk_bst_a)
+
+        seen_a = [seen_all[i] for i in idx_a]
+        cold_rand_a = compute_cold_only_random_metrics(seen_a, ho_set)
+        pooled_a_cold_random_ndcgs.append(cold_rand_a["ndcg_at_10"])
+
+        # Group (b) Ranks & Metrics
+        targ_b = targ_arr[idx_b]
+        rk_tt_b = compute_ranks(sc_tt[idx_b], targ_b)
+        rk_hyb_b = compute_ranks(sc_hyb[idx_b], targ_b)
+
+        pooled_b_ranks["two_tower"].extend(rk_tt_b)
+        pooled_b_ranks["routed_hybrid"].extend(rk_hyb_b)
+
+        # Paired diffs for this cohort
+        m_diff_a_tt, lo_a_tt, hi_a_tt = paired_bootstrap_diff(
+            ndcg_at_k(rk_hyb_a, 10), ndcg_at_k(rk_tt_a, 10), n_boot=n_boot, seed=seed
+        )
+        m_diff_a_cnt, lo_a_cnt, hi_a_cnt = paired_bootstrap_diff(
+            ndcg_at_k(rk_hyb_a, 10), ndcg_at_k(rk_cnt_a, 10), n_boot=n_boot, seed=seed
+        )
+        m_diff_b_tt, lo_b_tt, hi_b_tt = paired_bootstrap_diff(
+            ndcg_at_k(rk_hyb_b, 10), ndcg_at_k(rk_tt_b, 10), n_boot=n_boot, seed=seed
+        )
+
+        def _summarize(ranks: np.ndarray, n_u: int) -> dict[str, Any]:
+            hr_m, hr_lo, hr_hi = bootstrap_ci(hit_rate_at_k(ranks, 10), n_boot=n_boot, seed=seed)
+            nd_m, nd_lo, nd_hi = bootstrap_ci(ndcg_at_k(ranks, 10), n_boot=n_boot, seed=seed)
+            mr_m, mr_lo, mr_hi = bootstrap_ci(ranks, n_boot=n_boot, seed=seed)
             return {
-                "hits_k": int(np.sum(hr_arr)),
                 "n_users": n_u,
-                "hit_rate_at_10": float(hr_m),
-                "hit_rate_at_10_lo95": float(hr_lo),
-                "hit_rate_at_10_hi95": float(hr_hi),
                 "ndcg_at_10": float(nd_m),
                 "ndcg_at_10_lo95": float(nd_lo),
                 "ndcg_at_10_hi95": float(nd_hi),
-                "mrr_at_10": float(mrr_m),
-                "mrr_at_10_lo95": float(mrr_lo),
-                "mrr_at_10_hi95": float(mrr_hi),
+                "hit_rate_at_10": float(hr_m),
+                "hit_rate_at_10_lo95": float(hr_lo),
+                "hit_rate_at_10_hi95": float(hr_hi),
                 "mean_rank": float(mr_m),
                 "mean_rank_lo95": float(mr_lo),
                 "mean_rank_hi95": float(mr_hi),
-                "median_rank": float(np.median(ranks)),
             }
 
-        cohort_results[f"cohort_{seed}"] = {
-            "seed": seed,
-            "n_users": n_ho_users,
+        cohort_results[c_key] = {
+            "cohort_name": c_key,
             "held_out_item_count": len(ho_set),
-            "withheld_items_sample": [int(x) for x in ho_items[:10]],
+            "withheld_items_sample": ho_list[:10],
+            "n_users": len(u_group_a),
             "models": {
-                "random": {
-                    "hits_k": int(round(n_ho_users * random_hr)),
-                    "n_users": n_ho_users,
-                    "hit_rate_at_10": random_hr,
-                    "hit_rate_at_10_lo95": random_hr,
-                    "hit_rate_at_10_hi95": random_hr,
-                    "ndcg_at_10": random_ndcg,
-                    "ndcg_at_10_lo95": random_ndcg,
-                    "ndcg_at_10_hi95": random_ndcg,
-                    "mrr_at_10": random_mrr,
-                    "mrr_at_10_lo95": random_mrr,
-                    "mrr_at_10_hi95": random_mrr,
-                    "mean_rank": random_mean_rank,
-                    "mean_rank_lo95": random_mean_rank,
-                    "mean_rank_hi95": random_mean_rank,
-                    "median_rank": random_mean_rank,
+                "content": _summarize(rk_cnt_a, len(u_group_a)),
+                "two_tower": _summarize(rk_tt_a, len(u_group_a)),
+                "routed_hybrid": _summarize(rk_hyb_a, len(u_group_a)),
+                "boost_cold_equal": _summarize(rk_bst_a, len(u_group_a)),
+                "cold_only_random": cold_rand_a,
+                "catalog_random": {"ndcg_at_10": cat_random_ndcg, "hit_rate_at_10": cat_random_hr},
+            },
+            "group_a_cold_target_users": {
+                "n_users": len(u_group_a),
+                "cold_only_random": cold_rand_a,
+                "catalog_random": {"ndcg_at_10": cat_random_ndcg, "hit_rate_at_10": cat_random_hr},
+                "content": _summarize(rk_cnt_a, len(u_group_a)),
+                "two_tower": _summarize(rk_tt_a, len(u_group_a)),
+                "routed_hybrid": _summarize(rk_hyb_a, len(u_group_a)),
+                "boost_cold_equal": _summarize(rk_bst_a, len(u_group_a)),
+                "paired_diff_hybrid_vs_two_tower": {"diff_mean": m_diff_a_tt, "diff_lo95": lo_a_tt, "diff_hi95": hi_a_tt},
+                "paired_diff_hybrid_vs_content": {"diff_mean": m_diff_a_cnt, "diff_lo95": lo_a_cnt, "diff_hi95": hi_a_cnt},
+            },
+            "group_b_warm_target_users": {
+                "n_users": len(u_group_b),
+                "two_tower": _summarize(rk_tt_b, len(u_group_b)),
+                "routed_hybrid": _summarize(rk_hyb_b, len(u_group_b)),
+                "paired_diff_hybrid_vs_two_tower_warm_damage": {
+                    "diff_mean": m_diff_b_tt,
+                    "diff_lo95": lo_b_tt,
+                    "diff_hi95": hi_b_tt,
                 },
-                "content": _summarize_ranks(rk_cnt, n_ho_users, seed),
-                "two_tower": _summarize_ranks(rk_tt, n_ho_users, seed),
-                "routed_hybrid": _summarize_ranks(rk_hyb, n_ho_users, seed),
             },
         }
 
-    # Verify that withheld item sets differ across cohorts
-    for i in range(len(held_out_sets)):
-        for j in range(i + 1, len(held_out_sets)):
-            if held_out_sets[i] == held_out_sets[j]:
-                raise ValueError(f"Cohort {cohort_seeds[i]} and {cohort_seeds[j]} have identical withheld item sets!")
+    # 4. Pooled summaries across cohorts
+    total_a_users = len(pooled_a_ranks["routed_hybrid"])
+    total_b_users = len(pooled_b_ranks["routed_hybrid"])
+    pooled_cold_random_ndcg = float(np.mean(pooled_a_cold_random_ndcgs))
 
-    # Compute pooled results across all cohorts
-    total_users = sum(c["n_users"] for c in cohort_results.values() if "n_users" in c)
-    unique_items_withheld = len(set.union(*held_out_sets)) if held_out_sets else 0
-
-    def _summarize_pooled_ranks(ranks_list: list[float]) -> dict[str, Any]:
-        ranks = np.asarray(ranks_list, dtype=np.float64)
-        hr_arr = hit_rate_at_k(ranks, 10)
-        nd_arr = ndcg_at_k(ranks, 10)
-        mrr_arr = mrr_at_k(ranks, 10)
-        hr_m, hr_lo, hr_hi = bootstrap_ci(hr_arr, n_boot=n_boot, seed=42)
-        nd_m, nd_lo, nd_hi = bootstrap_ci(nd_arr, n_boot=n_boot, seed=42)
-        mrr_m, mrr_lo, mrr_hi = bootstrap_ci(mrr_arr, n_boot=n_boot, seed=42)
-        mr_m, mr_lo, mr_hi = bootstrap_ci(ranks, n_boot=n_boot, seed=42)
+    def _summarize_p(ranks_list: list[float], n_u: int) -> dict[str, Any]:
+        arr = np.asarray(ranks_list, dtype=np.float64)
+        hr_m, hr_lo, hr_hi = bootstrap_ci(hit_rate_at_k(arr, 10), n_boot=n_boot, seed=seed)
+        nd_m, nd_lo, nd_hi = bootstrap_ci(ndcg_at_k(arr, 10), n_boot=n_boot, seed=seed)
+        mr_m, mr_lo, mr_hi = bootstrap_ci(arr, n_boot=n_boot, seed=seed)
         return {
-            "hits_k": int(np.sum(hr_arr)),
-            "n_users": total_users,
-            "hit_rate_at_10": float(hr_m),
-            "hit_rate_at_10_lo95": float(hr_lo),
-            "hit_rate_at_10_hi95": float(hr_hi),
+            "n_users": n_u,
             "ndcg_at_10": float(nd_m),
             "ndcg_at_10_lo95": float(nd_lo),
             "ndcg_at_10_hi95": float(nd_hi),
-            "mrr_at_10": float(mrr_m),
-            "mrr_at_10_lo95": float(mrr_lo),
-            "mrr_at_10_hi95": float(mrr_hi),
+            "hit_rate_at_10": float(hr_m),
+            "hit_rate_at_10_lo95": float(hr_lo),
+            "hit_rate_at_10_hi95": float(hr_hi),
             "mean_rank": float(mr_m),
             "mean_rank_lo95": float(mr_lo),
             "mean_rank_hi95": float(mr_hi),
-            "median_rank": float(np.median(ranks)),
         }
 
-    pooled_models = {
-        "random": {
-            "hits_k": int(round(total_users * random_hr)),
-            "n_users": total_users,
-            "hit_rate_at_10": random_hr,
-            "hit_rate_at_10_lo95": random_hr,
-            "hit_rate_at_10_hi95": random_hr,
-            "ndcg_at_10": random_ndcg,
-            "ndcg_at_10_lo95": random_ndcg,
-            "ndcg_at_10_hi95": random_ndcg,
-            "mrr_at_10": random_mrr,
-            "mrr_at_10_lo95": random_mrr,
-            "mrr_at_10_hi95": random_mrr,
-            "mean_rank": random_mean_rank,
-            "mean_rank_lo95": random_mean_rank,
-            "mean_rank_hi95": random_mean_rank,
-            "median_rank": random_mean_rank,
-        },
-        "content": _summarize_pooled_ranks(pooled_rks["content"]),
-        "two_tower": _summarize_pooled_ranks(pooled_rks["two_tower"]),
-        "routed_hybrid": _summarize_pooled_ranks(pooled_rks["routed_hybrid"]),
-    }
+    pooled_a_hyb = _summarize_p(pooled_a_ranks["routed_hybrid"], total_a_users)
+    pooled_a_tt = _summarize_p(pooled_a_ranks["two_tower"], total_a_users)
+    pooled_a_cnt = _summarize_p(pooled_a_ranks["content"], total_a_users)
+    pooled_a_bst = _summarize_p(pooled_a_ranks["boost_cold_equal"], total_a_users)
 
-    # Honest evidence strength assessment
-    hyb_lo = pooled_models["routed_hybrid"]["ndcg_at_10_lo95"]
-    is_weak = hyb_lo <= (1.5 * random_ndcg)
-    evidence_status = "weak" if is_weak else "strong"
+    pooled_b_hyb = _summarize_p(pooled_b_ranks["routed_hybrid"], total_b_users)
+    pooled_b_tt = _summarize_p(pooled_b_ranks["two_tower"], total_b_users)
+
+    p_arr_a_hyb = np.asarray(pooled_a_ranks["routed_hybrid"])
+    p_arr_a_tt = np.asarray(pooled_a_ranks["two_tower"])
+    p_arr_a_cnt = np.asarray(pooled_a_ranks["content"])
+
+    p_arr_b_hyb = np.asarray(pooled_b_ranks["routed_hybrid"])
+    p_arr_b_tt = np.asarray(pooled_b_ranks["two_tower"])
+
+    pm_a_tt, plo_a_tt, phi_a_tt = paired_bootstrap_diff(
+        ndcg_at_k(p_arr_a_hyb, 10), ndcg_at_k(p_arr_a_tt, 10), n_boot=n_boot, seed=seed
+    )
+    pm_a_cnt, plo_a_cnt, phi_a_cnt = paired_bootstrap_diff(
+        ndcg_at_k(p_arr_a_hyb, 10), ndcg_at_k(p_arr_a_cnt, 10), n_boot=n_boot, seed=seed
+    )
+    pm_b_tt, plo_b_tt, phi_b_tt = paired_bootstrap_diff(
+        ndcg_at_k(p_arr_b_hyb, 10), ndcg_at_k(p_arr_b_tt, 10), n_boot=n_boot, seed=seed
+    )
+
+    pooled_diff_a_hyb_vs_tt = {"diff_mean": pm_a_tt, "diff_lo95": plo_a_tt, "diff_hi95": phi_a_tt}
+    pooled_diff_a_hyb_vs_cnt = {"diff_mean": pm_a_cnt, "diff_lo95": plo_a_cnt, "diff_hi95": phi_a_cnt}
+    pooled_diff_b_hyb_vs_tt = {"diff_mean": pm_b_tt, "diff_lo95": plo_b_tt, "diff_hi95": phi_b_tt}
+
+    # 5. Apply mechanical evidence grading rule
+    grade_info = compute_cold_start_grade(
+        group_a_ndcg_lo95=pooled_a_hyb["ndcg_at_10_lo95"],
+        cold_only_random_ndcg=pooled_cold_random_ndcg,
+        group_b_diff_lo95=pooled_diff_b_hyb_vs_tt["diff_lo95"],
+        group_b_diff_hi95=pooled_diff_b_hyb_vs_tt["diff_hi95"],
+    )
+
     evidence_statement = (
-        f"Evidence is {evidence_status}: Routed Hybrid pooled NDCG@10 lower 95% bound ({hyb_lo:.5f}) "
-        f"{'is close to' if is_weak else 'is strictly and substantially higher than (>10x)'} "
-        f"analytic random ({random_ndcg:.5f})."
+        f"Evidence is {grade_info['grade']}: "
+        f"Group (a) lower 95% bound ({pooled_a_hyb['ndcg_at_10_lo95']:.4f}) "
+        f"{'strictly exceeds 2x' if grade_info['beats_double_cold_random'] else 'exceeds' if grade_info['beats_single_cold_random'] else 'trails'} "
+        f"the cold-only random baseline ({pooled_cold_random_ndcg:.4f}), and warm-user damage is "
+        f"{'not statistically significant' if not grade_info['has_significant_warm_loss'] else 'statistically significant'} "
+        f"(Group b paired Delta = {pooled_diff_b_hyb_vs_tt['diff_mean']:+.4f} [{pooled_diff_b_hyb_vs_tt['diff_lo95']:+.4f}, {pooled_diff_b_hyb_vs_tt['diff_hi95']:+.4f}])."
     )
 
     return {
-        "study_type": "item_holdout_multi_cohort",
+        "study_type": "item_holdout_multi_cohort_disjoint",
         "primary_evidence": True,
-        "title": f"True Item Holdout Multi-Cohort Study ({len(cohort_seeds)} Cohorts, N={total_users} Users)",
+        "title": f"Fair Disjoint True Item Holdout Study (3 Cohorts, N={total_a_users} Cold-Target Users)",
         "split": split,
-        "n_eval_users": total_users,
-        "cohort_seeds": cohort_seeds,
-        "n_cohorts": len(cohort_seeds),
-        "total_unique_items_withheld": unique_items_withheld,
-        "cold_threshold": cold_threshold,
-        "evidence_status": evidence_status,
-        "evidence_statement": evidence_statement,
-        "models": pooled_models,
-        "per_cohort": cohort_results,
-        "random_reference": {
-            "hit_rate_at_10": random_hr,
-            "ndcg_at_10": random_ndcg,
-            "formula": "10 / n_items",
+        "n_eval_users": len(eval_users_arr),
+        "total_unique_items_withheld": 3 * cohort_size,
+        "tuning_cohort": {
+            "n_items": len(tuning_items),
+            "item_ids": tuning_items,
+            "threshold_search": tuning_trials,
+            "locked_N": locked_N,
         },
-        "note": (
-            f"True Item Holdout Multi-Cohort Study ({len(cohort_seeds)} cohorts): "
-            "Evaluated across disjoint withheld item sets with zero training interactions. "
-            f"Threshold N={cold_threshold} tuned on validation. "
-            f"{evidence_statement}"
-        ),
+        "evaluation_cohort_items": {k: cohorts[k] for k in eval_cohort_keys},
+        "evidence_grade": grade_info["grade"],
+        "evidence_status": grade_info["grade"],
+        "evidence_rule": grade_info["rule"],
+        "evidence_statement": evidence_statement,
+        "evidence_details": grade_info,
+        "pooled": {
+            "group_a_cold_target": {
+                "n_users": total_a_users,
+                "cold_only_random_ndcg": pooled_cold_random_ndcg,
+                "models": {
+                    "cold_only_random": {"ndcg_at_10": pooled_cold_random_ndcg},
+                    "catalog_random": {"ndcg_at_10": cat_random_ndcg, "hit_rate_at_10": cat_random_hr},
+                    "content": pooled_a_cnt,
+                    "two_tower": pooled_a_tt,
+                    "routed_hybrid": pooled_a_hyb,
+                    "boost_cold_equal": pooled_a_bst,
+                },
+                "paired_diff_hybrid_vs_two_tower": pooled_diff_a_hyb_vs_tt,
+                "paired_diff_hybrid_vs_content": pooled_diff_a_hyb_vs_cnt,
+            },
+            "group_b_warm_target": {
+                "n_users": total_b_users,
+                "models": {
+                    "two_tower": pooled_b_tt,
+                    "routed_hybrid": pooled_b_hyb,
+                },
+                "paired_diff_hybrid_vs_two_tower_warm_damage": pooled_diff_b_hyb_vs_tt,
+            },
+        },
+        "models": {
+            "cold_only_random": {"ndcg_at_10": pooled_cold_random_ndcg, "n_users": total_a_users},
+            "catalog_random": {"ndcg_at_10": cat_random_ndcg, "hit_rate_at_10": cat_random_hr, "n_users": total_a_users},
+            "random": {"ndcg_at_10": cat_random_ndcg, "hit_rate_at_10": cat_random_hr, "n_users": total_a_users},
+            "content": pooled_a_cnt,
+            "two_tower": pooled_a_tt,
+            "routed_hybrid": pooled_a_hyb,
+            "boost_cold_equal": pooled_a_bst,
+        },
+        "per_cohort": cohort_results,
+        "note": evidence_statement,
     }
 
 

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from recsys.coldstart import get_item_holdout_split
+from recsys.coldstart import get_disjoint_item_holdout_cohorts, get_item_holdout_split
 from recsys.data import RecsysData
 from recsys.evaluate import get_evaluation_user_split
 from recsys.models.base import BaseRecommender
@@ -165,4 +165,26 @@ def test_cold_start_artifact_integrity():
 
     # Verify evidence statement exists and matches
     assert "evidence_status" in ho_study
-    assert ho_study["evidence_status"] in ("strong", "weak")
+    assert ho_study["evidence_status"].lower() in ("strong", "moderate", "weak")
+
+
+def test_disjoint_item_holdout_cohorts_zero_overlap():
+    """
+    Phase K: Verify that get_disjoint_item_holdout_cohorts generates 4 mutually disjoint cohorts
+    (1 tuning cohort + 3 eval cohorts) with zero overlap between any pair.
+    """
+    data = RecsysData.load(Path("backend/data/recsys"))
+    cohorts = get_disjoint_item_holdout_cohorts(data, n_eval_cohorts=3, cohort_size=200, seed=42)
+
+    keys = ["tuning", "eval_1", "eval_2", "eval_3"]
+    assert set(cohorts.keys()) == set(keys)
+
+    for k in keys:
+        assert len(cohorts[k]) == 200, f"Cohort {k} expected 200 items, got {len(cohorts[k])}"
+
+    for i in range(len(keys)):
+        for j in range(i + 1, len(keys)):
+            k1, k2 = keys[i], keys[j]
+            overlap = set(cohorts[k1]) & set(cohorts[k2])
+            assert len(overlap) == 0, f"Expected 0 overlap between {k1} and {k2}, found {len(overlap)} overlapping items!"
+

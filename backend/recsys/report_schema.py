@@ -56,6 +56,10 @@ class TwoTowerAblationVariant(BaseModel):
     variant: str
     description: str
     seeds: list[int]
+    val_ndcg_at_10_mean: float | None = None
+    val_ndcg_at_10_std: float | None = None
+    val_hr_at_10_mean: float | None = None
+    val_hr_at_10_std: float | None = None
     test_ndcg_at_10_mean: float
     test_ndcg_at_10_std: float
     test_hr_at_10_mean: float
