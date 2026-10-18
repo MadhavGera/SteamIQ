@@ -23,14 +23,13 @@ import argparse
 import json
 import logging
 import time
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from core.config import settings
-from jobs.base_job import BaseJob
+from recsys.aggregation import aggregate_per_seed_metrics, verify_aggregation_integrity
 from recsys.coldstart import (
     _build_test_foldin_data,
     get_item_holdout_split,
@@ -45,17 +44,13 @@ from recsys.evaluate import (
 )
 from recsys.metrics import (
     bootstrap_ci,
-    catalog_coverage_at_k,
     compute_ranks,
     diversity_at_k,
     get_top_k_indices,
-    gini_coefficient_at_k,
-    head_share_at_k,
     hit_rate_at_k,
     mmr_rerank,
     mrr_at_k,
     ndcg_at_k,
-    novelty_at_k,
     paired_bootstrap_diff,
 )
 from recsys.models.als import ALSRecommender
@@ -65,7 +60,6 @@ from recsys.models.popularity import PopularityRecommender
 from recsys.models.two_tower import TwoTowerModel
 from recsys.ranker import RankerModel
 from recsys.report import (
-    _clean_for_json,
     build_beyond_accuracy_payload,
     build_cold_start_payload,
     build_leaderboard_payload,
@@ -105,7 +99,7 @@ def run_phase6_test_eval(
     val_sweep_path = docs_results_dir / "validation_sweep.json"
     val_sweep_data: dict[str, Any] = {}
     if val_sweep_path.exists():
-        with open(val_sweep_path, "r", encoding="utf-8") as f:
+        with open(val_sweep_path, encoding="utf-8") as f:
             val_sweep_data = json.load(f)
         logger.info("Loaded Phase 4 validation sweep provenance from %s", val_sweep_path)
 
@@ -145,19 +139,25 @@ def run_phase6_test_eval(
         tt_test_mrrs.append(float(t_res.metrics.get("mrr_at_10", 0.0)))
         logger.info("  TT Seed %d -> Test NDCG@10: %.5f | HR@10: %.5f", s, tt_test_ndcgs[-1], tt_test_hrs[-1])
 
-    tt_test_mean_ndcg = float(np.mean(tt_test_ndcgs))
-    tt_test_std_ndcg = float(np.std(tt_test_ndcgs))
-    tt_test_mean_hr = float(np.mean(tt_test_hrs))
-    tt_test_std_hr = float(np.std(tt_test_hrs))
+    tt_per_seed = [
+        {"seed": s, **{k: v for k, v in tt_test_evals[s].metrics.items() if not k.endswith("_ranks")}}
+        for s in seeds_5
+    ]
+    tt_test_agg = aggregate_per_seed_metrics(tt_per_seed, deterministic=False)
+    tt_test_mean_ndcg = tt_test_agg["means"].get("ndcg_at_10", 0.0)
+    tt_test_std_ndcg = tt_test_agg["stds"].get("ndcg_at_10", 0.0)
+    tt_test_mean_hr = tt_test_agg["means"].get("hit_rate_at_10", 0.0)
+    tt_test_std_hr = tt_test_agg["stds"].get("hit_rate_at_10", 0.0)
     logger.info("Clean Two-Tower 5-Seed Test: NDCG@10 = %.5f ± %.5f", tt_test_mean_ndcg, tt_test_std_ndcg)
 
-    # Champion is Seed 42 (closest to val mean, selected in Phase 4)
-    champ_tt_seed = 42
+    # Champion is selected from Phase 4 validation sweep
+    champ_tt_seed = int(val_sweep_data.get("two_tower_clean_5seeds", {}).get("champion_seed", 44))
     champ_tt_model = tt_models[champ_tt_seed]
     champ_tt_eval = tt_test_evals[champ_tt_seed]
     champ_tt_val_eval = evaluate_model(
         champ_tt_model, data, split="val", k_list=(10, 20), user_indices=eval_users, seed=champ_tt_seed
     )
+    verify_aggregation_integrity(tt_per_seed, champ_tt_eval.metrics, tt_test_agg)
 
     # =========================================================================
     # 2. Evaluate Baselines on Test Split
@@ -191,7 +191,13 @@ def run_phase6_test_eval(
         knn_val_evals[s] = k_val
         knn_test_evals[s] = k_test
         knn_test_ndcgs.append(float(k_test.metrics.get("ndcg_at_10", 0.0)))
-    logger.info("Item-kNN 5-Seed Test: NDCG@10 = %.5f ± %.5f", np.mean(knn_test_ndcgs), np.std(knn_test_ndcgs))
+
+    knn_per_seed = [
+        {"seed": s, **{k: v for k, v in knn_test_evals[s].metrics.items() if not k.endswith("_ranks")}}
+        for s in seeds_5
+    ]
+    knn_test_agg = aggregate_per_seed_metrics(knn_per_seed, deterministic=True)
+    logger.info("Item-kNN 5-Seed Test: NDCG@10 = %s", knn_test_agg["summary"]["ndcg_at_10"]["formatted"])
 
     # ALS (5 seeds)
     als_test_ndcgs: list[float] = []
@@ -207,7 +213,13 @@ def run_phase6_test_eval(
         als_val_evals[s] = a_val
         als_test_evals[s] = a_test
         als_test_ndcgs.append(float(a_test.metrics.get("ndcg_at_10", 0.0)))
-    logger.info("ALS 5-Seed Test: NDCG@10 = %.5f ± %.5f", np.mean(als_test_ndcgs), np.std(als_test_ndcgs))
+
+    als_per_seed = [
+        {"seed": s, **{k: v for k, v in als_test_evals[s].metrics.items() if not k.endswith("_ranks")}}
+        for s in seeds_5
+    ]
+    als_test_agg = aggregate_per_seed_metrics(als_per_seed, deterministic=False)
+    logger.info("ALS 5-Seed Test: NDCG@10 = %s", als_test_agg["summary"]["ndcg_at_10"]["formatted"])
 
     # =========================================================================
     # 3. Evaluate Clean Ranker Models (5 Seeds) on Test Split
@@ -248,19 +260,25 @@ def run_phase6_test_eval(
         rk_test_mrrs.append(float(t_res.metrics.get("mrr_at_10", 0.0)))
         logger.info("  Ranker Seed %d -> Test NDCG@10: %.5f | HR@10: %.5f", s, rk_test_ndcgs[-1], rk_test_hrs[-1])
 
-    rk_test_mean_ndcg = float(np.mean(rk_test_ndcgs))
-    rk_test_std_ndcg = float(np.std(rk_test_ndcgs))
-    rk_test_mean_hr = float(np.mean(rk_test_hrs))
-    rk_test_std_hr = float(np.std(rk_test_hrs))
+    rk_per_seed = [
+        {"seed": s, **{k: v for k, v in rk_test_evals[s].metrics.items() if not k.endswith("_ranks")}}
+        for s in seeds_5
+    ]
+    rk_test_agg = aggregate_per_seed_metrics(rk_per_seed, deterministic=False)
+    rk_test_mean_ndcg = rk_test_agg["means"].get("ndcg_at_10", 0.0)
+    rk_test_std_ndcg = rk_test_agg["stds"].get("ndcg_at_10", 0.0)
+    rk_test_mean_hr = rk_test_agg["means"].get("hit_rate_at_10", 0.0)
+    rk_test_std_hr = rk_test_agg["stds"].get("hit_rate_at_10", 0.0)
     logger.info("Clean Ranker 5-Seed Test: NDCG@10 = %.5f ± %.5f", rk_test_mean_ndcg, rk_test_std_ndcg)
 
-    # Champion Ranker is Seed 43 (closest to val mean, selected in Phase 4)
-    champ_rk_seed = 43
+    # Champion Ranker is selected from Phase 4 validation sweep
+    champ_rk_seed = int(val_sweep_data.get("ranker_clean_5seeds", {}).get("champion_seed", 44))
     champ_rk_model = rk_models[champ_rk_seed]
     champ_rk_eval = rk_test_evals[champ_rk_seed]
     champ_rk_val_eval = evaluate_model(
         champ_rk_model, data, split="val", k_list=(10, 20), user_indices=eval_users, seed=champ_rk_seed
     )
+    verify_aggregation_integrity(rk_per_seed, champ_rk_eval.metrics, rk_test_agg)
 
     # Reference all-time models for transparency if present on disk
     ref_tt_dir = resolved_data_dir / "artifacts" / "recsys_two_tower"
@@ -867,6 +885,7 @@ def run_phase6_test_eval(
             "model_name": "recsys_two_tower_clean",
             "family": "recsys_two_tower_clean",
             "stage": "champion",
+            "champion_seed": champ_tt_seed,
             "model_run_id": f"phase4_seed_{champ_tt_seed}",
             "rank_source": "fresh evaluate_model",
             "hyperparameters": champ_tt_model.hyperparameters(),
@@ -874,6 +893,8 @@ def run_phase6_test_eval(
             "test_metrics": champ_tt_eval.metrics,
             "val_slices": champ_tt_eval.slices,
             "test_slices": champ_tt_eval.slices,
+            "per_seed": tt_per_seed,
+            "aggregate": tt_test_agg,
             "multi_seed_5seeds": {
                 "test_mean_ndcg_at_10": tt_test_mean_ndcg,
                 "test_std_ndcg_at_10": tt_test_std_ndcg,
@@ -887,6 +908,7 @@ def run_phase6_test_eval(
             "model_name": "recsys_two_tower_ranker_clean",
             "family": "recsys_two_tower_ranker_clean",
             "stage": "candidate" if not gate_passed else "production",
+            "champion_seed": champ_rk_seed,
             "model_run_id": f"phase4_seed_{champ_rk_seed}",
             "rank_source": "fresh evaluate_model",
             "hyperparameters": champ_rk_model.hyperparameters() if hasattr(champ_rk_model, "hyperparameters") else {},
@@ -894,6 +916,8 @@ def run_phase6_test_eval(
             "test_metrics": champ_rk_eval.metrics,
             "val_slices": champ_rk_eval.slices,
             "test_slices": champ_rk_eval.slices,
+            "per_seed": rk_per_seed,
+            "aggregate": rk_test_agg,
             "multi_seed_5seeds": {
                 "test_mean_ndcg_at_10": rk_test_mean_ndcg,
                 "test_std_ndcg_at_10": rk_test_std_ndcg,
@@ -914,6 +938,7 @@ def run_phase6_test_eval(
             "model_name": "recsys_two_tower_ranker_v2_trainstats",
             "family": "recsys_two_tower_ranker_v2_trainstats",
             "stage": "candidate",
+            "champion_seed": champ_rk_seed,
             "model_run_id": f"phase4_seed_{champ_rk_seed}",
             "rank_source": "fresh evaluate_model",
             "hyperparameters": champ_rk_model.hyperparameters() if hasattr(champ_rk_model, "hyperparameters") else {},
@@ -921,6 +946,8 @@ def run_phase6_test_eval(
             "test_metrics": champ_rk_eval.metrics,
             "val_slices": champ_rk_eval.slices,
             "test_slices": champ_rk_eval.slices,
+            "per_seed": rk_per_seed,
+            "aggregate": rk_test_agg,
         },
         {
             "model_name": "recsys_itemknn",
@@ -933,9 +960,11 @@ def run_phase6_test_eval(
             "test_metrics": knn_test_evals[42].metrics,
             "val_slices": knn_val_evals[42].slices,
             "test_slices": knn_test_evals[42].slices,
+            "per_seed": knn_per_seed,
+            "aggregate": knn_test_agg,
             "multi_seed_5seeds": {
-                "test_mean_ndcg_at_10": float(np.mean(knn_test_ndcgs)),
-                "test_std_ndcg_at_10": float(np.std(knn_test_ndcgs)),
+                "test_mean_ndcg_at_10": knn_test_agg["means"].get("ndcg_at_10", 0.0),
+                "test_std_ndcg_at_10": knn_test_agg["stds"].get("ndcg_at_10", "n/a"),
             },
         },
         {
@@ -949,9 +978,11 @@ def run_phase6_test_eval(
             "test_metrics": als_test_evals[42].metrics,
             "val_slices": als_val_evals[42].slices,
             "test_slices": als_test_evals[42].slices,
+            "per_seed": als_per_seed,
+            "aggregate": als_test_agg,
             "multi_seed_5seeds": {
-                "test_mean_ndcg_at_10": float(np.mean(als_test_ndcgs)),
-                "test_std_ndcg_at_10": float(np.std(als_test_ndcgs)),
+                "test_mean_ndcg_at_10": als_test_agg["means"].get("ndcg_at_10", 0.0),
+                "test_std_ndcg_at_10": als_test_agg["stds"].get("ndcg_at_10", 0.0),
             },
         },
         {

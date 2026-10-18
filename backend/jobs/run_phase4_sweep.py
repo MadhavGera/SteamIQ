@@ -17,17 +17,14 @@ from __future__ import annotations
 import json
 import logging
 import time
-import uuid
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from core.config import settings
-from recsys.candidates import DEFAULT_CANDIDATE_COUNTS, generate_candidates
+from recsys.aggregation import aggregate_per_seed_metrics, verify_aggregation_integrity
 from recsys.data import RecsysData
 from recsys.evaluate import (
-    EvaluationResult,
     evaluate_model,
     get_evaluation_user_split,
 )
@@ -119,7 +116,7 @@ def run_sweep(
             t0 = time.perf_counter()
             m_wrapper = TwoTowerModel.load(seed_art_dir, data=data)
             m_wrapper.name = "recsys_two_tower_clean"
-            with open(seed_art_dir / "training_curves.json", "r", encoding="utf-8") as f:
+            with open(seed_art_dir / "training_curves.json", encoding="utf-8") as f:
                 t_curves = json.load(f)
         else:
             logger.info("--- Training Two-Tower Seed %d ---", s)
@@ -181,15 +178,23 @@ def run_sweep(
             t_elapsed,
         )
 
-    tt_ndcgs = [tt_results[s]["val_ndcg_at_10"] for s in seeds_5]
-    tt_hrs = [tt_results[s]["val_hr_at_10"] for s in seeds_5]
-    tt_mean_ndcg, tt_std_ndcg = float(np.mean(tt_ndcgs)), float(np.std(tt_ndcgs))
-    tt_mean_hr, tt_std_hr = float(np.mean(tt_hrs)), float(np.std(tt_hrs))
+    tt_per_seed = [
+        {"seed": s, **{k: v for k, v in res.items() if k != "val_eval"}}
+        for s, res in tt_results.items()
+    ]
+    tt_agg = aggregate_per_seed_metrics(tt_per_seed, deterministic=False)
+    tt_mean_ndcg = tt_agg["means"]["val_ndcg_at_10"]
+    tt_std_ndcg = tt_agg["stds"]["val_ndcg_at_10"]
+    tt_mean_hr = tt_agg["means"]["val_hr_at_10"]
+    tt_std_hr = tt_agg["stds"]["val_hr_at_10"]
 
     # Champion selection: closest to validation mean
     diffs = [abs(tt_results[s]["val_ndcg_at_10"] - tt_mean_ndcg) for s in seeds_5]
     champion_tt_seed = seeds_5[int(np.argmin(diffs))]
     champion_tt_model = tt_models[champion_tt_seed]
+    champ_tt_entry = {k: v for k, v in tt_results[champion_tt_seed].items() if k != "val_eval"}
+    verify_aggregation_integrity(tt_per_seed, champ_tt_entry, tt_agg)
+
     logger.info(
         "Two-Tower 5-Seed Validation NDCG@10: %.5f ± %.5f | Champion Seed: %d (Val NDCG@10: %.5f)",
         tt_mean_ndcg,
@@ -293,7 +298,7 @@ def run_sweep(
         logger.info("\n>>> [3/5] Skipping Two-Tower Architectural Ablations (--skip-ablations set)")
         old_sweep_file = results_path / "validation_sweep_reduced_budget.json"
         if old_sweep_file.exists():
-            with open(old_sweep_file, "r", encoding="utf-8") as f:
+            with open(old_sweep_file, encoding="utf-8") as f:
                 tt_ablation_results = json.load(f).get("two_tower_ablations", {})
     else:
         logger.info("\n>>> [3/5] Running Two-Tower Architectural Ablations across seeds: %s", seeds_3)
@@ -403,7 +408,7 @@ def run_sweep(
             t0 = time.perf_counter()
             r_model = RankerModel.load(seed_art_dir, data=data, models=stage1_for_ranker)
             r_model.name = "recsys_two_tower_ranker_clean"
-            with open(seed_art_dir / "training_curves.json", "r", encoding="utf-8") as f:
+            with open(seed_art_dir / "training_curves.json", encoding="utf-8") as f:
                 r_curves_payload = json.load(f)
             r_curves = r_curves_payload.get("curves", [])
         else:
@@ -482,15 +487,23 @@ def run_sweep(
             t_elapsed,
         )
 
-    r_ndcgs = [ranker_results[s]["val_ndcg_at_10"] for s in seeds_5]
-    r_hrs = [ranker_results[s]["val_hr_at_10"] for s in seeds_5]
-    r_mean_ndcg, r_std_ndcg = float(np.mean(r_ndcgs)), float(np.std(r_ndcgs))
-    r_mean_hr, r_std_hr = float(np.mean(r_hrs)), float(np.std(r_hrs))
+    ranker_per_seed = [
+        {"seed": s, **{k: v for k, v in res.items() if k != "val_eval"}}
+        for s, res in ranker_results.items()
+    ]
+    ranker_agg = aggregate_per_seed_metrics(ranker_per_seed, deterministic=False)
+    r_mean_ndcg = ranker_agg["means"]["val_ndcg_at_10"]
+    r_std_ndcg = ranker_agg["stds"]["val_ndcg_at_10"]
+    r_mean_hr = ranker_agg["means"]["val_hr_at_10"]
+    r_std_hr = ranker_agg["stds"]["val_hr_at_10"]
 
     # Champion selection for Ranker
     r_diffs = [abs(ranker_results[s]["val_ndcg_at_10"] - r_mean_ndcg) for s in seeds_5]
     champion_r_seed = seeds_5[int(np.argmin(r_diffs))]
     champion_r_model = ranker_models[champion_r_seed]
+    champ_r_entry = {k: v for k, v in ranker_results[champion_r_seed].items() if k != "val_eval"}
+    verify_aggregation_integrity(ranker_per_seed, champ_r_entry, ranker_agg)
+
     logger.info(
         "Ranker 5-Seed Validation NDCG@10: %.5f ± %.5f | Champion Seed: %d (Val NDCG@10: %.5f)",
         r_mean_ndcg,
@@ -531,7 +544,7 @@ def run_sweep(
         logger.info("\n>>> [5/5] Skipping Ranker Feature-Group Ablations (--skip-ablations set)")
         old_sweep_file = results_path / "validation_sweep_reduced_budget.json"
         if old_sweep_file.exists():
-            with open(old_sweep_file, "r", encoding="utf-8") as f:
+            with open(old_sweep_file, encoding="utf-8") as f:
                 ranker_ablation_results = json.load(f).get("ranker_ablations", {})
     else:
         logger.info("\n>>> [5/5] Running Ranker Feature-Group Ablations across seeds: %s", seeds_3)
@@ -677,11 +690,14 @@ def run_sweep(
             "mean_hr_at_10": tt_mean_hr,
             "std_hr_at_10": tt_std_hr,
             "champion_seed": champion_tt_seed,
+            "champion": champ_tt_entry,
             "paired_diff_vs_itemknn": {
                 "mean": tt_vs_knn_diff,
                 "lo95": tt_vs_knn_lo,
                 "hi95": tt_vs_knn_hi,
             },
+            "per_seed": tt_per_seed,
+            "aggregate": tt_agg,
             "seed_results": {s: {k: v for k, v in res.items() if k != "val_eval"} for s, res in tt_results.items()},
         },
         "ranker_clean_5seeds": {
@@ -690,11 +706,14 @@ def run_sweep(
             "mean_hr_at_10": r_mean_hr,
             "std_hr_at_10": r_std_hr,
             "champion_seed": champion_r_seed,
+            "champion": champ_r_entry,
             "paired_diff_vs_tt_champion": {
                 "mean": r_vs_tt_diff,
                 "lo95": r_vs_tt_lo,
                 "hi95": r_vs_tt_hi,
             },
+            "per_seed": ranker_per_seed,
+            "aggregate": ranker_agg,
             "seed_results": {s: {k: v for k, v in res.items() if k != "val_eval"} for s, res in ranker_results.items()},
         },
         "baselines": {

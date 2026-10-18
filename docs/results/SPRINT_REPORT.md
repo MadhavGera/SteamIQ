@@ -392,3 +392,27 @@ Both artifacts were directly evaluated on the validation split (5,000 fixed vali
   - SNIPS-NDCG@10 Lift: Ranker achieves **`0.03785`** vs Two-Tower **`0.03379`** (**+12.0% debiased ranking lift**).
   - Catalog Coverage Lift: Expands from **`43.47%`** (Two-Tower) to **`55.03%`** (Ranker), representing a **+26.6% relative gain in catalog exploration** via quota candidate multi-source blending.
 
+### Phase C: Multi-Seed Aggregation Integrity (Issue I2 Resolution)
+
+#### 1. Context & Root Cause Analysis
+In an independent review of the sprint report, Issue I2 identified inconsistencies in multi-seed reporting:
+- Coverage, novelty, diversity, and MRR metrics for multi-seed rows in several summary tables identically matched the champion single-seed numbers.
+- Deterministic baselines such as Item-kNN reported standard deviations of `0.0000`, misleading readers into believing a sample distribution had been drawn across seeds.
+- The root cause was located in `run_phase4_sweep.py` and `run_phase6_test_eval.py`: multi-seed runs were not logged as complete `per_seed` arrays across all metrics, and summary aggregators only tracked NDCG and Hit Rate means/stds. Report authors and scripts defaulted to populating auxiliary metric columns with the single-seed champion metrics.
+
+#### 2. Architecture & Integrity Guard Implementation
+To resolve Issue I2 permanently and prevent regressions, a unified multi-seed aggregation and validation framework was created:
+- **`backend/recsys/aggregation.py`**:
+  - `aggregate_per_seed_metrics(per_seed: list[dict], deterministic: bool = False)`: Automatically inspects all evaluation metrics across seeds, computing exact floating-point mean and sample standard deviation ($N$-denominator std).
+  - **Deterministic Baseline Handling:** When `deterministic=True` (e.g., Item-kNN whose deterministic similarity graph yields identical recommendations across seeds), the standard deviation is explicitly marked as `"n/a"` with formatted output `f"{mean:.4f} (n/a)"`, completely eliminating misleading `0.0000` claims.
+  - **Champion Separation:** The champion entry is decoupled from the multi-seed aggregate into its own explicit dictionary referencing `champion_seed`.
+  - `verify_aggregation_integrity(per_seed, champion_entry, aggregate_result)`: An automated guard that verifies mathematical consistency ($|mean_{reported} - mean_{computed}| \le 10^{-6}$) and strictly rejects any payload where multi-seed means identically match champion values across varying metrics (copy-paste detection).
+
+#### 3. Verification & Test Suite
+- **Unit Tests (`backend/tests/test_seed_aggregation.py`)**: 4 comprehensive tests implemented and passing:
+  1. `test_aggregate_known_inputs`: Verifies exact numerical accuracy of means, stds, and formatted output on synthetic test inputs.
+  2. `test_deterministic_baseline_reports_na_std`: Ensures deterministic models output `"n/a"` std and `"mean (n/a)"` formatting.
+  3. `test_copy_paste_detection_fails_when_champion_copied`: Confirms that copying single-seed champion numbers into multi-seed rows triggers an explicit `ValueError`.
+  4. `test_validation_sweep_artifact_integrity`: Validates `docs/results/validation_sweep.json` directly from disk, verifying that both Two-Tower and Ranker sections pass mathematical consistency and copy-paste tests.
+- **Artifact Update:** `docs/results/validation_sweep.json` now includes canonical `per_seed`, `aggregate`, and `champion` blocks for all 5-seed experiments.
+
