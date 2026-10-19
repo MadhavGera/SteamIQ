@@ -19,6 +19,278 @@ interface AssistantTabProps {
   errorsPayload: Record<string, unknown> | null;
 }
 
+function IntentConfusionMatrix({
+  classes,
+  matrix,
+}: {
+  classes: string[];
+  matrix: number[][];
+}) {
+  const [showNormalized, setShowNormalized] = React.useState(false);
+  const [hoveredCell, setHoveredCell] = React.useState<{ row: number; col: number } | null>(null);
+
+  if (!classes || classes.length === 0 || !matrix || matrix.length === 0) {
+    return null;
+  }
+
+  // Row sums for normalization
+  const rowSums = matrix.map((row) => row.reduce((acc, val) => acc + val, 0));
+  const totalQueries = rowSums.reduce((acc, val) => acc + val, 0);
+  const totalCorrect = matrix.reduce((acc, row, idx) => acc + (row[idx] || 0), 0);
+  // HONEST-FALLBACK: Compute overall accuracy or fallback to 0
+  const overallAcc = totalQueries > 0 ? totalCorrect / totalQueries : 0;
+
+  // Abbreviated label map for clean matrix headers
+  const getShortLabel = (name: string): string => {
+    const map: Record<string, string> = {
+      game_overview: "overview",
+      review_summary: "summary",
+      top_complaints: "complaints",
+      loved_features: "features",
+      similar_games: "similar",
+      price_advice: "price",
+      player_match: "match",
+      success_score: "success",
+      update_impact: "update",
+      recommendations: "recs",
+      market_opportunity: "market",
+      recommend_for_me: "rec_4_me",
+      out_of_scope: "oos",
+    };
+    return map[name] || name.slice(0, 7);
+  };
+
+  return (
+    <div
+      className="card"
+      style={{
+        background: "var(--bg-surface-elevated)",
+        border: "1px solid var(--border-subtle)",
+        borderRadius: "12px",
+        padding: "20px",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
+              Intent Classification Confusion Matrix
+            </h3>
+            <span className="badge-pill badge-pill--neutral" style={{ fontSize: "11px" }}>
+              {classes.length} &times; {classes.length} Classes
+            </span>
+            <span className="badge-pill badge-pill--success" style={{ fontSize: "11px" }}>
+              {(overallAcc * 100).toFixed(1)}% Accuracy ({totalCorrect}/{totalQueries})
+            </span>
+          </div>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
+            Evaluated on held-out gold benchmark queries. Rows represent <strong>True Intent</strong>; columns represent <strong>Predicted Intent</strong>. Diagonal cells indicate correct classifications.
+          </p>
+        </div>
+
+        {/* Toggle between Counts and Normalized Recall % */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "var(--bg-surface-low)", padding: "3px 6px", borderRadius: "6px" }}>
+          <button
+            type="button"
+            onClick={() => setShowNormalized(false)}
+            style={{
+              padding: "4px 8px",
+              fontSize: "11px",
+              fontWeight: !showNormalized ? 700 : 500,
+              background: !showNormalized ? "var(--bg-surface-elevated)" : "transparent",
+              color: !showNormalized ? "var(--accent-primary)" : "var(--text-muted)",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            Raw Counts
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowNormalized(true)}
+            style={{
+              padding: "4px 8px",
+              fontSize: "11px",
+              fontWeight: showNormalized ? 700 : 500,
+              background: showNormalized ? "var(--bg-surface-elevated)" : "transparent",
+              color: showNormalized ? "var(--accent-primary)" : "var(--text-muted)",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            Normalized (Recall %)
+          </button>
+        </div>
+      </div>
+
+      {/* Heatmap Grid Table */}
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "separate", borderSpacing: "2px", fontSize: "11px", width: "100%", minWidth: "750px", tableLayout: "fixed" }}>
+          <thead>
+            <tr>
+              <th style={{ width: "140px", padding: "6px 8px", textAlign: "left", color: "var(--text-muted)", fontSize: "10px", fontWeight: 700, textTransform: "uppercase" }}>
+                True \ Pred
+              </th>
+              {classes.map((c, colIdx) => (
+                <th
+                  key={c}
+                  title={`Predicted Intent: ${c}`}
+                  style={{
+                    padding: "4px 2px",
+                    textAlign: "center",
+                    color: hoveredCell?.col === colIdx ? "var(--accent-primary)" : "var(--text-secondary)",
+                    fontWeight: hoveredCell?.col === colIdx ? 700 : 600,
+                    fontSize: "10px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {getShortLabel(c)}
+                </th>
+              ))}
+              <th style={{ width: "65px", padding: "4px 6px", textAlign: "right", color: "var(--text-muted)", fontSize: "10px", fontWeight: 700 }}>
+                Recall
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {classes.map((trueClass, rowIdx) => {
+              const row = matrix[rowIdx] || [];
+              const rowTotal = rowSums[rowIdx] || 1;
+              const recall = (row[rowIdx] || 0) / rowTotal;
+
+              return (
+                <tr key={trueClass}>
+                  <td
+                    title={`True Intent: ${trueClass}`}
+                    style={{
+                      padding: "4px 8px",
+                      color: hoveredCell?.row === rowIdx ? "var(--accent-primary)" : "var(--text-primary)",
+                      fontWeight: hoveredCell?.row === rowIdx ? 700 : 500,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      fontSize: "11px",
+                    }}
+                  >
+                    <code>{trueClass}</code>
+                  </td>
+                  {classes.map((predClass, colIdx) => {
+                    const val = row[colIdx] || 0;
+                    const isDiag = rowIdx === colIdx;
+                    const isHovered = hoveredCell?.row === rowIdx && hoveredCell?.col === colIdx;
+                    const cellRatio = val / rowTotal;
+
+                    // Color calculation
+                    let bg = "rgba(255, 255, 255, 0.02)";
+                    let textColor = "var(--text-muted)";
+                    if (isDiag) {
+                      bg = `rgba(52, 211, 153, ${0.12 + 0.65 * cellRatio})`;
+                      textColor = cellRatio > 0.5 ? "#ffffff" : "#a7f3d0";
+                    } else if (val > 0) {
+                      bg = `rgba(239, 68, 68, ${0.15 + Math.min(0.7, val * 0.15)})`;
+                      textColor = "#fca5a5";
+                    }
+
+                    if (isHovered) {
+                      bg = isDiag ? "rgba(52, 211, 153, 0.9)" : "rgba(239, 68, 68, 0.9)";
+                      textColor = "#000000";
+                    }
+
+                    return (
+                      <td
+                        key={predClass}
+                        onMouseEnter={() => setHoveredCell({ row: rowIdx, col: colIdx })}
+                        onMouseLeave={() => setHoveredCell(null)}
+                        title={`True: ${trueClass}\nPred: ${predClass}\nCount: ${val} (${(cellRatio * 100).toFixed(1)}%)`}
+                        style={{
+                          textAlign: "center",
+                          padding: "6px 2px",
+                          background: bg,
+                          color: textColor,
+                          fontWeight: isDiag ? 700 : 500,
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                          transition: "background 0.15s ease",
+                          fontFamily: "var(--font-mono, monospace)",
+                          fontSize: "10px",
+                        }}
+                      >
+                        {val === 0 ? "·" : showNormalized ? `${(cellRatio * 100).toFixed(0)}%` : val}
+                      </td>
+                    );
+                  })}
+                  <td
+                    style={{
+                      textAlign: "right",
+                      padding: "4px 6px",
+                      fontFamily: "var(--font-mono, monospace)",
+                      fontWeight: 700,
+                      fontSize: "11px",
+                      color: recall >= 0.9 ? "var(--success)" : recall >= 0.75 ? "#fbbf24" : "var(--danger)",
+                    }}
+                  >
+                    {(recall * 100).toFixed(0)}%
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Inspector / Selected Cell Status Bar */}
+      <div
+        style={{
+          marginTop: "12px",
+          padding: "8px 12px",
+          background: "var(--bg-surface-low)",
+          borderRadius: "6px",
+          fontSize: "12px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "8px",
+          minHeight: "36px",
+        }}
+      >
+        {hoveredCell ? (
+          <div>
+            <span style={{ color: "var(--text-muted)" }}>Selected Cell: </span>
+            <strong>True:</strong> <code>{classes[hoveredCell.row]}</code>
+            <span style={{ margin: "0 6px", color: "var(--text-muted)" }}>&rarr;</span>
+            <strong>Pred:</strong> <code>{classes[hoveredCell.col]}</code>
+            <span style={{ margin: "0 8px" }}>|</span>
+            <strong>{(matrix[hoveredCell.row]?.[hoveredCell.col] || 0)}</strong> queries
+            <span style={{ color: "var(--text-muted)", marginLeft: "4px" }}>
+              ({(((matrix[hoveredCell.row]?.[hoveredCell.col] || 0) / (rowSums[hoveredCell.row] || 1)) * 100).toFixed(1)}% of true class)
+            </span>
+          </div>
+        ) : (
+          <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>
+            Hover over any matrix cell to inspect true vs. predicted counts and misclassification patterns.
+          </span>
+        )}
+
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "11px", color: "var(--text-muted)" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <span style={{ width: "10px", height: "10px", background: "rgba(52, 211, 153, 0.6)", borderRadius: "2px" }} />
+            Diagonal (Correct)
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <span style={{ width: "10px", height: "10px", background: "rgba(239, 68, 68, 0.6)", borderRadius: "2px" }} />
+            Off-diagonal (Confusion)
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AssistantTab({
   leaderboardPayload,
   calibrationPayload,
@@ -132,6 +404,9 @@ export function AssistantTab({
     // HONEST-FALLBACK: Read resolved routing method
     resolved_method: String(err.resolved_method ?? (err.abstained ? "abstained" : "logistic")),
   }));
+
+  const confClasses = (cal.classes as string[]) || [];
+  const confMatrix = (cal.confusion_matrix as number[][]) || [];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
@@ -333,7 +608,12 @@ export function AssistantTab({
         </div>
       </div>
 
-      {/* 4. Error Breakdown Diagnostic Table */}
+      {/* 4. Intent Classification Confusion Matrix Heatmap */}
+      {confClasses.length > 0 && confMatrix.length > 0 && (
+        <IntentConfusionMatrix classes={confClasses} matrix={confMatrix} />
+      )}
+
+      {/* 5. Error Breakdown Diagnostic Table */}
       {errors.length > 0 && (
         <div
           className="card"
