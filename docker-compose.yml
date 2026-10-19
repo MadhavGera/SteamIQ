@@ -65,10 +65,10 @@ services:
       - ./backend/data/recsys/artifacts:/app/data/recsys/artifacts
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 120s
 
   # ── Frontend (Next.js) ────────────────────────────────────────────────────────
   frontend:
