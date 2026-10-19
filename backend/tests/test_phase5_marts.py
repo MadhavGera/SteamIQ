@@ -20,7 +20,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api import games, market
+from api import activity, games, market
 from db.models import (
     FeatureReviewComplaint,
     FeatureReviewFeature,
@@ -402,3 +402,33 @@ async def test_golden_rule_no_raw_reads_in_apis() -> None:
     assert "raw_games" not in market_source, "Golden Rule Violation: api/market.py references raw_games!"
     assert "RawPriceHistory" not in market_source, "Golden Rule Violation: api/market.py references RawPriceHistory!"
     assert "MartGameOverview" in market_source
+
+    activity_source = inspect.getsource(activity)
+    assert "RawGame" not in activity_source, "Golden Rule Violation: api/activity.py references RawGame!"
+    assert "raw_games" not in activity_source, "Golden Rule Violation: api/activity.py references raw_games!"
+    assert "RawPlayerSnapshot" not in activity_source, "Golden Rule Violation: api/activity.py references RawPlayerSnapshot!"
+    assert "raw_player_snapshots" not in activity_source, "Golden Rule Violation: api/activity.py references raw_player_snapshots!"
+    assert "RawReview" not in activity_source, "Golden Rule Violation: api/activity.py references RawReview!"
+    assert "raw_reviews" not in activity_source, "Golden Rule Violation: api/activity.py references raw_reviews!"
+    assert "MartGameOverview" in activity_source
+
+
+@pytest.mark.anyio
+async def test_get_player_activity_endpoint(client: AsyncClient, db_session: AsyncSession) -> None:
+    """Test GET /api/v1/games/{app_id}/activity endpoint with Golden Rule verification."""
+    await _seed_full_pipeline_data(db_session)
+    job = MaterializeMartsJob(dry_run=False)
+    await job._run_async(session=db_session)
+
+    resp = await client.get("/api/v1/games/50001/activity")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    data = body["data"]
+    assert data["app_id"] == 50001
+    assert data["game_name"] == "Metroid Legend"
+    assert data["peak_ccu_24h"] is not None
+    assert "playtime_percentiles" in data
+    assert "playtime_cohorts" in data
+    assert "ccu_history" in data
+    assert data["telemetry_mode"] == "snapshot_polled"

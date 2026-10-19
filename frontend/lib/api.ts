@@ -241,6 +241,58 @@ export interface RecommendationBundle {
   recommendations: RecommendationItem[];
 }
 
+// ─── Player Activity & Telemetry Types (Phase 5 — Tab 3) ───────────────────
+
+export interface PlaytimeCohort {
+  cohort: string;
+  label: string;
+  hours_range: string;
+  player_count: number;
+  share_pct: number;
+}
+
+export interface PlaytimePercentiles {
+  p25_hours: number | null;
+  median_hours: number | null;
+  p75_hours: number | null;
+  p90_hours: number | null;
+}
+
+export interface CCUPoint {
+  snapshot_at: string | null;
+  player_count: number;
+  source: string;
+}
+
+export interface EventImpactSummary {
+  patch_name: string;
+  patch_date: string | null;
+  pre_avg_ccu: number | null;
+  post_avg_ccu: number | null;
+  ccu_change_pct: number | null;
+  verdict: string | null;
+}
+
+export interface PlayerActivity {
+  app_id: number;
+  game_name: string;
+  current_ccu: number | null;
+  peak_ccu_24h: number | null;
+  all_time_peak_ccu: number | null;
+  owners_estimate: string | null;
+  average_playtime_forever_hours: number | null;
+  median_playtime_forever_hours: number | null;
+  average_playtime_at_review_hours: number | null;
+  post_review_engagement_delta_hours: number | null;
+  sample_size_reviews: number;
+  playtime_percentiles: PlaytimePercentiles;
+  playtime_cohorts: PlaytimeCohort[];
+  ccu_history: CCUPoint[];
+  recent_event_impacts: EventImpactSummary[];
+  telemetry_mode: string;
+  updated_at: string | null;
+}
+
 // ─── Game Match Types (Phase 5 — Player Match Tab) ──────────────────────────
 
 export interface GameMatchProfile {
@@ -664,6 +716,14 @@ export const api = {
    */
   async getMarket(appId: number): Promise<MarketIntelligence> {
     return apiFetch<MarketIntelligence>(`/api/v1/games/${appId}/market`);
+  },
+
+  /**
+   * Get Player Activity & Telemetry intelligence by Steam app_id (Phase 5).
+   * GET /api/v1/games/{appId}/activity
+   */
+  async getActivity(appId: number): Promise<PlayerActivity> {
+    return apiFetch<PlayerActivity>(`/api/v1/games/${appId}/activity`);
   },
 
   /**

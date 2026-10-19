@@ -5,6 +5,7 @@ import {
   type CompetitorList,
   type GameDetail,
   type MarketIntelligence,
+  type PlayerActivity,
   type RecommendationBundle,
   type ReviewIntelligenceBundle,
   type UpdateImpactFeed,
@@ -56,6 +57,7 @@ export default async function GameDetailPage({
   let marketData: MarketIntelligence | null = null;
   let updatesData: UpdateImpactFeed | null = null;
   let recommendationsData: RecommendationBundle | null = null;
+  let activityData: PlayerActivity | null = null;
 
   const [
     gameRes,
@@ -64,6 +66,7 @@ export default async function GameDetailPage({
     marketRes,
     updatesRes,
     recommendationsRes,
+    activityRes,
   ] = await Promise.allSettled([
     api.getGame(appId),
     api.getReviews(appId),
@@ -71,6 +74,7 @@ export default async function GameDetailPage({
     api.getMarket(appId),
     api.getUpdates(appId),
     api.getRecommendations(appId),
+    api.getActivity(appId),
   ]);
 
   if (gameRes.status === "rejected") {
@@ -83,6 +87,7 @@ export default async function GameDetailPage({
   if (marketRes.status === "fulfilled") marketData = marketRes.value;
   if (updatesRes.status === "fulfilled") updatesData = updatesRes.value;
   if (recommendationsRes.status === "fulfilled") recommendationsData = recommendationsRes.value;
+  if (activityRes.status === "fulfilled") activityData = activityRes.value;
 
   return (
     <GameDetailView
@@ -94,6 +99,7 @@ export default async function GameDetailPage({
       marketData={marketData}
       updatesData={updatesData}
       recommendationsData={recommendationsData}
+      activityData={activityData}
     />
   );
 }

@@ -9,6 +9,7 @@ import {
   type CompetitorList,
   type GameDetail,
   type MarketIntelligence,
+  type PlayerActivity,
   type RecommendationBundle,
   type ReviewIntelligenceBundle,
   type UpdateImpactFeed,
@@ -29,6 +30,7 @@ import { MarketTab } from "@/components/game/MarketTab";
 import { UpdatesTab } from "@/components/game/UpdatesTab";
 import { RecommendationsTab } from "@/components/game/RecommendationsTab";
 import { MatchTab } from "@/components/game/MatchTab";
+import { PlayerActivityTab } from "@/components/game/PlayerActivityTab";
 
 interface GameDetailViewProps {
   appId: number;
@@ -39,6 +41,7 @@ interface GameDetailViewProps {
   marketData: MarketIntelligence | null;
   updatesData: UpdateImpactFeed | null;
   recommendationsData: RecommendationBundle | null;
+  activityData?: PlayerActivity | null;
 }
 
 export function GameDetailView({
@@ -50,6 +53,7 @@ export function GameDetailView({
   marketData,
   updatesData,
   recommendationsData,
+  activityData,
 }: GameDetailViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -597,25 +601,8 @@ export function GameDetailView({
 
         {/* ── TAB: PLAYER ACTIVITY ── */}
         {hasData && activeTab === "player-activity" && (
-          <div className="card" style={{ padding: "64px 24px", textAlign: "center", marginTop: "24px" }}>
-            <h2 style={{ fontSize: "22px", fontWeight: 700, margin: "8px 0" }}>
-              Player Activity Telemetry
-            </h2>
-            <p style={{ color: "var(--text-secondary)", maxWidth: "520px", margin: "0 auto 24px", lineHeight: "1.6", fontSize: "14px" }}>
-              High-frequency minute-level player CCU tracking and retention cohort charts are scheduled in Phase 7. Current 24h Peak ({peakCcuStr}) and lifetime playtime metrics ({game?.average_playtime_forever ? `${Math.round(game.average_playtime_forever / 60)}h avg` : "N/A"}) are active.
-            </p>
-            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-              <button type="button" onClick={() => handleTabChange("overview")} className="btn btn--secondary">
-                Overview
-              </button>
-              <button type="button" onClick={() => handleTabChange("market")} className="btn btn--primary">
-                {isPlayer ? "Deals & Pricing" : "Market Intelligence"}
-                <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
-                  arrow_forward
-                </span>
-              </button>
-            </div>
-          </div>
+          // HONEST-FALLBACK: Safe null fallback for activityData
+          <PlayerActivityTab activity={activityData ?? null} gameTitle={title} />
         )}
       </main>
     </div>

@@ -39,10 +39,12 @@ from db.models import (
     MartOpportunityScore,
     MartReviewIntelligence,
     MartTrend,
+    MartUpdateImpact,
     RawGame,
     RawGameTag,
     RawPlayerSnapshot,
     RawPriceHistory,
+    RawReview,
     ServingPrediction,
 )
 from jobs.base_job import BaseJob
@@ -308,6 +310,24 @@ class MaterializeMartsJob(BaseJob):
         for tag in tags_res.scalars().all():
             tags_by_game.setdefault(tag.app_id, []).append(tag)
 
+        # Raw reviews playtime telemetry
+        reviews_res = await session.execute(
+            select(
+                RawReview.app_id,
+                RawReview.author_playtime_forever,
+                RawReview.author_playtime_at_review,
+            ).where(RawReview.author_playtime_forever > 0)
+        )
+        reviews_by_game: dict[int, list[tuple[int, int]]] = {}
+        for r_app_id, r_forever, r_at_rev in reviews_res.all():
+            reviews_by_game.setdefault(r_app_id, []).append((r_forever, r_at_rev or 0))
+
+        # Update impacts
+        impacts_res = await session.execute(select(MartUpdateImpact))
+        impacts_by_game: dict[int, list[MartUpdateImpact]] = {}
+        for imp in impacts_res.scalars().all():
+            impacts_by_game.setdefault(imp.app_id, []).append(imp)
+
         # Precompute genre price distributions (min, p25, median, p75, max)
         games_by_genre: dict[str, list[RawGame]] = {}
         for g in all_games:
@@ -469,6 +489,104 @@ class MaterializeMartsJob(BaseJob):
                 for p in game_price_history
             ]
 
+            # Playtime & Player Activity Telemetry
+            rev_playtimes = reviews_by_game.get(game.app_id, [])
+            if rev_playtimes:
+                forevers = [p[0] for p in rev_playtimes]
+                at_reviews = [p[1] for p in rev_playtimes]
+                sample_size = len(forevers)
+                calc_avg_forever = int(round(float(np.mean(forevers))))
+                calc_med_forever = int(round(float(np.median(forevers))))
+                avg_playtime_forever = game.average_playtime_forever or calc_avg_forever
+                median_playtime_forever = game.median_playtime_forever or calc_med_forever
+
+                avg_hours = round(float(avg_playtime_forever) / 60.0, 1)
+                median_hours = round(float(median_playtime_forever) / 60.0, 1)
+                avg_at_review_hours = round(float(np.mean(at_reviews)) / 60.0, 1)
+                post_review_delta_hours = max(0.0, round(avg_hours - avg_at_review_hours, 1))
+
+                p25_hours = round(float(np.percentile(forevers, 25)) / 60.0, 1)
+                p50_hours = round(float(np.percentile(forevers, 50)) / 60.0, 1)
+                p75_hours = round(float(np.percentile(forevers, 75)) / 60.0, 1)
+                p90_hours = round(float(np.percentile(forevers, 90)) / 60.0, 1)
+
+                c1 = sum(1 for f in forevers if f < 600)
+                c2 = sum(1 for f in forevers if 600 <= f < 1800)
+                c3 = sum(1 for f in forevers if 1800 <= f < 6000)
+                c4 = sum(1 for f in forevers if f >= 6000)
+
+                cohorts = [
+                    {"cohort": "Under 10h", "label": "Casual / Early Drop", "hours_range": "< 10h", "player_count": c1, "share_pct": round(c1 / sample_size * 100.0, 1)},
+                    {"cohort": "10h - 30h", "label": "Engaged Explorers", "hours_range": "10h - 30h", "player_count": c2, "share_pct": round(c2 / sample_size * 100.0, 1)},
+                    {"cohort": "30h - 100h", "label": "Core Dedicated", "hours_range": "30h - 100h", "player_count": c3, "share_pct": round(c3 / sample_size * 100.0, 1)},
+                    {"cohort": "100h+", "label": "Hardcore Enthusiasts", "hours_range": "100h+", "player_count": c4, "share_pct": round(c4 / sample_size * 100.0, 1)},
+                ]
+            else:
+                avg_playtime_forever = game.average_playtime_forever or 0
+                median_playtime_forever = game.median_playtime_forever or 0
+                avg_hours = round(float(avg_playtime_forever) / 60.0, 1) if avg_playtime_forever > 0 else None
+                median_hours = round(float(median_playtime_forever) / 60.0, 1) if median_playtime_forever > 0 else None
+                avg_at_review_hours = None
+                post_review_delta_hours = None
+                p25_hours = None
+                p50_hours = median_hours
+                p75_hours = None
+                p90_hours = None
+                sample_size = 0
+                cohorts = []
+
+            # CCU snapshots and history
+            game_snaps_sorted = sorted(
+                game_snaps,
+                key=lambda s: s.snapshot_at or datetime.min.replace(tzinfo=UTC),
+            )
+            latest_ccu = game_snaps_sorted[-1].player_count if game_snaps_sorted else None
+            all_time_peak_ccu = max([s.player_count for s in game_snaps_sorted] + [peak_ccu])
+
+            ccu_history = [
+                {
+                    "snapshot_at": s.snapshot_at.isoformat() if s.snapshot_at else None,
+                    "player_count": s.player_count,
+                    "source": s.source or "steam_api",
+                }
+                for s in game_snaps_sorted
+            ]
+
+            player_activity = {
+                "app_id": game.app_id,
+                "game_name": game.name,
+                "current_ccu": latest_ccu or peak_ccu,
+                "peak_ccu_24h": peak_ccu,
+                "all_time_peak_ccu": all_time_peak_ccu,
+                "owners_estimate": game.owners_estimate,
+                "average_playtime_forever_hours": avg_hours,
+                "median_playtime_forever_hours": median_hours,
+                "average_playtime_at_review_hours": avg_at_review_hours,
+                "post_review_engagement_delta_hours": post_review_delta_hours,
+                "sample_size_reviews": sample_size,
+                "playtime_percentiles": {
+                    "p25_hours": p25_hours,
+                    "median_hours": p50_hours,
+                    "p75_hours": p75_hours,
+                    "p90_hours": p90_hours,
+                },
+                "playtime_cohorts": cohorts,
+                "ccu_history": ccu_history,
+                "recent_event_impacts": [
+                    {
+                        "patch_name": imp.patch_name,
+                        "patch_date": imp.patch_date.isoformat() if imp.patch_date else None,
+                        "pre_avg_ccu": imp.pre_avg_ccu,
+                        "post_avg_ccu": imp.post_avg_ccu,
+                        "ccu_change_pct": float(imp.ccu_change_pct) if imp.ccu_change_pct is not None else None,
+                        "verdict": imp.observed_sentiment_verdict,
+                    }
+                    for imp in impacts_by_game.get(game.app_id, [])
+                ],
+                "telemetry_mode": "snapshot_polled",
+                "updated_at": now.isoformat(),
+            }
+
             overview = MartGameOverview(
                 app_id=game.app_id,
                 name=game.name,
@@ -493,8 +611,8 @@ class MaterializeMartsJob(BaseJob):
                 review_score=game.review_score,
                 review_score_desc=game.review_score_desc,
                 owners_estimate=game.owners_estimate,
-                average_playtime_forever=game.average_playtime_forever,
-                median_playtime_forever=game.median_playtime_forever,
+                average_playtime_forever=avg_playtime_forever,
+                median_playtime_forever=median_playtime_forever,
                 metacritic_score=game.metacritic_score,
                 header_image=game.header_image,
                 website=game.website,
@@ -519,6 +637,7 @@ class MaterializeMartsJob(BaseJob):
                 genre_p75_price_usd=Decimal(str(round(g_stats["p75"], 2))),
                 pricing_spectrum=pricing_spectrum,
                 price_history_points=price_history_points,
+                player_activity=player_activity,
                 materialized_at=now,
             )
             overview_records.append(overview)

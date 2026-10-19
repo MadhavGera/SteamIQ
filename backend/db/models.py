@@ -895,6 +895,7 @@ class MartGameOverview(Base):
     genre_p75_price_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     pricing_spectrum: Mapped[dict | None] = mapped_column(JSONB)
     price_history_points: Mapped[list | dict | None] = mapped_column(JSONB)
+    player_activity: Mapped[dict | None] = mapped_column(JSONB)
 
     materialized_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

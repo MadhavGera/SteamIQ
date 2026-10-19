@@ -61,6 +61,7 @@ def create_app() -> FastAPI:
     from core.health import router as health_router
     app.include_router(health_router)
 
+    from api.activity import router as activity_router
     from api.assistant import router as assistant_router
     from api.competitors import router as competitors_router
     from api.games import router as games_router
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     from api.updates import router as updates_router
 
     app.include_router(games_router, prefix="/api/v1")
+    app.include_router(activity_router, prefix="/api/v1")
     app.include_router(reviews_router, prefix="/api/v1")
     app.include_router(competitors_router, prefix="/api/v1")
     app.include_router(market_router, prefix="/api/v1")
