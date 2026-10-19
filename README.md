@@ -109,7 +109,10 @@ The headline production model is **`recsys_two_tower_clean`** (Champion Seed 44)
 | `recsys_two_tower_ranker_clean` | test | 5-seed mean | 0.0517 ± 0.0020 | 0.0992 ± 0.0024 | — | — | — | Candidate |
 | `recsys_two_tower_ranker_clean` | **val** | 1 (Champ 44) | 0.0582 [0.0531, 0.0635] | 0.1098 [0.1014, 0.1190] | 0.0428 | 55.03% | 0.7450 | Candidate |
 | `recsys_two_tower_ranker_clean` | val | 5-seed mean | 0.0586 ± 0.0020 | 0.1105 ± 0.0035 | 0.0430 | 51.55% | 0.7511 | Candidate |
-| `recsys_sasrec` | **test** | 1 (Champ 43) | 0.0420 [0.0379, 0.0465] | 0.0824 [0.0750, 0.0900] | 0.0297 | 18.13% | 0.7485 | Challenger |
+| `recsys_sasrec` | **test** | 1 (Champ 42) | 0.0569 [0.0517, 0.0617] | 0.1094 [0.1004, 0.1180] | 0.0409 | 37.30% | 0.7732 | Challenger |
+| `recsys_sasrec` | test | 3-seed mean | 0.0545 ± 0.0025 | 0.1054 ± 0.0050 | — | — | — | Challenger |
+| `recsys_sasrec` | **val** | 1 (Champ 42) | 0.0601 [0.0553, 0.0647] | 0.1174 [0.1090, 0.1260] | 0.0427 | 38.20% | 0.7692 | Challenger |
+| `recsys_sasrec` | val | 3-seed mean | 0.0609 ± 0.0016 | 0.1186 ± 0.0026 | — | — | — | Challenger |
 | `recsys_itemknn` | **test** | 5-seed | 0.0433 [0.0389, 0.0480] | 0.0826 [0.0748, 0.0900] | 0.0315 | 61.50% | 0.7255 | Candidate |
 | `recsys_als` | **test** | 5-seed | 0.0356 [0.0315, 0.0396] | 0.0724 [0.0654, 0.0796] | 0.0246 | 32.33% | 0.7772 | Candidate |
 | `recsys_popularity` | **test** | Baseline | 0.0151 [0.0125, 0.0178] | 0.0326 [0.0274, 0.0376] | 0.0100 | 0.70% | 0.6948 | Baseline |

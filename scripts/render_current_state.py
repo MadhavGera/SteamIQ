@@ -52,10 +52,20 @@ def render_current_state(results_dir: Path | str = "docs/results") -> str:
     rk_val_std = rk_5s.get("std_ndcg_at_10", 0.0020)
 
     # SASRec aggregate
-    sas_agg_summary = sas.get("aggregate", {}).get("summary", {})
+    sas_agg_means = sas.get("aggregate", {}).get("means", {})
+    sas_agg_stds = sas.get("aggregate", {}).get("stds", {})
     sas_recall = sas.get("candidate_union_recall", {})
     sas_comp = sas.get("comparison_vs_two_tower", {})
-    sas_lat = sas.get("latency_benchmark", {})
+
+    # Latency benchmark
+    lat_path = results_path / "latency_benchmark.json"
+    lat_data = json.loads(lat_path.read_text(encoding="utf-8")) if lat_path.exists() else {}
+    lat_models = lat_data.get("models", {})
+    sas_lat = lat_models.get("recsys_sasrec", {})
+
+    # Exploratory Ranker without user features
+    rf_path = results_path / "ranker_without_user_features.json"
+    rf_data = json.loads(rf_path.read_text(encoding="utf-8")) if rf_path.exists() else {}
 
     lines: list[str] = []
     lines.append("# Current Authoritative State")
@@ -128,11 +138,12 @@ def render_current_state(results_dir: Path | str = "docs/results") -> str:
     sas_c_thr_lo = sas_m["test_metrics"]["hit_rate_at_10_lo95"]
     sas_c_thr_hi = sas_m["test_metrics"]["hit_rate_at_10_hi95"]
 
-    sas_v_ndcg = sas_agg_summary.get("ndcg_at_10", {}).get("mean", sas_c_vnd)
-    sas_v_ndcg_s = sas_agg_summary.get("ndcg_at_10", {}).get("std", 0.0007)
-    sas_v_hr = sas_agg_summary.get("hit_rate_at_10", {}).get("mean", sas_c_vhr)
-    sas_t_ndcg = 0.0424
-    sas_t_ndcg_s = 0.0004
+    sas_v_ndcg = sas_agg_means.get("ndcg_at_10", sas_c_vnd)
+    sas_v_ndcg_s = sas_agg_stds.get("ndcg_at_10", 0.0016)
+    sas_v_hr = sas_agg_means.get("hit_rate_at_10", sas_c_vhr)
+    sas_t_summary = sas_m.get("aggregate", {}).get("summary", {})
+    sas_t_ndcg = sas_t_summary.get("ndcg_at_10", {}).get("mean", sas_c_tnd)
+    sas_t_ndcg_s = sas_t_summary.get("ndcg_at_10", {}).get("std", 0.0025)
 
     lines.append(
         f"| `recsys_sasrec` | Sequential Challenger | Seed 42 (Champ) | "
@@ -182,10 +193,10 @@ def render_current_state(results_dir: Path | str = "docs/results") -> str:
     lines.append("  - **Verdict: FAILED**. The 95% bootstrap confidence interval spans zero. `recsys_two_tower_clean` remains the authoritative production serving champion.")
     lines.append("")
     lines.append("- **SASRec Sequential Challenger Gate:**")
-    lines.append(f"  - Validation Paired Difference vs Two-Tower: **`{sas_comp.get('mean_paired_diff', -0.0123):.4f}`** (95% CI: `[{sas_comp.get('diff_ci95', [-0.0172, -0.0078])[0]:.4f}, {sas_comp.get('diff_ci95', [-0.0172, -0.0078])[1]:.4f}]`).")
-    lines.append("  - Retrieval Quality: Trails Two-Tower clean champion significantly ($p < 0.001$).")
-    lines.append(f"  - Quota Candidate Union Recall Lift: **`+{sas_recall.get('relative_recall_lift_pct', 18.9):.1f}%`** relative (`{sas_recall.get('quota_recall_without_sasrec', 0.418):.3f}` $\\to$ `{sas_recall.get('quota_recall_with_sasrec', 0.497):.3f}` at K=100).")
-    lines.append(f"  - Measured CPU Latency: $P_{{50}} = {sas_lat.get('p50_latency_ms', 2.29):.2f}\\text{{ ms}}$, $P_{{95}} = {sas_lat.get('p95_latency_ms', 3.23):.2f}\\text{{ ms}}$ (< 50 ms SLA).")
+    lines.append(f"  - Validation Paired Difference vs Two-Tower: **`{sas_comp.get('mean_paired_diff', -0.0009):.4f}`** (95% CI: `[{sas_comp.get('diff_ci95', [-0.0056, 0.0034])[0]:.4f}, {sas_comp.get('diff_ci95', [-0.0056, 0.0034])[1]:.4f}]`).")
+    lines.append("  - Retrieval Quality: Statistically indistinguishable from Two-Tower clean champion overall on validation (paired bootstrap CI spans zero). On long histories (10+ items), SASRec achieves NDCG@10 0.0538 vs Two-Tower 0.0503.")
+    lines.append(f"  - Quota Candidate Union Recall Lift: **`+{sas_recall.get('recall_lift_pct', sas_recall.get('relative_recall_lift_pct', 22.5)):.1f}%`** relative (`{sas_recall.get('two_tower_recall_at_100', sas_recall.get('quota_recall_without_sasrec', 0.418)):.3f}` $\\to$ `{sas_recall.get('union_recall_at_200', sas_recall.get('quota_recall_with_sasrec', 0.512)):.3f}` at K=100/200).")
+    lines.append(f"  - Measured Single-Item CPU Latency: $P_{{50}} = {sas_lat.get('p50_ms', 2.31):.2f}\\text{{ ms}}$, $P_{{95}} = {sas_lat.get('p95_ms', 3.78):.2f}\\text{{ ms}}$ (< 50 ms SLA).")
     lines.append("")
 
     # Section 3: Ablations
@@ -229,6 +240,21 @@ def render_current_state(results_dir: Path | str = "docs/results") -> str:
         lines.append(f"| `{grp}` | {desc} | {val_ndcg:.4f} | **{diff:+.4f}** | [{lo:+.4f}, {hi:+.4f}] | {sig} |")
 
     lines.append("")
+
+    if rf_data:
+        rf_m = rf_data.get("summary", {})
+        rf_val_mean = rf_m.get("val_ndcg_at_10_mean", 0.0620)
+        rf_val_std = rf_m.get("val_ndcg_at_10_std", 0.0021)
+        rf_diff_full = rf_m.get("delta_vs_full_clean_ranker", 0.0037)
+        rf_diff_tt = rf_m.get("delta_vs_two_tower", 0.0010)
+
+        lines.append("### Exploratory Ablation: Ranker Without User Profile Features (5 Seeds on Validation Split)")
+        lines.append("")
+        lines.append("- **Protocol:** Evaluated on 5,000 validation users across 5 seeds (`[42, 43, 44, 45, 46]`) with user profile features `['history_len', 'log_products', 'log_reviews', 'mean_log_hours']` excluded (31 active features). Strict zero test split access.")
+        lines.append(f"- **5-Seed Val NDCG@10:** **`{rf_val_mean:.4f} ± {rf_val_std:.4f}`** (vs Full Clean Ranker: `0.0586 ± 0.0020`, vs Two-Tower Champion: `0.0611 ± 0.0010`).")
+        lines.append(f"- **Seed-Matched Paired Diff vs Full Clean Ranker:** **`{rf_diff_full:+.4f}`** (improved across all 5 seeds; significant on Seeds 44 and 46).")
+        lines.append(f"- **Paired Diff vs Two-Tower Champion:** **`{rf_diff_tt:+.4f}`** (positive mean delta; individual per-seed 95% CIs span zero).")
+        lines.append("")
 
     # Section 4: Cold Start
     lines.append("## 4. Cold-Start Multi-Cohort Evaluation (Validation Split)")
@@ -304,6 +330,25 @@ def render_current_state(results_dir: Path | str = "docs/results") -> str:
     lines.append(f"- **Synthetic Paraphrase Holdout (n={ml['synthetic_paraphrase_holdout']['count']}):** Accuracy = **`{ml['synthetic_paraphrase_holdout']['accuracy'] * 100:.2f}%`** (95% CI: [{ml['synthetic_paraphrase_holdout']['accuracy_ci'][0] * 100:.2f}%, {ml['synthetic_paraphrase_holdout']['accuracy_ci'][1] * 100:.2f}%]), Selective Accuracy = **`{ml['synthetic_paraphrase_holdout']['selective_accuracy'] * 100:.2f}%`**.")
     lines.append("- **Human Holdout Status:** Current verified human queries: 0 / 50. Evaluation scaffold active in `backend/assistant/data/holdout_queries_human.jsonl`; formal human evaluation will trigger automatically once community contributors log $\\ge 50$ validated queries.")
     lines.append("")
+
+    # Section 6: Unified CPU Latency Benchmark
+    if lat_data:
+        lines.append("## 6. Production Serving CPU Latency Benchmark (N=1,000, batch_size=1, cache=disabled)")
+        lines.append("")
+        meta_hw = lat_data.get("metadata", {}).get("hardware", {})
+        lines.append(f"- **Hardware Platform:** {meta_hw.get('cpu_model', 'Intel CPU')} | {meta_hw.get('cpu_physical_cores', 4)} physical cores ({meta_hw.get('cpu_logical_cores', 8)} threads) | {meta_hw.get('ram_total_gb', 11.73):.2f} GB RAM | OS: {meta_hw.get('os', 'Windows 11')}.")
+        lines.append("- **SLA Target:** < 50.0 ms per single-user request (batch_size=1).")
+        lines.append("")
+        lines.append("| Component / Model | Role | Mean (ms) | P50 (ms) | P95 (ms) | P99 (ms) | SLA (<50ms) |")
+        lines.append("|---|---|---|---|---|---|---|")
+        for m_id, m_lat in lat_models.items():
+            lines.append(
+                f"| `{m_lat.get('model_name', m_id)}` | {m_lat.get('role', 'retriever')} | "
+                f"{m_lat.get('mean_ms', 0.0):.2f} | {m_lat.get('p50_ms', 0.0):.2f} | "
+                f"{m_lat.get('p95_ms', 0.0):.2f} | {m_lat.get('p99_ms', 0.0):.2f} | "
+                f"**{'PASSED' if m_lat.get('sla_met') else 'FAILED'}** |"
+            )
+        lines.append("")
 
     return "\n".join(lines)
 
@@ -441,11 +486,23 @@ def update_sprint_report(report_path: Path | str = "docs/results/SPRINT_REPORT.m
 
 if __name__ == "__main__":
     import argparse
+    import sys
     parser = argparse.ArgumentParser(description="Render Current Authoritative State")
     parser.add_argument("--update", action="store_true", help="Update docs/results/SPRINT_REPORT.md in-place")
+    parser.add_argument("--check", action="store_true", help="Check if docs/results/SPRINT_REPORT.md is up to date")
     args = parser.parse_args()
 
-    if args.update:
+    if args.check:
+        rep_p = Path("docs/results/SPRINT_REPORT.md")
+        current_doc = rep_p.read_text(encoding="utf-8") if rep_p.exists() else ""
+        expected_auth = render_current_state()
+        if expected_auth in current_doc:
+            print("docs/results/SPRINT_REPORT.md matches current authoritative state.")
+            sys.exit(0)
+        else:
+            print("ERROR: docs/results/SPRINT_REPORT.md is out of sync with current authoritative state. Run with --update.")
+            sys.exit(1)
+    elif args.update:
         update_sprint_report()
     else:
         print(render_current_state())
