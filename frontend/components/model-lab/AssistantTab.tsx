@@ -61,31 +61,77 @@ export function AssistantTab({
     );
   }
 
-  const routerRows = (leaderboardPayload.routers as RouterRow[]) || [];
+  const modelsObj = (leaderboardPayload.models || {}) as Record<string, {
+    accuracy?: number;
+    macro_f1?: number;
+    accuracy_ci?: [number, number];
+    macro_f1_ci?: [number, number];
+    ece?: number;
+    [k: string]: unknown;
+  }>;
+  const headlineModel = (leaderboardPayload.headline_model as string) || "minilm_logistic";
+
+  // Build router rows from models object or routers list
+  const routerRows: RouterRow[] = (leaderboardPayload.routers as RouterRow[]) ||
+    Object.entries(modelsObj).map(([name, m]) => ({
+      model_name: name,
+      // HONEST-FALLBACK: Read accuracy from model payload or fallback to 0
+      accuracy: m.accuracy ?? 0,
+      accuracy_ci: m.accuracy_ci,
+      // HONEST-FALLBACK: Read macro_f1 from model payload or fallback to 0
+      macro_f1: m.macro_f1 ?? 0,
+      macro_f1_ci: m.macro_f1_ci,
+      ece: m.ece,
+      is_headline: name === headlineModel,
+    })).sort((a, b) => b.accuracy - a.accuracy);
+
   const verifiedGoldCount = Number(leaderboardPayload.verified_gold_count || 0);
   const totalGoldCount = Number(leaderboardPayload.total_gold_count || 0);
   const isPreliminary = verifiedGoldCount < 100;
 
   const cal = (calibrationPayload || {}) as Record<string, unknown>;
-  const tau = Number(cal.tau || 0.85);
-  const selectivePrecision = Number(cal.selective_precision || 0);
-  const coverage = Number(cal.coverage || 0);
-  const oosAuroc = Number(cal.oos_auroc || 0);
-  const ece = Number(cal.ece || 0);
+  const selPred = (cal.selective_prediction || {}) as Record<string, unknown>;
+  const oos = (cal.out_of_scope_detection || {}) as Record<string, unknown>;
+  const oosAll = (oos.softmax_all || {}) as Record<string, unknown>;
+
+  // HONEST-FALLBACK: Read tau from calibration payload or default to 0.1
+  const tau = Number(cal.tau ?? 0.1);
+  // HONEST-FALLBACK: Read selective accuracy / precision from selective_prediction or root field
+  const selectivePrecision = Number(selPred.selective_accuracy ?? cal.selective_precision ?? 0);
+  // HONEST-FALLBACK: Read coverage from selective_prediction or root field
+  const coverage = Number(selPred.coverage ?? cal.coverage ?? 0);
+  // HONEST-FALLBACK: Read AUROC from out_of_scope_detection softmax_all or root field
+  const oosAuroc = Number(oosAll.auroc ?? cal.oos_auroc ?? 0);
+  // HONEST-FALLBACK: Read ECE from calibration payload or root field
+  const ece = Number(cal.ece ?? 0);
 
   const ret = (retrievalPayload || {}) as Record<string, unknown>;
-  const denseRecall3 = Number(ret.dense_recall_at_3 || 0);
-  const tfidfRecall3 = Number(ret.tfidf_recall_at_3 || 0);
-  const denseMrr = Number(ret.dense_mrr || 0);
-  const tfidfMrr = Number(ret.tfidf_mrr || 0);
+  const metrics = (ret.metrics || {}) as Record<string, unknown>;
+  const denseMetrics = (metrics.dense || {}) as Record<string, unknown>;
+  const tfidfMetrics = (metrics.tfidf || {}) as Record<string, unknown>;
 
-  const errors = (errorsPayload?.error_breakdown as Array<{
-    query: string;
-    true_intent: string;
-    pred_intent: string;
-    confidence: number;
-    resolved_method?: string;
-  }>) || [];
+  // HONEST-FALLBACK: Read dense recall@3 from metrics.dense or root field
+  const denseRecall3 = Number(denseMetrics.recall_at_3 ?? ret.dense_recall_at_3 ?? 0);
+  // HONEST-FALLBACK: Read tfidf recall@3 from metrics.tfidf or root field
+  const tfidfRecall3 = Number(tfidfMetrics.recall_at_3 ?? ret.tfidf_recall_at_3 ?? 0);
+  // HONEST-FALLBACK: Read dense MRR from metrics.dense or root field
+  const denseMrr = Number(denseMetrics.mrr ?? ret.dense_mrr ?? 0);
+  // HONEST-FALLBACK: Read tfidf MRR from metrics.tfidf or root field
+  const tfidfMrr = Number(tfidfMetrics.mrr ?? ret.tfidf_mrr ?? 0);
+
+  const rawErrors = ((errorsPayload?.worst_20_errors || errorsPayload?.error_breakdown || []) as Array<Record<string, unknown>>);
+  const errors = rawErrors.map((err) => ({
+    // HONEST-FALLBACK: Read error query string from text or query field
+    query: String(err.text ?? err.query ?? ""),
+    // HONEST-FALLBACK: Read true intent label
+    true_intent: String(err.true_intent ?? "unknown"),
+    // HONEST-FALLBACK: Read predicted intent label from predicted_intent or pred_intent
+    pred_intent: String(err.predicted_intent ?? err.pred_intent ?? "unknown"),
+    // HONEST-FALLBACK: Read model confidence
+    confidence: Number(err.confidence ?? 0),
+    // HONEST-FALLBACK: Read resolved routing method
+    resolved_method: String(err.resolved_method ?? (err.abstained ? "abstained" : "logistic")),
+  }));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
@@ -192,7 +238,7 @@ export function AssistantTab({
                     )}
                   </td>
                   <td style={{ padding: "10px" }}>
-                    {r.ece !== undefined ? r.ece.toFixed(4) : "—"}
+                    {r.ece !== undefined ? r.ece.toFixed(4) : (r.is_headline && ece > 0 ? ece.toFixed(4) : "—")}
                   </td>
                 </tr>
               ))}

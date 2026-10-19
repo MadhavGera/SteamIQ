@@ -77,7 +77,7 @@ export default function ModelLabPage() {
     { key: "curves", label: "Training Curves", icon: "show_chart" },
     { key: "explainability", label: "Explainability", icon: "psychology" },
     { key: "data_method", label: "Data & Method", icon: "description" },
-    { key: "assistant", label: "Assistant", icon: "chat_spark" },
+    { key: "assistant", label: "Assistant", icon: "smart_toy" },
   ];
 
   // HONEST-FALLBACK: Read dataset version from leaderboard report or fallback string
