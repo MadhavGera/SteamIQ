@@ -684,3 +684,18 @@ def compute_metrics_from_ranks(
     )
 
     return metrics, per_user, slices
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Evaluate Recsys Model / Split")
+    parser.add_argument("--split", type=str, default="val", choices=["val", "test"])
+    parser.add_argument("--only", type=str, default=None, choices=["sasrec", None])
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--reason", type=str, default=None)
+    args = parser.parse_args()
+
+    if args.split == "test":
+        from jobs.run_phase6_test_eval import run_phase6_test_eval
+        run_phase6_test_eval(force=args.force, reason=args.reason, only=args.only)
+

@@ -41,8 +41,18 @@ sys.path.insert(0, str(Path("backend").resolve()))
 
 from recsys.aggregation import aggregate_per_seed_metrics
 from recsys.data import RecsysData
-from recsys.evaluate import evaluate_model, get_evaluation_user_split
-from recsys.metrics import bootstrap_ci, paired_bootstrap_diff
+from recsys.evaluate import (
+    _build_user_interaction_maps,
+    evaluate_model,
+    get_evaluation_user_split,
+)
+from recsys.metrics import (
+    bootstrap_ci,
+    compute_ranks,
+    hit_rate_at_k,
+    ndcg_at_k,
+    paired_bootstrap_diff,
+)
 from recsys.models.sequential import SASRecConfig, SASRecModel, SASRecModule
 from recsys.models.two_tower import TwoTowerModel
 from recsys.train_two_tower import (
@@ -102,6 +112,18 @@ def train_single_sasrec_run(
         return max(1e-5 / lr, 0.5 * (1.0 + math.cos(math.pi * progress)))
 
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+    user_train_pos, _ = _build_user_interaction_maps(data)
+    val_target_map = dict(zip(data.val_df["user_idx"].to_numpy(), data.val_df["item_idx"].to_numpy(), strict=True))
+    eval_histories: list[np.ndarray] = []
+    eval_targets: list[int] = []
+    if tuning_users is not None and len(tuning_users) > 0:
+        for u in tuning_users:
+            u_int = int(u)
+            if u_int in val_target_map and u_int in user_train_pos:
+                eval_histories.append(np.array(user_train_pos[u_int], dtype=np.int64))
+                eval_targets.append(int(val_target_map[u_int]))
+    eval_targets_arr = np.array(eval_targets, dtype=np.int64)
 
     epoch_sec_list: list[float] = []
     loss_list: list[float] = []
@@ -166,23 +188,17 @@ def train_single_sasrec_run(
         avg_loss = total_loss / max(1, n_batches)
         loss_list.append(avg_loss)
 
-        # Validation evaluation on tuning users
+        # Validation evaluation on tuning users (fast vectorized scoring without overhead)
         val_ndcg10 = 0.0
         val_hr10 = 0.0
-        if tuning_users is not None and len(tuning_users) > 0:
+        if len(eval_histories) > 0:
             eval_model = SASRecModel(config)
             eval_model.module = module
             eval_model.precompute_item_vectors(data)
-            val_res = evaluate_model(
-                eval_model,
-                data,
-                split="val",
-                k_list=(10, 20),
-                user_indices=tuning_users,
-                seed=seed,
-            )
-            val_ndcg10 = float(val_res.metrics.get("ndcg_at_10", 0.0))
-            val_hr10 = float(val_res.metrics.get("hit_rate_at_10", 0.0))
+            scores = eval_model.score(eval_histories)
+            ranks = compute_ranks(scores, eval_targets_arr)
+            val_ndcg10 = float(np.mean(ndcg_at_k(ranks, 10)))
+            val_hr10 = float(np.mean(hit_rate_at_k(ranks, 10)))
 
         cur_lr = float(scheduler.get_last_lr()[0])
         epoch_rec = {
@@ -305,7 +321,7 @@ def _worker_train_sasrec_trial(args: dict[str, Any]) -> dict[str, Any]:
 
 
 def _worker_train_sasrec_seed(args: dict[str, Any]) -> dict[str, Any]:
-    torch.set_num_threads(2)
+    torch.set_num_threads(4)
     data_path = Path(args["data_path"])
     data = RecsysData.load(data_path)
     eval_users, tuning_users = get_evaluation_user_split(
@@ -369,7 +385,7 @@ def run_hyperparameter_sweep(
             "params": params,
             "seed": seed,
             "data_path": str(data_path),
-            "epochs": 15,
+            "epochs": 20,
             "pairs_per_epoch": 25000,
             "patience": 3,
         }
@@ -599,6 +615,12 @@ def evaluate_quota_recall(
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="SASRec Converged Training & Sweep")
+    parser.add_argument("--force-sweep", action="store_true", help="Force re-running hyperparameter sweep")
+    parser.add_argument("--sweep-only", action="store_true", help="Only run hyperparameter sweep and exit")
+    args = parser.parse_args()
+
     data_dir = Path("backend/data/recsys")
     docs_dir = Path("docs/results")
     reports_dir = data_dir / "reports"
@@ -615,7 +637,7 @@ def main():
 
     # 1. Hyperparameter sweep on seed 42 (load winning config if already available)
     trials_file = docs_dir / "sasrec_trials.json"
-    if trials_file.exists():
+    if not args.force_sweep and not args.sweep_only and trials_file.exists():
         with open(trials_file, encoding="utf-8") as f:
             sweep_payload = json.load(f)
         win_cfg = sweep_payload.get("winning_config", {"d_model": 64, "dropout": 0.2, "use_text": True})
@@ -623,6 +645,9 @@ def main():
     else:
         sweep_payload = run_hyperparameter_sweep(data_dir, docs_dir, seed=42)
         win_cfg = sweep_payload["winning_config"]
+        if args.sweep_only:
+            logger.info("Sweep-only mode requested. Exiting successfully.")
+            return
 
     # 2. Train 3 seeds with winning config to full convergence across 3 parallel workers
     seeds = [42, 43, 44]
@@ -638,12 +663,10 @@ def main():
         }
         for s in seeds
     ]
-    logger.info("Training 3 Converged SASRec Seeds (%s) across 3 parallel workers...", seeds)
+    logger.info("Training 3 Converged SASRec Seeds (%s) sequentially...", seeds)
     seed_results = []
-    with concurrent.futures.ProcessPoolExecutor(max_workers=3) as executor:
-        future_map = {executor.submit(_worker_train_sasrec_seed, t): t for t in tasks}
-        for future in concurrent.futures.as_completed(future_map):
-            seed_results.append(future.result())
+    for t in tasks:
+        seed_results.append(_worker_train_sasrec_seed(t))
 
     seed_results.sort(key=lambda r: r["seed"])
 

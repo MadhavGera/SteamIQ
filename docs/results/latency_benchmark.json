@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "report_key": "latency_benchmark",
+    "n_requests": 1000,
+    "batch_size": 1,
+    "hardware": {
+      "cpu_model": "11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
+      "cpu_physical_cores": 4,
+      "cpu_logical_cores": 8,
+      "ram_total_gb": 11.73,
+      "os": "Windows 11 (10.0.26200)",
+      "python_version": "3.12.7",
+      "torch_version": "2.12.0+cpu",
+      "lightgbm_version": "4.6.0",
+      "numpy_version": "2.4.6"
+    },
+    "sla_constraint_ms": 50.0,
+    "generated_at": "2026-10-19T03:40:16.996854+00:00"
+  },
+  "models": {
+    "recsys_two_tower_clean": {
+      "model_name": "recsys_two_tower_clean",
+      "description": "Two-Tower Neural Retriever (Champion Seed 44)",
+      "role": "retriever_stage_1",
+      "sla_target_ms": 50.0,
+      "sla_met": true,
+      "n_requests": 1000,
+      "batch_size": 1,
+      "mean_ms": 0.899,
+      "std_ms": 0.583,
+      "min_ms": 0.57,
+      "max_ms": 13.238,
+      "p50_ms": 0.788,
+      "p90_ms": 1.176,
+      "p95_ms": 1.387,
+      "p99_ms": 1.862
+    },
+    "recsys_sasrec": {
+      "model_name": "recsys_sasrec",
+      "description": "SASRec Sequential Transformer Retriever (Champion Seed 42)",
+      "role": "retriever_stage_1",
+      "sla_target_ms": 50.0,
+      "sla_met": true,
+      "n_requests": 1000,
+      "batch_size": 1,
+      "mean_ms": 2.502,
+      "std_ms": 1.375,
+      "min_ms": 1.5,
+      "max_ms": 30.931,
+      "p50_ms": 2.305,
+      "p90_ms": 2.988,
+      "p95_ms": 3.783,
+      "p99_ms": 5.599
+    },
+    "recsys_two_tower_ranker_v2_trainstats": {
+      "model_name": "recsys_two_tower_ranker_v2_trainstats",
+      "description": "Two-Tower Ranker V2 TrainStats (Production Ranker)",
+      "role": "ranker_stage_2",
+      "sla_target_ms": 50.0,
+      "sla_met": true,
+      "n_requests": 1000,
+      "batch_size": 1,
+      "mean_ms": 20.199,
+      "std_ms": 8.988,
+      "min_ms": 0.822,
+      "max_ms": 223.63,
+      "p50_ms": 21.326,
+      "p90_ms": 24.712,
+      "p95_ms": 26.24,
+      "p99_ms": 29.455
+    },
+    "end_to_end_serving_pipeline": {
+      "model_name": "end_to_end_serving_pipeline",
+      "description": "Full End-to-End Serving (Stage 1 Retrieval + Feature Join + Stage 2 LightGBM + Top-10 Format)",
+      "role": "end_to_end_serving",
+      "sla_target_ms": 50.0,
+      "sla_met": true,
+      "n_requests": 500,
+      "batch_size": 1,
+      "mean_ms": 19.958,
+      "std_ms": 7.508,
+      "min_ms": 1.225,
+      "max_ms": 65.018,
+      "p50_ms": 21.822,
+      "p90_ms": 24.557,
+      "p95_ms": 26.199,
+      "p99_ms": 28.499
+    }
+  }
+}

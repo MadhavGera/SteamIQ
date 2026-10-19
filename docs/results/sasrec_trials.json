@@ -4,7 +4,7 @@
     "seed": 42,
     "n_trials": 8,
     "dataset_version": "c662b8232dc0",
-    "generated_at": "2026-10-18T16:13:55.446389+00:00"
+    "generated_at": "2026-10-19T02:11:49.978004+00:00"
   },
   "trials": [
     {
@@ -13,11 +13,11 @@
       "dropout": 0.2,
       "use_text": false,
       "parameter_count": 295361,
-      "epochs_trained": 8,
-      "best_epoch": 5,
-      "best_tuning_val_ndcg_at_10": 0.023453190422741334,
-      "total_training_sec": 688.9,
-      "mean_epoch_sec": 77.1
+      "epochs_trained": 18,
+      "best_epoch": 15,
+      "best_tuning_val_ndcg_at_10": 0.04530135916115513,
+      "total_training_sec": 1082.0,
+      "mean_epoch_sec": 58.5
     },
     {
       "trial_id": 2,
@@ -25,11 +25,11 @@
       "dropout": 0.2,
       "use_text": true,
       "parameter_count": 320129,
-      "epochs_trained": 10,
-      "best_epoch": 7,
-      "best_tuning_val_ndcg_at_10": 0.026817020586041462,
-      "total_training_sec": 883.9,
-      "mean_epoch_sec": 79.3
+      "epochs_trained": 11,
+      "best_epoch": 8,
+      "best_tuning_val_ndcg_at_10": 0.03781254279465144,
+      "total_training_sec": 697.3,
+      "mean_epoch_sec": 61.3
     },
     {
       "trial_id": 3,
@@ -37,11 +37,11 @@
       "dropout": 0.4,
       "use_text": false,
       "parameter_count": 295361,
-      "epochs_trained": 6,
-      "best_epoch": 3,
-      "best_tuning_val_ndcg_at_10": 0.025103470370590606,
-      "total_training_sec": 409.5,
-      "mean_epoch_sec": 59.6
+      "epochs_trained": 20,
+      "best_epoch": 19,
+      "best_tuning_val_ndcg_at_10": 0.04232436853560957,
+      "total_training_sec": 1135.6,
+      "mean_epoch_sec": 55.3
     },
     {
       "trial_id": 4,
@@ -51,9 +51,9 @@
       "parameter_count": 320129,
       "epochs_trained": 11,
       "best_epoch": 8,
-      "best_tuning_val_ndcg_at_10": 0.026220871590142362,
-      "total_training_sec": 2470.4,
-      "mean_epoch_sec": 205.8
+      "best_tuning_val_ndcg_at_10": 0.033224850539496115,
+      "total_training_sec": 643.2,
+      "mean_epoch_sec": 56.5
     },
     {
       "trial_id": 5,
@@ -61,11 +61,11 @@
       "dropout": 0.2,
       "use_text": false,
       "parameter_count": 787329,
-      "epochs_trained": 11,
-      "best_epoch": 8,
-      "best_tuning_val_ndcg_at_10": 0.0260510313923151,
-      "total_training_sec": 7643.5,
-      "mean_epoch_sec": 671.6
+      "epochs_trained": 18,
+      "best_epoch": 15,
+      "best_tuning_val_ndcg_at_10": 0.04588085932349358,
+      "total_training_sec": 7012.6,
+      "mean_epoch_sec": 379.3
     },
     {
       "trial_id": 6,
@@ -73,11 +73,11 @@
       "dropout": 0.2,
       "use_text": true,
       "parameter_count": 836865,
-      "epochs_trained": 5,
-      "best_epoch": 2,
-      "best_tuning_val_ndcg_at_10": 0.025516269118365575,
-      "total_training_sec": 4042.3,
-      "mean_epoch_sec": 767.0
+      "epochs_trained": 17,
+      "best_epoch": 14,
+      "best_tuning_val_ndcg_at_10": 0.04488534671268965,
+      "total_training_sec": 8615.5,
+      "mean_epoch_sec": 492.9
     },
     {
       "trial_id": 7,
@@ -85,11 +85,11 @@
       "dropout": 0.4,
       "use_text": false,
       "parameter_count": 787329,
-      "epochs_trained": 5,
-      "best_epoch": 2,
-      "best_tuning_val_ndcg_at_10": 0.025427205716085463,
-      "total_training_sec": 3398.8,
-      "mean_epoch_sec": 645.8
+      "epochs_trained": 19,
+      "best_epoch": 16,
+      "best_tuning_val_ndcg_at_10": 0.0434041027078698,
+      "total_training_sec": 7817.3,
+      "mean_epoch_sec": 402.5
     },
     {
       "trial_id": 8,
@@ -97,28 +97,28 @@
       "dropout": 0.4,
       "use_text": true,
       "parameter_count": 836865,
-      "epochs_trained": 5,
-      "best_epoch": 2,
-      "best_tuning_val_ndcg_at_10": 0.025281489402359254,
-      "total_training_sec": 2296.9,
-      "mean_epoch_sec": 440.6
+      "epochs_trained": 20,
+      "best_epoch": 20,
+      "best_tuning_val_ndcg_at_10": 0.04316957891280147,
+      "total_training_sec": 6552.3,
+      "mean_epoch_sec": 315.2
     }
   ],
   "winning_config": {
-    "d_model": 64,
+    "d_model": 128,
     "dropout": 0.2,
-    "use_text": true
+    "use_text": false
   },
   "winning_trial": {
-    "trial_id": 2,
-    "d_model": 64,
+    "trial_id": 5,
+    "d_model": 128,
     "dropout": 0.2,
-    "use_text": true,
-    "parameter_count": 320129,
-    "epochs_trained": 10,
-    "best_epoch": 7,
-    "best_tuning_val_ndcg_at_10": 0.026817020586041462,
-    "total_training_sec": 883.9,
-    "mean_epoch_sec": 79.3
+    "use_text": false,
+    "parameter_count": 787329,
+    "epochs_trained": 18,
+    "best_epoch": 15,
+    "best_tuning_val_ndcg_at_10": 0.04588085932349358,
+    "total_training_sec": 7012.6,
+    "mean_epoch_sec": 379.3
   }
 }

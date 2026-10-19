@@ -124,7 +124,7 @@ def test_sasrec_causal_padding_masks_and_last_non_pad() -> None:
     # 2. Verify padding mask: left padding (token 0) is ignored by attention
     seq_right_aligned = torch.tensor([[0, 0, 0, 0, 0, 0, 0, 5, 12, 19]], dtype=torch.long)
     user_vec_1 = module.encode_history(seq_right_aligned)
-    assert user_vec_1.shape == (1, 64) and not torch.isnan(user_vec_1).any()
+    assert user_vec_1.shape == (1, d_model) and not torch.isnan(user_vec_1).any()
 
     # Left-aligned sequence with identical valid tokens: [5, 12, 19, 0, ..., 0]
     seq_left_aligned = torch.tensor([[5, 12, 19, 0, 0, 0, 0, 0, 0, 0]], dtype=torch.long)

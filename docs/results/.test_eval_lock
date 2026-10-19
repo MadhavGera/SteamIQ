@@ -24,6 +24,11 @@
       "action": "test_eval_sasrec",
       "timestamp": "2026-10-18T20:16:32.973023+00:00",
       "reason": "round4: retrained sasrec with token alignment and padding mask bugfix"
+    },
+    {
+      "action": "test_eval_sasrec",
+      "timestamp": "2026-10-19T03:33:11.100962+00:00",
+      "reason": "round5: sasrec re-selected after bugfix; challenger only"
     }
   ]
 }

@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "sweep_name": "sasrec_hyperparameter_sweep",
+    "seed": 42,
+    "n_trials": 8,
+    "dataset_version": "c662b8232dc0",
+    "generated_at": "2026-10-18T16:13:55.446389+00:00"
+  },
+  "trials": [
+    {
+      "trial_id": 1,
+      "d_model": 64,
+      "dropout": 0.2,
+      "use_text": false,
+      "parameter_count": 295361,
+      "epochs_trained": 8,
+      "best_epoch": 5,
+      "best_tuning_val_ndcg_at_10": 0.023453190422741334,
+      "total_training_sec": 688.9,
+      "mean_epoch_sec": 77.1
+    },
+    {
+      "trial_id": 2,
+      "d_model": 64,
+      "dropout": 0.2,
+      "use_text": true,
+      "parameter_count": 320129,
+      "epochs_trained": 10,
+      "best_epoch": 7,
+      "best_tuning_val_ndcg_at_10": 0.026817020586041462,
+      "total_training_sec": 883.9,
+      "mean_epoch_sec": 79.3
+    },
+    {
+      "trial_id": 3,
+      "d_model": 64,
+      "dropout": 0.4,
+      "use_text": false,
+      "parameter_count": 295361,
+      "epochs_trained": 6,
+      "best_epoch": 3,
+      "best_tuning_val_ndcg_at_10": 0.025103470370590606,
+      "total_training_sec": 409.5,
+      "mean_epoch_sec": 59.6
+    },
+    {
+      "trial_id": 4,
+      "d_model": 64,
+      "dropout": 0.4,
+      "use_text": true,
+      "parameter_count": 320129,
+      "epochs_trained": 11,
+      "best_epoch": 8,
+      "best_tuning_val_ndcg_at_10": 0.026220871590142362,
+      "total_training_sec": 2470.4,
+      "mean_epoch_sec": 205.8
+    },
+    {
+      "trial_id": 5,
+      "d_model": 128,
+      "dropout": 0.2,
+      "use_text": false,
+      "parameter_count": 787329,
+      "epochs_trained": 11,
+      "best_epoch": 8,
+      "best_tuning_val_ndcg_at_10": 0.0260510313923151,
+      "total_training_sec": 7643.5,
+      "mean_epoch_sec": 671.6
+    },
+    {
+      "trial_id": 6,
+      "d_model": 128,
+      "dropout": 0.2,
+      "use_text": true,
+      "parameter_count": 836865,
+      "epochs_trained": 5,
+      "best_epoch": 2,
+      "best_tuning_val_ndcg_at_10": 0.025516269118365575,
+      "total_training_sec": 4042.3,
+      "mean_epoch_sec": 767.0
+    },
+    {
+      "trial_id": 7,
+      "d_model": 128,
+      "dropout": 0.4,
+      "use_text": false,
+      "parameter_count": 787329,
+      "epochs_trained": 5,
+      "best_epoch": 2,
+      "best_tuning_val_ndcg_at_10": 0.025427205716085463,
+      "total_training_sec": 3398.8,
+      "mean_epoch_sec": 645.8
+    },
+    {
+      "trial_id": 8,
+      "d_model": 128,
+      "dropout": 0.4,
+      "use_text": true,
+      "parameter_count": 836865,
+      "epochs_trained": 5,
+      "best_epoch": 2,
+      "best_tuning_val_ndcg_at_10": 0.025281489402359254,
+      "total_training_sec": 2296.9,
+      "mean_epoch_sec": 440.6
+    }
+  ],
+  "winning_config": {
+    "d_model": 64,
+    "dropout": 0.2,
+    "use_text": true
+  },
+  "winning_trial": {
+    "trial_id": 2,
+    "d_model": 64,
+    "dropout": 0.2,
+    "use_text": true,
+    "parameter_count": 320129,
+    "epochs_trained": 10,
+    "best_epoch": 7,
+    "best_tuning_val_ndcg_at_10": 0.026817020586041462,
+    "total_training_sec": 883.9,
+    "mean_epoch_sec": 79.3
+  }
+}
