@@ -18,7 +18,23 @@ export function RecsysCompareView({
   defaultModelA = "recsys_two_tower_clean",
   defaultModelB = "recsys_itemknn",
 }: RecsysCompareViewProps) {
-  const deployableModels = models.filter((m) => m.deployable && m.is_ready);
+  // Allowed models in Recommendation Engine per user request: ItemKNN, ALS, Two Tower
+  const ALLOWED_RECOMMENDER_MODELS = [
+    "recsys_two_tower_clean",
+    "recsys_two_tower",
+    "recsys_itemknn",
+    "recsys_als",
+  ];
+  const deployableModels = models.filter(
+    (m) => m.deployable && m.is_ready && ALLOWED_RECOMMENDER_MODELS.includes(m.model_name)
+  );
+
+  const getCleanDisplayName = (m: RecsysModelInfo) => {
+    if (m.model_name === "recsys_itemknn") return "ItemKNN";
+    if (m.model_name === "recsys_als") return "ALS";
+    if (m.model_name === "recsys_two_tower_clean" || m.model_name === "recsys_two_tower") return "Two Tower";
+    return m.display_name;
+  };
 
   // Pick initial models that are deployable
   // HONEST-FALLBACK: Default to first deployable model if specified default is unavailable
@@ -122,7 +138,7 @@ export function RecsysCompareView({
               >
                 {deployableModels.map((m) => (
                   <option key={m.model_name} value={m.model_name}>
-                    {m.display_name}
+                    {getCleanDisplayName(m)}
                   </option>
                 ))}
               </select>
@@ -150,7 +166,7 @@ export function RecsysCompareView({
               >
                 {deployableModels.map((m) => (
                   <option key={m.model_name} value={m.model_name}>
-                    {m.display_name}
+                    {getCleanDisplayName(m)}
                   </option>
                 ))}
               </select>

@@ -685,7 +685,8 @@ class RecommenderService:
         matched: list[dict[str, Any]] = []
         for meta in self.items_metadata.values():
             title = meta.get("title", "").lower()
-            if not q_clean or q_clean in title:
+            app_id_str = str(meta.get("app_id", ""))
+            if not q_clean or q_clean in title or (q_clean.isdigit() and q_clean == app_id_str):
                 matched.append(meta)
 
         matched.sort(key=lambda x: x.get("popularity_rank", 999999))

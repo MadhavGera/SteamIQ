@@ -41,12 +41,42 @@ export default function ForYouPage() {
           setHealth(healthRes);
           setModels(modelsRes);
 
-          // Select champion or first ready deployable model
-          const readyDeployables = modelsRes.filter((m) => m.deployable && m.is_ready);
-          const champion = readyDeployables.find((m) => m.stage === "champion") || readyDeployables[0];
-          if (champion) {
-            setSelectedModel(champion.model_name);
+          // Allowed models per user request: ItemKNN, ALS, Two Tower
+          const ALLOWED_RECOMMENDER_MODELS = [
+            "recsys_two_tower_clean",
+            "recsys_two_tower",
+            "recsys_itemknn",
+            "recsys_als",
+          ];
+          const readyDeployables = modelsRes.filter(
+            (m) => m.deployable && m.is_ready && ALLOWED_RECOMMENDER_MODELS.includes(m.model_name)
+          );
+          // Default to Two Tower
+          const defaultModel =
+            readyDeployables.find((m) => m.model_name.startsWith("recsys_two_tower")) ||
+            readyDeployables[0];
+          if (defaultModel) {
+            setSelectedModel(defaultModel.model_name);
           }
+
+          // Pre-fill 3 benchmark games (Elden Ring, Hollow Knight, Hades) for immediate model comparison
+          try {
+            const trioIds = [1245620, 367520, 1145360];
+            const prefilled: RecsysCatalogItem[] = [];
+            for (const id of trioIds) {
+              const searchRes = await api.searchRecsysItems(String(id), 1);
+              const match = searchRes.items.find((it) => it.app_id === id);
+              if (match) {
+                prefilled.push(match);
+              }
+            }
+            if (prefilled.length > 0) {
+              setSelectedGames(prefilled);
+            }
+          } catch {
+            // Ignore prefill errors
+          }
+
           setIsLoadingHealth(false);
         }
       } catch {

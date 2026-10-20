@@ -22,7 +22,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from fastapi import Path as PathParam
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.recsys import (
@@ -83,7 +83,15 @@ async def search_items(
             # Base query
             query = select(ServingRecItem)
             if clean_q:
-                query = query.where(ServingRecItem.title.ilike(f"%{clean_q}%"))
+                if clean_q.isdigit():
+                    query = query.where(
+                        or_(
+                            ServingRecItem.title.ilike(f"%{clean_q}%"),
+                            ServingRecItem.app_id == int(clean_q),
+                        )
+                    )
+                else:
+                    query = query.where(ServingRecItem.title.ilike(f"%{clean_q}%"))
 
             # Total matches
             match_count_stmt = select(func.count()).select_from(query.subquery())

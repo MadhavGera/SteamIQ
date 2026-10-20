@@ -16,8 +16,23 @@ export function RecsysModelSelector({
   onSelectModel,
   disabled = false,
 }: RecsysModelSelectorProps) {
-  // Only deployable models belong in the For You selector (ADR 0005)
-  const deployableModels = models.filter((m) => m.deployable);
+  // Allowed models in Recommendation Engine per user request: ItemKNN, ALS, Two Tower
+  const ALLOWED_RECOMMENDER_MODELS = [
+    "recsys_two_tower_clean",
+    "recsys_two_tower",
+    "recsys_itemknn",
+    "recsys_als",
+  ];
+  const deployableModels = models.filter(
+    (m) => m.deployable && ALLOWED_RECOMMENDER_MODELS.includes(m.model_name)
+  );
+
+  const getCleanDisplayName = (m: RecsysModelInfo) => {
+    if (m.model_name === "recsys_itemknn") return "ItemKNN";
+    if (m.model_name === "recsys_als") return "ALS";
+    if (m.model_name === "recsys_two_tower_clean" || m.model_name === "recsys_two_tower") return "Two Tower";
+    return m.display_name;
+  };
 
   // Format metric string strictly from API returned values (never hardcoded)
   const formatMetric = (m: RecsysModelInfo) => {
@@ -103,7 +118,7 @@ export function RecsysModelSelector({
                     color: isSelected ? "var(--accent-primary)" : "var(--text-primary)",
                   }}
                 >
-                  {m.display_name}
+                  {getCleanDisplayName(m)}
                 </span>
 
                 {m.is_preview && (
