@@ -59,9 +59,9 @@ export default function ForYouPage() {
             setSelectedModel(defaultModel.model_name);
           }
 
-          // Pre-fill 3 benchmark games (Elden Ring, Hollow Knight, Hades) for immediate model comparison
+          // Pre-fill 3 benchmark games (Elden Ring, Hollow Knight, Sekiro) for immediate model comparison
           try {
-            const trioIds = [1245620, 367520, 1145360];
+            const trioIds = [1245620, 367520, 814380];
             const prefilled: RecsysCatalogItem[] = [];
             for (const id of trioIds) {
               const searchRes = await api.searchRecsysItems(String(id), 1);

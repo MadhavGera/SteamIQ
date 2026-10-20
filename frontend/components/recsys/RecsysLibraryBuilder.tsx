@@ -20,6 +20,11 @@ const QUICK_ADD_GAMES: Array<{
     header_image_url: "https://cdn.cloudflare.steamstatic.com/steam/apps/367520/header.jpg",
   },
   {
+    app_id: 814380,
+    title: "Sekiro™: Shadows Die Twice",
+    header_image_url: "https://cdn.cloudflare.steamstatic.com/steam/apps/814380/header.jpg",
+  },
+  {
     app_id: 1145360,
     title: "Hades",
     header_image_url: "https://cdn.cloudflare.steamstatic.com/steam/apps/1145360/header.jpg",
@@ -42,7 +47,7 @@ const PRESET_CONFIGS = [
     id: "benchmark_trio",
     name: "Benchmark Trio",
     icon: "bolt",
-    appIds: [1245620, 367520, 1145360], // Elden Ring, Hollow Knight, Hades
+    appIds: [1245620, 367520, 814380], // Elden Ring, Hollow Knight, Sekiro
   },
   {
     id: "action_souls",
@@ -255,7 +260,7 @@ export function RecsysLibraryBuilder({
 
   const handleLoadBenchmarkTrio = async () => {
     try {
-      const trioIds = [1245620, 367520, 1145360];
+      const trioIds = [1245620, 367520, 814380];
       const items: RecsysCatalogItem[] = [];
       for (const id of trioIds) {
         const res = await api.searchRecsysItems(String(id), 1);
@@ -583,12 +588,12 @@ export function RecsysLibraryBuilder({
             alignItems: "center",
             gap: "6px",
           }}
-          title="Select Elden Ring, Hollow Knight, and Hades in 1 click"
+          title="Select Elden Ring, Hollow Knight, and Sekiro in 1 click"
         >
           <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
             bolt
           </span>
-          <span>Load 3 Games (Elden Ring + Hollow Knight + Hades)</span>
+          <span>Load 3 Games (Elden Ring + Hollow Knight + Sekiro)</span>
         </button>
 
         {/* Individual Quick Add Game Pills */}
@@ -743,7 +748,7 @@ export function RecsysLibraryBuilder({
             <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>
               bolt
             </span>
-            Load 3 Benchmark Games (Elden Ring, Hollow Knight, Hades)
+            Load 3 Benchmark Games (Elden Ring, Hollow Knight, Sekiro)
           </button>
         </div>
       )}
