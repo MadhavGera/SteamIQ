@@ -922,21 +922,86 @@ export interface AssistantRetrievedPassage {
   score: number;
 }
 
+export interface GameCandidate {
+  app_id: number;
+  title: string;
+  header_image?: string | null;
+  score: number;
+  score_type: string;
+  rank: number;
+  price_usd?: string | null;
+  positive_ratio?: number | null;
+  genres?: string[];
+  tags?: string[];
+  match_reason: string;
+  explanation?: Record<string, unknown> | null;
+}
+
+export interface LatencyBreakdown {
+  entity_resolution_ms: number;
+  intent_routing_ms: number;
+  data_retrieval_ms: number;
+  template_execution_ms: number;
+  total_ms: number;
+}
+
+export interface AssistantEntity {
+  type: string;
+  app_id?: number | null;
+  title?: string | null;
+  confidence: number;
+  method: string;
+}
+
+export interface AssistantResolvedGame {
+  app_id: number;
+  title: string;
+  price_usd?: string | null;
+  positive_ratio?: number | null;
+  tags?: string[];
+  confidence?: number;
+  method?: string;
+}
+
+export interface MarketOverviewMetrics {
+  games_analyzed: number;
+  price_range_usd: string;
+  median_price_usd: string;
+  sentiment_pct?: number | null;
+  review_count: number;
+  sources: string[];
+  scope_notes: string;
+}
+
+export interface MLEvaluationMetrics {
+  intent_model_name: string;
+  intent_accuracy: number;
+  intent_macro_f1: number;
+  intent_test_samples: number;
+  recsys_model_name: string;
+  recsys_ndcg_at_10: number;
+  recsys_hr_at_10: number;
+  recsys_test_users: number;
+  architecture_summary: string;
+}
+
 export interface AssistantAskResponse {
   answer: string;
   intent: string;
   confidence: number;
   abstained: boolean;
+  tau: number;
   user_mode: "player" | "developer";
-  resolved_game: {
-    app_id: number;
-    title: string;
-    confidence: number;
-    method: string;
-  } | null;
+  entities?: AssistantEntity[];
+  resolved_game?: AssistantResolvedGame | null;
+  candidates?: GameCandidate[];
+  market_summary?: MarketOverviewMetrics | null;
+  ml_evaluation?: MLEvaluationMetrics | null;
+  sources?: Array<Record<string, unknown>>;
+  retrieval_passages?: AssistantRetrievedPassage[];
   provenance: AssistantProvenance;
-  retrieval_passages: AssistantRetrievedPassage[];
-  structured_args: Record<string, unknown>;
+  latency_breakdown?: LatencyBreakdown | null;
+  structured_args?: Record<string, unknown>;
 }
 
 export interface AssistantHealthResponse {

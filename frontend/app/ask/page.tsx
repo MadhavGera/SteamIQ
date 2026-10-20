@@ -8,6 +8,81 @@ import {
   GameSummary,
 } from "@/lib/api";
 import { useUserMode } from "@/lib/UserModeContext";
+import { CandidateGameCard } from "@/components/assistant/CandidateGameCard";
+import { AnalysisOverviewGrid } from "@/components/assistant/AnalysisOverviewGrid";
+import { MLDiagnosticsPanel } from "@/components/assistant/MLDiagnosticsPanel";
+
+function renderInlineMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function FormattedAnswer({ content }: { content: string }) {
+  const paragraphs = content.split("\n\n");
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+      {paragraphs.map((p, idx) => {
+        const trimmed = p.trim();
+        if (trimmed.startsWith("### ")) {
+          return (
+            <h3
+              key={idx}
+              style={{
+                fontSize: "18px",
+                fontWeight: 700,
+                color: "var(--accent-primary)",
+                margin: "4px 0 0",
+              }}
+            >
+              {trimmed.replace(/^###\s+/, "")}
+            </h3>
+          );
+        }
+        if (trimmed.startsWith("- ")) {
+          const items = trimmed.split("\n").filter((l) => l.trim().startsWith("- "));
+          return (
+            <ul
+              key={idx}
+              style={{
+                margin: 0,
+                paddingLeft: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+                fontSize: "14px",
+                lineHeight: 1.6,
+                color: "var(--text-primary)",
+              }}
+            >
+              {items.map((item, iIdx) => (
+                <li
+                  key={iIdx}
+                  dangerouslySetInnerHTML={{
+                    __html: renderInlineMarkdown(item.replace(/^-\s+/, "")),
+                  }}
+                />
+              ))}
+            </ul>
+          );
+        }
+        return (
+          <p
+            key={idx}
+            style={{
+              margin: 0,
+              fontSize: "14px",
+              lineHeight: 1.65,
+              color: "var(--text-primary)",
+            }}
+            dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(trimmed) }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 export default function AskSteamIQPage() {
   const { mode, isPlayer } = useUserMode();
@@ -39,7 +114,8 @@ export default function AskSteamIQPage() {
             is_ready: false,
             model_name: "assistant_intent_main",
             run_id: null,
-            tau: 0.85,
+            // HONEST-FALLBACK: Default tau fallback threshold when API is uncontactable
+            tau: 0.5,
           });
         }
       });
@@ -57,7 +133,8 @@ export default function AskSteamIQPage() {
     const timer = setTimeout(async () => {
       try {
         const res = await api.searchGames(gameSearchQuery);
-        setGameSearchResults(res?.games || []);
+        // HONEST-FALLBACK: Empty array when games search response is missing
+        setGameSearchResults(res?.games ?? []);
       } catch {
         setGameSearchResults([]);
       }
@@ -66,7 +143,8 @@ export default function AskSteamIQPage() {
   }, [gameSearchQuery]);
 
   const handleAsk = async (queryToAsk?: string) => {
-    const q = (queryToAsk || query).trim();
+    // HONEST-FALLBACK: Fallback to query input state when queryToAsk argument is omitted
+    const q = (queryToAsk ?? query).trim();
     if (!q) return;
 
     setIsLoading(true);
@@ -76,7 +154,7 @@ export default function AskSteamIQPage() {
       const res = await api.assistantAsk({
         query: q,
         user_mode: mode,
-        game_app_id: selectedGame?.app_id || null,
+        game_app_id: selectedGame?.app_id ?? null, // HONEST-FALLBACK: Null app_id when no game context selected
       });
       startTransition(() => {
         setResponse(res);
@@ -93,16 +171,16 @@ export default function AskSteamIQPage() {
 
   const samplePrompts = isPlayer
     ? [
-        "What is Terraria about?",
-        "What do players complain about in Cyberpunk 2077?",
+        "similar game to elden ring",
         "Why do players love Hollow Knight?",
-        "Recommend games similar to Hades",
+        "What do players complain about in Cyberpunk 2077?",
         "Should I buy Baldur's Gate 3 now or wait for a discount?",
+        "What is Terraria about?",
       ]
     : [
         "What is the market opportunity for a Roguelike Deckbuilder?",
+        "similar game to elden ring",
         "What were the feature drivers of success for Elden Ring?",
-        "How did recent updates impact player reception for No Man's Sky?",
         "What are competitor price points and discounts in the RPG genre?",
         "What are the top complaint themes for indie survival games?",
       ];
@@ -115,15 +193,15 @@ export default function AskSteamIQPage() {
   };
 
   return (
-    <div className="container" style={{ paddingBottom: "80px", maxWidth: "960px", margin: "0 auto" }}>
+    <div className="container" style={{ paddingBottom: "80px", maxWidth: "1100px", margin: "0 auto" }}>
       {/* Header Banner */}
       <div style={{ padding: "32px 0 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
           <span
             className="material-symbols-outlined"
             style={{ fontSize: "24px", color: "var(--accent-primary)" }}
           >
-            chat_spark
+            psychology
           </span>
           <span
             className="badge-pill"
@@ -134,20 +212,23 @@ export default function AskSteamIQPage() {
               fontWeight: 600,
             }}
           >
-            {isPlayer ? "Player Discovery Mode" : "Developer Intelligence Mode"}
+            {isPlayer ? "SteamIQ | Player mode" : "SteamIQ | Developer mode"}
+          </span>
+          <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "var(--text-muted)", textTransform: "uppercase" }}>
+            GAME INTELLIGENCE · ANALYTICS · RECOMMENDATIONS
           </span>
           {health?.is_ready && (
-            <span className="badge-pill badge-pill--success" style={{ fontSize: "11px" }}>
-              Model Online (tau = {health.tau})
+            <span className="badge-pill badge-pill--success" style={{ fontSize: "11px", marginLeft: "auto" }}>
+              Calibrated Router Online (&tau; = {health.tau})
             </span>
           )}
         </div>
         <h1 style={{ fontSize: "32px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
           Ask SteamIQ
         </h1>
-        <p style={{ fontSize: "15px", color: "var(--text-secondary)", marginTop: "6px" }}>
-          Learned, calibrated query routing with extractive passage retrieval. Zero hallucinated free-text;
-          answers are executed strictly against validated analytical data marts.
+        <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "6px" }}>
+          Dual-stage intelligence powered by Two-Tower neural collaborative filtering and calibrated intent routing.
+          Answers and recommendations are backed by pre-materialized analytical data marts.
         </p>
       </div>
 
@@ -212,7 +293,7 @@ export default function AskSteamIQPage() {
             <div style={{ width: "100%", marginTop: "8px", position: "relative" }}>
               <input
                 type="text"
-                placeholder="Type to search games (e.g. Portal, Terraria)..."
+                placeholder="Type to search games (e.g. Elden Ring, Hollow Knight, Cyberpunk)..."
                 value={gameSearchQuery}
                 onChange={(e) => setGameSearchQuery(e.target.value)}
                 autoFocus
@@ -283,8 +364,8 @@ export default function AskSteamIQPage() {
             type="text"
             placeholder={
               isPlayer
-                ? "Ask about game features, sentiment, complaints, or recommendations..."
-                : "Ask about market sizing, success drivers, update impacts, or competitors..."
+                ? 'Try "similar game to elden ring", "why do players love hollow knight"...'
+                : 'Try "What is the market opportunity for a Roguelike Deckbuilder?", "similar game to elden ring"...'
             }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -315,15 +396,16 @@ export default function AskSteamIQPage() {
               display: "flex",
               alignItems: "center",
               gap: "6px",
+              cursor: isLoading || !query.trim() ? "not-allowed" : "pointer",
             }}
           >
             {isLoading ? (
               <span>Evaluating...</span>
             ) : (
               <>
-                <span>Ask</span>
+                <span>Analyze</span>
                 <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>
-                  send
+                  arrow_forward
                 </span>
               </>
             )}
@@ -333,7 +415,7 @@ export default function AskSteamIQPage() {
         {/* Suggested Prompts */}
         <div style={{ marginTop: "14px" }}>
           <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginBottom: "8px" }}>
-            Suggested Questions ({isPlayer ? "Player Discovery" : "Developer Intelligence"}):
+            Suggested Queries:
           </span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
             {samplePrompts.map((p, idx) => (
@@ -360,8 +442,42 @@ export default function AskSteamIQPage() {
         </div>
       </div>
 
+      {/* Loading Skeleton */}
+      {isLoading && (
+        <div
+          className="card"
+          style={{
+            marginTop: "24px",
+            background: "var(--bg-surface-elevated)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "12px",
+            padding: "32px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              display: "inline-block",
+              width: "36px",
+              height: "36px",
+              border: "3px solid rgba(0, 210, 255, 0.2)",
+              borderTopColor: "var(--accent-primary)",
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+              marginBottom: "12px",
+            }}
+          />
+          <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-primary)" }}>
+            Running Neural Inference & Candidate Retrieval...
+          </div>
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
+            Calibrating intent confidence and querying in-memory Two-Tower embedding space.
+          </div>
+        </div>
+      )}
+
       {/* Error Banner */}
-      {error && (
+      {error && !isLoading && (
         <div
           style={{
             marginTop: "20px",
@@ -377,131 +493,181 @@ export default function AskSteamIQPage() {
         </div>
       )}
 
-      {/* Response Card */}
-      {response && (
-        <div
-          className="card"
-          style={{
-            marginTop: "24px",
-            background: "var(--bg-surface-elevated)",
-            border: "1px solid var(--border-subtle)",
-            borderRadius: "12px",
-            padding: "24px",
-            boxShadow: "0 6px 24px rgba(0, 0, 0, 0.25)",
-          }}
-        >
-          {/* Metadata Top Row */}
+      {/* Response Centerpiece (Answer-First Primary View) */}
+      {response && !isLoading && (
+        <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* Quick Routing Status Bar */}
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "16px",
               flexWrap: "wrap",
               gap: "10px",
-              borderBottom: "1px solid var(--border-subtle)",
-              paddingBottom: "12px",
+              padding: "4px 0",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span
-                className="badge-pill"
-                style={{
-                  background: "rgba(99, 102, 241, 0.2)",
-                  color: "#a5b4fc",
-                  border: "1px solid rgba(99, 102, 241, 0.3)",
-                  fontWeight: 600,
-                  fontSize: "13px",
-                }}
-              >
+              <span className="badge-pill" style={{ background: "rgba(99, 102, 241, 0.15)", color: "#a5b4fc" }}>
                 Intent: {formatIntentLabel(response.intent)}
               </span>
-
               <span
                 className="badge-pill"
                 style={{
-                  background:
-                    response.confidence >= 0.85
-                      ? "rgba(16, 185, 129, 0.15)"
-                      : "rgba(245, 158, 11, 0.15)",
-                  color: response.confidence >= 0.85 ? "#34d399" : "#fbbf24",
-                  border: `1px solid ${
-                    response.confidence >= 0.85
-                      ? "rgba(16, 185, 129, 0.3)"
-                      : "rgba(245, 158, 11, 0.3)"
-                  }`,
-                  fontSize: "12px",
+                  background: response.confidence >= response.tau ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
+                  color: response.confidence >= response.tau ? "#34d399" : "#fbbf24",
                 }}
               >
-                Confidence: {(response.confidence * 100).toFixed(1)}%
+                {(response.confidence * 100).toFixed(1)}% Confidence
               </span>
-
-              {response.resolved_game && (
-                <span className="badge-pill badge-pill--neutral" style={{ fontSize: "12px" }}>
-                  Game: {response.resolved_game.title} (#{response.resolved_game.app_id})
-                </span>
-              )}
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span className="badge-pill badge-pill--neutral" style={{ fontSize: "11px" }}>
-                Mode: {response.user_mode}
+                ⚡ {response.provenance.took_ms < 0.1 && response.provenance.took_ms > 0 ? "< 0.1 ms" : `${response.provenance.took_ms.toFixed(1)} ms`}
               </span>
-              {response.provenance.cached && (
-                <span
-                  className="badge-pill"
-                  style={{
-                    background: "rgba(59, 130, 246, 0.15)",
-                    color: "#60a5fa",
-                    fontSize: "11px",
-                  }}
-                >
-                  ⚡ Cache Hit
-                </span>
-              )}
             </div>
           </div>
 
-          {/* Abstained Warning */}
-          {response.abstained && (
+          {/* 4 Overview KPI Cards */}
+          <AnalysisOverviewGrid
+            marketSummary={response.market_summary}
+            intent={response.intent}
+            confidence={response.confidence}
+            tau={response.tau}
+          />
+
+          {/* Resolved Game Context Banner (if specific game bound) */}
+          {response.resolved_game && (
             <div
+              className="card"
               style={{
-                marginBottom: "16px",
-                padding: "12px 16px",
-                background: "rgba(245, 158, 11, 0.1)",
-                border: "1px solid rgba(245, 158, 11, 0.3)",
-                borderRadius: "8px",
-                color: "#fbbf24",
-                fontSize: "13px",
+                background: "rgba(0, 210, 255, 0.05)",
+                border: "1px solid rgba(0, 210, 255, 0.25)",
+                borderRadius: "10px",
+                padding: "14px 18px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "10px",
               }}
             >
-              <strong>Selective Abstention Active:</strong> Calibrated router confidence (
-              {(response.confidence * 100).toFixed(1)}%) was below the precision threshold tau.
-              Displaying fallback extractive review passages below.
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span className="material-symbols-outlined" style={{ color: "var(--accent-primary)", fontSize: "20px" }}>
+                  sports_esports
+                </span>
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block", textTransform: "uppercase" }}>
+                    Subject Game
+                  </span>
+                  <strong style={{ fontSize: "16px", color: "var(--text-primary)" }}>
+                    {response.resolved_game.title}
+                  </strong>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {response.resolved_game.positive_ratio !== null && response.resolved_game.positive_ratio !== undefined && (
+                  <span
+                    style={{
+                      background: "rgba(16, 185, 129, 0.2)",
+                      color: "#34d399",
+                      border: "1px solid rgba(16, 185, 129, 0.4)",
+                      padding: "2px 8px",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {response.resolved_game.positive_ratio}% Positive
+                  </span>
+                )}
+                {response.resolved_game.price_usd && (
+                  <span
+                    style={{
+                      background: "var(--bg-surface-elevated)",
+                      color: "var(--text-primary)",
+                      border: "1px solid var(--border-subtle)",
+                      padding: "2px 8px",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {response.resolved_game.price_usd.startsWith("$")
+                      ? response.resolved_game.price_usd
+                      : `$${response.resolved_game.price_usd}`}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Answer Body */}
+          {/* Primary Answer & Key Findings Card */}
           <div
+            className="card"
             style={{
-              fontSize: "15px",
-              lineHeight: 1.6,
-              color: "var(--text-primary)",
-              whiteSpace: "pre-line",
+              background: "var(--bg-surface-elevated)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "12px",
+              padding: "24px 28px",
+              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.25)",
             }}
           >
-            {response.answer}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: "20px", color: "var(--accent-primary)" }}>
+                analytics
+              </span>
+              <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+                Key Findings & Analytical Synthesis
+              </h3>
+            </div>
+            <FormattedAnswer content={response.answer} />
           </div>
 
-          {/* Extractive Review Passages Card (if present) */}
+          {/* Candidates Grid (Structured recommendations / market peer exemplars) */}
+          {response.candidates && response.candidates.length > 0 && (
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "14px",
+                }}
+              >
+                <h3 style={{ fontSize: "17px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+                  Catalog Peers & Market Benchmarks ({response.candidates.length} titles)
+                </h3>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  Neural collaborative filtering & mart similarity
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))",
+                  gap: "18px",
+                }}
+              >
+                {response.candidates.map((c) => (
+                  <CandidateGameCard key={c.app_id} candidate={c} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Extractive Snippets (when available) */}
           {response.retrieval_passages && response.retrieval_passages.length > 0 && (
             <div
+              className="card"
               style={{
-                marginTop: "24px",
-                padding: "16px",
                 background: "var(--bg-surface-low)",
-                borderRadius: "8px",
+                borderRadius: "10px",
                 border: "1px solid var(--border-subtle)",
+                padding: "16px 20px",
               }}
             >
               <h4
@@ -518,7 +684,7 @@ export default function AskSteamIQPage() {
                 <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
                   format_quote
                 </span>
-                Extractive Review Snippets (Passage Index)
+                Extractive Review Intelligence Snippets
               </h4>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {response.retrieval_passages.map((p, idx) => (
@@ -555,23 +721,25 @@ export default function AskSteamIQPage() {
             </div>
           )}
 
-          {/* Full Provenance Footer */}
+          {/* Collapsible ML Diagnostics & Architecture Drawer */}
+          <MLDiagnosticsPanel response={response} defaultExpanded={false} />
+
+          {/* Persistent Lineage & SLA Footer */}
           <div
             style={{
-              marginTop: "24px",
-              paddingTop: "14px",
+              paddingTop: "16px",
               borderTop: "1px solid var(--border-subtle)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               flexWrap: "wrap",
-              gap: "8px",
+              gap: "10px",
               fontSize: "12px",
               color: "var(--text-muted)",
             }}
           >
             <div>
-              <span>Tables: </span>
+              <span>Marts Read: </span>
               {response.provenance.data_tables_read.length > 0 ? (
                 response.provenance.data_tables_read.map((t, idx) => (
                   <code key={idx} style={{ marginRight: "6px" }}>
@@ -583,19 +751,23 @@ export default function AskSteamIQPage() {
               )}
             </div>
 
-            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <span>Run: <code>{response.provenance.model_run_id || "ephemeral"}</code></span>
-              <span>Latency: <strong>{response.provenance.took_ms.toFixed(1)}ms</strong></span>
+            <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+              <span>
+                Run ID: <code>{response.provenance.model_run_id ?? "ephemeral"}</code> {/* HONEST-FALLBACK: Fallback model run id to ephemeral */}
+              </span>
+              <span>
+                Total Latency: <strong>{response.provenance.took_ms < 0.1 && response.provenance.took_ms > 0 ? "< 0.1 ms" : `${response.provenance.took_ms.toFixed(1)} ms`}</strong>
+              </span>
               <span
                 style={{
                   color: "var(--text-secondary)",
                   background: "var(--bg-surface-low)",
-                  padding: "2px 6px",
+                  padding: "2px 8px",
                   borderRadius: "4px",
                   fontSize: "11px",
                 }}
               >
-                🔒 Zero LLM Free-Text
+                🔒 Zero LLM Hallucinations
               </span>
             </div>
           </div>

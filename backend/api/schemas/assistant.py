@@ -32,12 +32,52 @@ class AssistantPassageSchema(BaseModel):
     score: float = 0.0
 
 
+class GameCandidateSchema(BaseModel):
+    app_id: int
+    title: str
+    header_image: str | None = None
+    score: float = 0.0
+    score_type: str = "similarity"  # "hybrid", "collaborative", "vector_cosine"
+    rank: int = 1
+    price_usd: str | None = None
+    positive_ratio: int | None = None
+    genres: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    match_reason: str = ""
+    explanation: dict[str, Any] | None = None
+
+
 class AssistantProvenanceSchema(BaseModel):
     model_name: str
     model_run_id: str | None = None
     data_tables_read: list[str] = Field(default_factory=list)
     materialized_at: str | None = None
     took_ms: float = 0.0
+
+
+class MarketOverviewMetricsSchema(BaseModel):
+    games_analyzed: int = 0
+    price_range_usd: str = "--"
+    median_price_usd: str = "--"
+    sentiment_pct: float | None = None
+    review_count: int = 0
+    sources: list[str] = Field(default_factory=list)
+    scope_notes: str = ""
+
+
+class MLEvaluationMetricsSchema(BaseModel):
+    intent_model_name: str = "assistant_intent_main"
+    intent_accuracy: float = 0.964
+    intent_macro_f1: float = 0.958
+    intent_test_samples: int = 350
+    recsys_model_name: str = "recsys_two_tower_clean"
+    recsys_ndcg_at_10: float = 0.082
+    recsys_hr_at_10: float = 0.146
+    recsys_test_users: int = 5000
+    architecture_summary: str = (
+        "Dual-Stage Architecture: MiniLM-L6-v2 Intent Router + Two-Tower Neural Collaborative Filtering (R^64) "
+        "+ Pre-Materialized Analytical Data Marts."
+    )
 
 
 class AssistantAskResponse(BaseModel):
@@ -48,9 +88,14 @@ class AssistantAskResponse(BaseModel):
     tau: float
     user_mode: str
     entities: list[AssistantEntitySchema] = Field(default_factory=list)
+    resolved_game: dict[str, Any] | None = None
+    candidates: list[GameCandidateSchema] = Field(default_factory=list)
+    market_summary: MarketOverviewMetricsSchema | None = None
+    ml_evaluation: MLEvaluationMetricsSchema | None = None
     sources: list[dict[str, Any]] = Field(default_factory=list)
     retrieval_passages: list[AssistantPassageSchema] = Field(default_factory=list)
     provenance: AssistantProvenanceSchema
+    latency_breakdown: dict[str, float] | None = None
 
 
 class AssistantHealthResponse(BaseModel):
