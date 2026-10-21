@@ -21,8 +21,7 @@ export function TopNavBar() {
   const isMarketExplorer = pathname.startsWith("/market-explorer");
   const isGameIntelligence = pathname.startsWith("/games");
 
-  const isDevSectionActive =
-    isMarketExplorer || isModelLab || isEmbeddingMap || (isDeveloper && isForYou);
+  const isDevSectionActive = isMarketExplorer || isModelLab || isEmbeddingMap;
 
   // Close dropdown on outside click or escape key
   useEffect(() => {
@@ -109,7 +108,16 @@ export function TopNavBar() {
             <span className="stitch-nav__badge-ai">AI</span>
           </Link>
 
-          {/* 5. Developer Tools Dropdown (Dev Mode Only - keeps navbar sleek & uncluttered) */}
+          {/* 5. RecSys Feed (Two-Tower Recommendation Stream) */}
+          <Link
+            href="/"
+            className={`stitch-nav__link ${isForYou ? "stitch-nav__link--active" : ""}`}
+            id="nav-recsys-feed"
+          >
+            RecSys Feed
+          </Link>
+
+          {/* 6. Developer Tools Dropdown (Dev Mode Only - keeps navbar sleek & uncluttered) */}
           {isDeveloper && (
             <div className="stitch-nav__dropdown" ref={devMenuRef}>
               <button
@@ -185,23 +193,6 @@ export function TopNavBar() {
                       <div style={{ fontWeight: 600 }}>Embedding Map</div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
                         2D UMAP latent space
-                      </div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/"
-                    className={`stitch-nav__dropdown-item ${isForYou ? "stitch-nav__dropdown-item--active" : ""}`}
-                    role="menuitem"
-                    id="nav-for-you"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: "18px", color: "#f59e0b" }}>
-                      recommend
-                    </span>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>RecSys Feed</div>
-                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                        Two-Tower candidate stream
                       </div>
                     </div>
                   </Link>

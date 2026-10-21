@@ -27,8 +27,6 @@ import { CompetitorRadarTeaser } from "@/components/game/CompetitorRadarTeaser";
 import { ShapAttributionCard } from "@/components/game/ShapAttributionCard";
 import { ExecutiveBriefCard } from "@/components/game/ExecutiveBriefCard";
 import { MarketTab } from "@/components/game/MarketTab";
-import { UpdatesTab } from "@/components/game/UpdatesTab";
-import { RecommendationsTab } from "@/components/game/RecommendationsTab";
 import { MatchTab } from "@/components/game/MatchTab";
 import { PlayerActivityTab } from "@/components/game/PlayerActivityTab";
 
@@ -39,8 +37,8 @@ interface GameDetailViewProps {
   reviewsBundle: ReviewIntelligenceBundle | null;
   competitorData: CompetitorList | null;
   marketData: MarketIntelligence | null;
-  updatesData: UpdateImpactFeed | null;
-  recommendationsData: RecommendationBundle | null;
+  updatesData?: UpdateImpactFeed | null;
+  recommendationsData?: RecommendationBundle | null;
   activityData?: PlayerActivity | null;
 }
 
@@ -51,8 +49,6 @@ export function GameDetailView({
   reviewsBundle,
   competitorData,
   marketData,
-  updatesData,
-  recommendationsData,
   activityData,
 }: GameDetailViewProps) {
   const router = useRouter();
@@ -98,8 +94,6 @@ export function GameDetailView({
       { id: "player-activity", label: "Player Activity" },
       { id: "market", label: "Market" },
       { id: "competitors", label: "Competitors" },
-      { id: "updates", label: "Updates" },
-      { id: "recommendations", label: "Recommendations" },
     ];
   }, [isPlayer]);
 
@@ -441,29 +435,18 @@ export function GameDetailView({
               {isDeveloper ? (
                 <button
                   type="button"
-                  onClick={() => handleTabChange("recommendations")}
+                  onClick={() => handleTabChange("market")}
                   className="card card--hoverable"
                   style={{ textAlign: "left", cursor: "pointer", background: "var(--bg-surface)" }}
                 >
                   <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "12px" }}>
-                    Priority Recommendation
+                    Market & Pricing
                   </h3>
-                  {recommendationsData?.recommendations && recommendationsData.recommendations.length > 0 ? (
-                    <div style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
-                      <div style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
-                        {recommendationsData.recommendations[0].title}
-                      </div>
-                      <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                        {recommendationsData.recommendations[0].rationale}
-                      </div>
-                    </div>
-                  ) : (
-                    <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6", margin: "0" }}>
-                      Recommendation pipeline pending. Run recommendation job to generate strategic action items.
-                    </p>
-                  )}
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6", margin: "0" }}>
+                    Inspect genre pricing spectrum, discount depth, and revenue elasticity benchmarks.
+                  </p>
                   <div style={{ marginTop: "16px", fontSize: "12px", fontWeight: 600, color: "var(--accent-primary)", display: "flex", alignItems: "center", gap: "4px" }}>
-                    View recommendation plan <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>arrow_forward</span>
+                    View market intelligence <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>arrow_forward</span>
                   </div>
                 </button>
               ) : (
@@ -589,15 +572,6 @@ export function GameDetailView({
           </div>
         )}
 
-        {/* ── TAB: UPDATES (DEV MODE ONLY) ── */}
-        {hasData && activeTab === "updates" && isDeveloper && (
-          <UpdatesTab updatesFeed={updatesData} gameTitle={title} />
-        )}
-
-        {/* ── TAB: RECOMMENDATIONS (DEV MODE ONLY) ── */}
-        {hasData && activeTab === "recommendations" && isDeveloper && (
-          <RecommendationsTab bundle={recommendationsData} gameTitle={title} />
-        )}
 
         {/* ── TAB: PLAYER ACTIVITY ── */}
         {hasData && activeTab === "player-activity" && (
