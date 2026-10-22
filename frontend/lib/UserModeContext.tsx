@@ -10,6 +10,7 @@ interface UserModeContextValue {
   toggleMode: () => void;
   isPlayer: boolean;
   isDeveloper: boolean;
+  hydrated: boolean;
 }
 
 const UserModeContext = createContext<UserModeContextValue | undefined>(undefined);
@@ -18,6 +19,7 @@ const STORAGE_KEY = "steamiq_user_mode";
 
 export function UserModeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<UserMode>("developer");
+  const [hydrated, setHydrated] = useState<boolean>(false);
 
   useEffect(() => {
     try {
@@ -27,6 +29,8 @@ export function UserModeProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       // Ignore localStorage read errors
+    } finally {
+      setHydrated(true);
     }
   }, []);
 
@@ -51,6 +55,7 @@ export function UserModeProvider({ children }: { children: React.ReactNode }) {
         toggleMode,
         isPlayer: mode === "player",
         isDeveloper: mode === "developer",
+        hydrated,
       }}
     >
       {children}
@@ -68,6 +73,7 @@ export function useUserMode(): UserModeContextValue {
       toggleMode: () => {},
       isPlayer: false,
       isDeveloper: true,
+      hydrated: false,
     };
   }
   return context;

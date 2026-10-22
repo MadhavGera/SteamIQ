@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api, RecsysReport } from "@/lib/api";
 import { LeaderboardTab } from "@/components/model-lab/LeaderboardTab";
 import { PairedTestsTab } from "@/components/model-lab/PairedTestsTab";
@@ -40,11 +41,33 @@ const REPORT_KEYS = [
   "assistant_errors",
 ];
 
-export default function ModelLabPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("leaderboard");
+const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
+  { key: "leaderboard", label: "Leaderboard", icon: "leaderboard" },
+  { key: "paired", label: "Paired Tests", icon: "compare_arrows" },
+  { key: "ablations", label: "Ablations", icon: "tune" },
+  { key: "cold_start", label: "Cold-Start & Slices", icon: "ac_unit" },
+  { key: "beyond_accuracy", label: "Beyond Accuracy", icon: "insights" },
+  { key: "curves", label: "Training Curves", icon: "show_chart" },
+  { key: "explainability", label: "Explainability", icon: "psychology" },
+  { key: "data_method", label: "Data & Method", icon: "description" },
+  { key: "assistant", label: "Assistant", icon: "smart_toy" },
+];
+
+function ModelLabContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawTab = searchParams.get("tab");
+  const isTabValid = TABS.some((t) => t.key === rawTab);
+  // HONEST-FALLBACK: Default active tab to leaderboard if query param omitted or unrecognized
+  const activeTab: TabKey = (isTabValid ? rawTab : "leaderboard") as TabKey;
+
   const [reports, setReports] = useState<Record<string, RecsysReport>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  const handleTabChange = (key: TabKey) => {
+    router.replace(`/model-lab?tab=${key}`, { scroll: false });
+  };
 
   const loadReports = React.useCallback(async () => {
     const fetched: Record<string, RecsysReport> = {};
@@ -68,20 +91,13 @@ export default function ModelLabPage() {
     loadReports();
   }, [loadReports]);
 
-  const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
-    { key: "leaderboard", label: "Leaderboard", icon: "leaderboard" },
-    { key: "paired", label: "Paired Tests", icon: "compare_arrows" },
-    { key: "ablations", label: "Ablations", icon: "tune" },
-    { key: "cold_start", label: "Cold-Start & Slices", icon: "ac_unit" },
-    { key: "beyond_accuracy", label: "Beyond Accuracy", icon: "insights" },
-    { key: "curves", label: "Training Curves", icon: "show_chart" },
-    { key: "explainability", label: "Explainability", icon: "psychology" },
-    { key: "data_method", label: "Data & Method", icon: "description" },
-    { key: "assistant", label: "Assistant", icon: "smart_toy" },
-  ];
-
   // HONEST-FALLBACK: Read dataset version from leaderboard report or fallback string
   const datasetVer = reports["leaderboard"]?.dataset_version ?? "frozen_catalog";
+
+  // HONEST-FALLBACK: Read headline champion model from leaderboard report payload or fallback to clean
+  const leaderboardModels = reports["leaderboard"]?.payload?.models as Array<{ model_name: string; stage?: string }> | undefined;
+  // HONEST-FALLBACK: Default champion name if leaderboard payload models missing
+  const championModelName = leaderboardModels?.find((m) => m.stage === "champion")?.model_name ?? "recsys_two_tower_clean";
 
   return (
     <main className="container" style={{ paddingTop: "88px", paddingBottom: "64px" }}>
@@ -112,7 +128,7 @@ export default function ModelLabPage() {
           </h1>
           <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
             Comprehensive offline evaluation metrics, paired statistical tests, fairness diagnostics, and TreeSHAP explainability.
-            Headline production champion: <strong style={{ color: "var(--accent-primary)" }}>recsys_two_tower_clean</strong>. With train-only item stats there is no evidence of gain (CI includes 0); the all-time-stats gain is leakage-confounded.
+            Headline production champion: <strong style={{ color: "var(--accent-primary)" }}>{championModelName}</strong>. With train-only item stats there is no evidence of gain (CI includes 0); the all-time-stats gain is leakage-confounded.
           </p>
         </div>
 
@@ -159,7 +175,7 @@ export default function ModelLabPage() {
           return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -248,5 +264,13 @@ export default function ModelLabPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function ModelLabPage() {
+  return (
+    <Suspense fallback={<div className="container" style={{ paddingTop: "88px" }}>Loading Model Lab...</div>}>
+      <ModelLabContent />
+    </Suspense>
   );
 }

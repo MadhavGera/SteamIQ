@@ -135,7 +135,7 @@ export function LeaderboardTab({ payload }: LeaderboardTabProps) {
           <tbody>
             {modelRows.map((row) => {
               const m = split === "test" ? row.test_metrics : row.val_metrics;
-              const isChamp = row.stage === "champion" || row.model_name.includes("clean");
+              const isChamp = row.stage === "champion";
 
               return (
                 <tr
@@ -155,10 +155,20 @@ export function LeaderboardTab({ payload }: LeaderboardTabProps) {
                     </div>
                   </td>
                   <td>
-                    <span className="badge-pill badge-pill--neutral" style={{ fontSize: "10px" }}>
-                      {/* HONEST-FALLBACK: Model stage default if omitted */}
-                      {row.stage ?? "candidate"}
-                    </span>
+                    {row.stage === "reference" || row.stage === "upper_bound_reference" ? (
+                      <span className="badge-pill badge-pill--neutral" style={{ fontSize: "10px", opacity: 0.75 }}>
+                        reference, not deployable
+                      </span>
+                    ) : row.stage === "challenger" ? (
+                      <span className="badge-pill badge-pill--warning" style={{ fontSize: "10px" }}>
+                        challenger
+                      </span>
+                    ) : (
+                      <span className="badge-pill badge-pill--neutral" style={{ fontSize: "10px" }}>
+                        {/* HONEST-FALLBACK: Model stage default if omitted */}
+                        {row.stage ?? "candidate"}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <ErrorBar val={m?.ndcg_at_10} lo={m?.ndcg_at_10_lo95} hi={m?.ndcg_at_10_hi95} maxVal={0.2} />

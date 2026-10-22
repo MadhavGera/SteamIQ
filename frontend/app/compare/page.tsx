@@ -361,10 +361,23 @@ export default function ComparePage() {
                   </div>
                 )}
                 <div style={{ padding: "20px", display: "flex", flexDirection: "column", flexGrow: 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                    <h2 style={{ fontSize: "20px", fontWeight: "800", margin: 0, color: "var(--text-primary)" }}>
-                      {gameA.name}
-                    </h2>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                    <div>
+                      <h2 style={{ fontSize: "20px", fontWeight: "800", margin: 0, color: "var(--text-primary)" }}>
+                        {gameA.name}
+                      </h2>
+                      <div style={{ marginTop: "4px" }}>
+                        {comparisonProfile?.isCurated ? (
+                          <span className="badge-pill badge-pill--primary" style={{ fontSize: "10px" }}>
+                            Curated editorial profile
+                          </span>
+                        ) : (
+                          <span className="badge-pill badge-pill--neutral" style={{ fontSize: "10px" }}>
+                            Auto-generated from catalog data
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <Link
                       href={`/games/${gameA.app_id}?tab=overview`}
                       style={{
@@ -486,10 +499,23 @@ export default function ComparePage() {
                   </div>
                 )}
                 <div style={{ padding: "20px", display: "flex", flexDirection: "column", flexGrow: 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                    <h2 style={{ fontSize: "20px", fontWeight: "800", margin: 0, color: "var(--text-primary)" }}>
-                      {gameB.name}
-                    </h2>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                    <div>
+                      <h2 style={{ fontSize: "20px", fontWeight: "800", margin: 0, color: "var(--text-primary)" }}>
+                        {gameB.name}
+                      </h2>
+                      <div style={{ marginTop: "4px" }}>
+                        {comparisonProfile?.isCurated ? (
+                          <span className="badge-pill badge-pill--primary" style={{ fontSize: "10px" }}>
+                            Curated editorial profile
+                          </span>
+                        ) : (
+                          <span className="badge-pill badge-pill--neutral" style={{ fontSize: "10px" }}>
+                            Auto-generated from catalog data
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <Link
                       href={`/games/${gameB.app_id}?tab=overview`}
                       style={{
@@ -640,6 +666,13 @@ export default function ComparePage() {
           />
         </div>
       )}
+
+      {/* Footer Note */}
+      <footer style={{ marginTop: "48px", paddingTop: "16px", borderTop: "1px solid var(--border-subtle)", textAlign: "center" }}>
+        <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
+          Note: Curated profile prices and availability figures are illustrative historical snapshots from Steam catalog data.
+        </p>
+      </footer>
     </div>
   );
 }

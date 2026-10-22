@@ -4,6 +4,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  api,
   formatPrice,
   reviewScore,
   type CompetitorList,
@@ -29,6 +30,8 @@ import { ExecutiveBriefCard } from "@/components/game/ExecutiveBriefCard";
 import { MarketTab } from "@/components/game/MarketTab";
 import { MatchTab } from "@/components/game/MatchTab";
 import { PlayerActivityTab } from "@/components/game/PlayerActivityTab";
+import { UpdatesTab } from "@/components/game/UpdatesTab";
+import { RecommendationsTab } from "@/components/game/RecommendationsTab";
 
 interface GameDetailViewProps {
   appId: number;
@@ -49,6 +52,8 @@ export function GameDetailView({
   reviewsBundle,
   competitorData,
   marketData,
+  updatesData,
+  recommendationsData,
   activityData,
 }: GameDetailViewProps) {
   const router = useRouter();
@@ -83,6 +88,7 @@ export function GameDetailView({
         { id: "overview", label: "Overview" },
         { id: "match", label: "Match (Is It For Me?)" },
         { id: "reviews", label: "Reviews" },
+        { id: "updates", label: "Updates" },
         { id: "player-activity", label: "Player Activity" },
         { id: "market", label: "Deals & Pricing" },
         { id: "competitors", label: "Similar Games" },
@@ -91,6 +97,8 @@ export function GameDetailView({
     return [
       { id: "overview", label: "Overview" },
       { id: "reviews", label: "Reviews" },
+      { id: "updates", label: "Updates" },
+      { id: "recommendations", label: "Recommendations" },
       { id: "player-activity", label: "Player Activity" },
       { id: "market", label: "Market" },
       { id: "competitors", label: "Competitors" },
@@ -104,7 +112,7 @@ export function GameDetailView({
   useEffect(() => {
     const isTabValid = availableTabs.some((t) => t.id === urlTab);
     if (!isTabValid) {
-      // If current tab is hidden in current mode (e.g. Updates in Player Mode), default to overview
+      // If current tab is hidden in current mode (e.g. Recommendations in Player Mode), default to overview
       setActiveTab("overview");
     } else {
       setActiveTab(urlTab);
@@ -115,6 +123,47 @@ export function GameDetailView({
     setActiveTab(tabId);
     router.push(`/games/${appId}?tab=${tabId}`, { scroll: false });
   };
+
+  // Lazy data fetching for UpdatesTab and RecommendationsTab
+  // HONEST-FALLBACK: Initialize with server-provided updatesData or null
+  const [lazyUpdates, setLazyUpdates] = useState<UpdateImpactFeed | null>(updatesData ?? null);
+  const [isLoadingUpdates, setIsLoadingUpdates] = useState(false);
+  const [updatesLoaded, setUpdatesLoaded] = useState(Boolean(updatesData));
+
+  // HONEST-FALLBACK: Initialize with server-provided recommendationsData or null
+  const [lazyRecs, setLazyRecs] = useState<RecommendationBundle | null>(recommendationsData ?? null);
+  const [isLoadingRecs, setIsLoadingRecs] = useState(false);
+  const [recsLoaded, setRecsLoaded] = useState(Boolean(recommendationsData));
+
+  useEffect(() => {
+    if (activeTab === "updates" && !updatesLoaded && !isLoadingUpdates) {
+      setIsLoadingUpdates(true);
+      api.getUpdates(appId)
+        .then((data) => {
+          setLazyUpdates(data);
+          setUpdatesLoaded(true);
+        })
+        .catch(() => {
+          setUpdatesLoaded(true);
+        })
+        .finally(() => setIsLoadingUpdates(false));
+    }
+  }, [activeTab, appId, updatesLoaded, isLoadingUpdates]);
+
+  useEffect(() => {
+    if (activeTab === "recommendations" && isDeveloper && !recsLoaded && !isLoadingRecs) {
+      setIsLoadingRecs(true);
+      api.getRecommendations(appId)
+        .then((data) => {
+          setLazyRecs(data);
+          setRecsLoaded(true);
+        })
+        .catch(() => {
+          setRecsLoaded(true);
+        })
+        .finally(() => setIsLoadingRecs(false));
+    }
+  }, [activeTab, appId, isDeveloper, recsLoaded, isLoadingRecs]);
 
   // HONEST-FALLBACK: Real metric values or explicit pending state indicator
   const successScoreStr = game?.success_score != null
@@ -577,6 +626,34 @@ export function GameDetailView({
         {hasData && activeTab === "player-activity" && (
           // HONEST-FALLBACK: Safe null fallback for activityData
           <PlayerActivityTab activity={activityData ?? null} gameTitle={title} />
+        )}
+
+        {/* ── TAB: UPDATES ── */}
+        {hasData && activeTab === "updates" && (
+          isLoadingUpdates ? (
+            <div style={{ padding: "40px 0", textAlign: "center" }}>
+              <div className="loading-bars" style={{ margin: "0 auto 12px" }}>
+                <span /><span /><span />
+              </div>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Loading update impact timeline...</p>
+            </div>
+          ) : (
+            <UpdatesTab updatesFeed={lazyUpdates} gameTitle={title} />
+          )
+        )}
+
+        {/* ── TAB: RECOMMENDATIONS (Dev Mode Only) ── */}
+        {hasData && isDeveloper && activeTab === "recommendations" && (
+          isLoadingRecs ? (
+            <div style={{ padding: "40px 0", textAlign: "center" }}>
+              <div className="loading-bars" style={{ margin: "0 auto 12px" }}>
+                <span /><span /><span />
+              </div>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Loading ML recommendations...</p>
+            </div>
+          ) : (
+            <RecommendationsTab bundle={lazyRecs} gameTitle={title} />
+          )
         )}
       </main>
     </div>

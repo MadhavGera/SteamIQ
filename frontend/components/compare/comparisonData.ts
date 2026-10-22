@@ -27,12 +27,14 @@ export interface ComparisonProfile {
   features: FeatureRow[];
   scorecard: ScorecardItem[];
   verdict: VerdictData;
+  isCurated: boolean;
 }
 
 // ─── Curated Benchmark Profiles ────────────────────────────────────────────────
 
 // 1. Hollow Knight (367520) vs Elden Ring (1245620)
 const PROFILE_HK_VS_ER: ComparisonProfile = {
+  isCurated: true,
   gameAVisualSummary: "Atmospheric 2D exploration, tight controls and demanding boss fights.",
   gameBVisualSummary: "Epic landscapes, flexible builds and massive freedom to explore.",
   features: [
@@ -144,6 +146,7 @@ const PROFILE_HK_VS_ER: ComparisonProfile = {
 
 // 2. Elden Ring (1245620) vs Sekiro: Shadows Die Twice (814380)
 const PROFILE_ER_VS_SEKIRO: ComparisonProfile = {
+  isCurated: true,
   gameAVisualSummary: "Epic open world, boundless build freedom, and diverse RPG progression.",
   gameBVisualSummary: "Masterclass rhythmic deflection combat, grapple mobility, and razor-sharp shinobi duel mechanics.",
   features: [
@@ -201,6 +204,7 @@ const PROFILE_ER_VS_SEKIRO: ComparisonProfile = {
 
 // 3. Hollow Knight (367520) vs Hades (1145360)
 const PROFILE_HK_VS_HADES: ComparisonProfile = {
+  isCurated: true,
   gameAVisualSummary: "Atmospheric 2D exploration, methodical Metroidvania pacing, and deep boss mastery.",
   gameBVisualSummary: "High-octane isometric roguelite combat, dynamic god boon synergies, and rich narrative reactivity.",
   features: [
@@ -268,6 +272,7 @@ const CURATED_PROFILES: Record<string, ComparisonProfile> = {
 
 function invertProfile(profile: ComparisonProfile): ComparisonProfile {
   return {
+    isCurated: profile.isCurated,
     gameAVisualSummary: profile.gameBVisualSummary,
     gameBVisualSummary: profile.gameAVisualSummary,
     features: profile.features.map((f) => ({
@@ -407,6 +412,7 @@ function generateDynamicProfile(
   ];
 
   return {
+    isCurated: false,
     gameAVisualSummary: `${genreStrA} experience focusing on ${tagsA.slice(0, 3).join(", ").toLowerCase() || "action"}.`,
     gameBVisualSummary: `${genreStrB} experience focusing on ${tagsB.slice(0, 3).join(", ").toLowerCase() || "action"}.`,
     features,

@@ -293,22 +293,6 @@ img {
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 
-.btn-signin {
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  padding: 7px 16px;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-signin:hover {
-  background-color: var(--bg-surface-low);
-}
-
 /* ─── Hero Section (Search / Landing) ─────────────────────────────────────── */
 .hero-wrapper {
   max-width: 800px;

@@ -8,9 +8,10 @@ import { useUserMode } from "@/lib/UserModeContext";
 
 export function TopNavBar() {
   const pathname = usePathname();
-  const { isDeveloper } = useUserMode();
+  const { isDeveloper, hydrated } = useUserMode();
   const [devMenuOpen, setDevMenuOpen] = useState(false);
   const devMenuRef = useRef<HTMLDivElement>(null);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
 
   const isSearchLanding = pathname === "/dashboard";
   const isForYou = pathname === "/";
@@ -19,20 +20,47 @@ export function TopNavBar() {
   const isEmbeddingMap = pathname.startsWith("/embedding-map");
   const isCompare = pathname.startsWith("/compare");
   const isMarketExplorer = pathname.startsWith("/market-explorer");
+  const isMonitoring = pathname.startsWith("/monitoring");
   const isGameIntelligence = pathname.startsWith("/games");
 
-  const isDevSectionActive = isMarketExplorer || isModelLab || isEmbeddingMap;
+  const isDevSectionActive =
+    isMarketExplorer || isModelLab || isEmbeddingMap || isMonitoring;
 
-  // Close dropdown on outside click or escape key
+  // Close dropdown on outside click or keyboard navigation
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (devMenuRef.current && !devMenuRef.current.contains(event.target as Node)) {
         setDevMenuOpen(false);
       }
     }
+
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setDevMenuOpen(false);
+        toggleButtonRef.current?.focus();
+        return;
+      }
+      if (!devMenuRef.current) return;
+      const items = Array.from(
+        devMenuRef.current.querySelectorAll<HTMLAnchorElement>('a[role="menuitem"]')
+      );
+      if (items.length === 0) return;
+      const currentIndex = items.indexOf(document.activeElement as HTMLAnchorElement);
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        const nextIndex = currentIndex === -1 || currentIndex === items.length - 1 ? 0 : currentIndex + 1;
+        items[nextIndex]?.focus();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        const prevIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+        items[prevIndex]?.focus();
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        items[0]?.focus();
+      } else if (event.key === "End") {
+        event.preventDefault();
+        items[items.length - 1]?.focus();
       }
     }
 
@@ -71,13 +99,13 @@ export function TopNavBar() {
 
         {/* Dynamic Nav Links */}
         <div className="stitch-nav__links">
-          {/* 1. Search / Landing */}
+          {/* 1. Catalog (formerly Search/Landing) */}
           <Link
             href="/dashboard"
             className={`stitch-nav__link ${isSearchLanding ? "stitch-nav__link--active" : ""}`}
             id="nav-search-landing"
           >
-            Search/Landing
+            Catalog
           </Link>
 
           {/* 2. Game Intelligence */}
@@ -108,19 +136,20 @@ export function TopNavBar() {
             <span className="stitch-nav__badge-ai">AI</span>
           </Link>
 
-          {/* 5. RecSys Feed (Two-Tower Recommendation Stream) */}
+          {/* 5. For You (Recommender Stream) */}
           <Link
             href="/"
             className={`stitch-nav__link ${isForYou ? "stitch-nav__link--active" : ""}`}
             id="nav-recsys-feed"
           >
-            RecSys Feed
+            For You
           </Link>
 
-          {/* 6. Developer Tools Dropdown (Dev Mode Only - keeps navbar sleek & uncluttered) */}
-          {isDeveloper && (
+          {/* 6. Developer Tools Dropdown (Rendered strictly when hydrated && isDeveloper) */}
+          {hydrated && isDeveloper && (
             <div className="stitch-nav__dropdown" ref={devMenuRef}>
               <button
+                ref={toggleButtonRef}
                 type="button"
                 onClick={() => setDevMenuOpen((prev) => !prev)}
                 className={`stitch-nav__link stitch-nav__dropdown-toggle ${isDevSectionActive ? "stitch-nav__link--active" : ""}`}
@@ -158,7 +187,7 @@ export function TopNavBar() {
                     <div>
                       <div style={{ fontWeight: 600 }}>Market Explorer</div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                        Demand matrix & trends
+                        Demand matrix &amp; trends
                       </div>
                     </div>
                   </Link>
@@ -175,7 +204,7 @@ export function TopNavBar() {
                     <div>
                       <div style={{ fontWeight: 600 }}>Model Lab</div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                        Benchmarks & ablations
+                        Benchmarks &amp; ablations
                       </div>
                     </div>
                   </Link>
@@ -196,6 +225,23 @@ export function TopNavBar() {
                       </div>
                     </div>
                   </Link>
+
+                  <Link
+                    href="/monitoring"
+                    className={`stitch-nav__dropdown-item ${isMonitoring ? "stitch-nav__dropdown-item--active" : ""}`}
+                    role="menuitem"
+                    id="nav-monitoring"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: "18px", color: "#f59e0b" }}>
+                      monitoring
+                    </span>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>Monitoring</div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        Drift, gates &amp; model cards
+                      </div>
+                    </div>
+                  </Link>
                 </div>
               )}
             </div>
@@ -205,9 +251,6 @@ export function TopNavBar() {
         {/* Action Controls & Mode Toggle */}
         <div className="stitch-nav__actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <UserModeToggle />
-          <button className="btn-signin">
-            Sign In
-          </button>
         </div>
       </div>
     </nav>
