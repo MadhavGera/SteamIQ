@@ -44,7 +44,7 @@ flowchart TD
         ServingItems & ServingProj & Reports --> RecService["RecommenderService<br/>(In-Memory O(N x 64) Dot Product)"]
         RecService --> API["FastAPI Endpoints<br/>(/api/v1/recsys/*)"]
         API --> ForYou["/ (For You Homepage)<br/>Interactive Seed Library & SHAP Chips"]
-        API --> ModelLab["/model-lab<br/>8-Tab Evidence Center & SVG Charts"]
+        API --> ModelLab["/model-lab<br/>9-Tab Evidence Center & SVG Charts"]
         API --> EmbeddingMap["/embedding-map<br/>HTML5 Canvas 2D Scatter & Neighbors"]
         API --> Dashboard["/dashboard<br/>Catalog & Intelligence Mart"]
     end
@@ -145,17 +145,19 @@ These reference models utilize all-time item review statistics (lookahead across
 3. **Modality Ablations (Issues I3, J):**
    Multi-seed architectural ablations on Two-Tower under the full training budget (15 epochs, all 145,741 pairs/epoch from 165,741 raw train rows across 20,000 users) reveal that MiniLM text ($\Delta = \mathbf{-0.0091}$, $p < 0.05$) and multi-hot tags ($\Delta = \mathbf{-0.0023}$, $p < 0.05$) are the genuine drivers of retrieval accuracy. Removing standardized numeric features ($\Delta = -0.0004$, CI $[-0.0023, +0.0015]$) and item ID embeddings ($\Delta = +0.0005$, CI $[-0.0018, +0.0027]$) produces no statistically significant drop (CIs span zero), proving that the large drops reported in Round 2 were artifacts of training budget starvation.
 4. **SASRec Sequential Challenger (Round 4 Sanity Audit & Re-benchmark):**
-   A comprehensive sanity audit resolved two implementation defects: (1) an off-by-one token alignment shift where 0-indexed item IDs were passed to token embeddings with `padding_idx=0` (zeroing item ID 0 and shifting items relative to target/evaluation), and (2) separate 2D causal/pad attention masks producing NaNs in evaluation mode, resolved with a unified 3D attention mask. Following verification across four sanity assertions (overfit test reaching 100% train hit rate on 200 users, chronological sort with last 50 items, causal/padding mask verification, and training-eval fold-in numerical equivalence $< 10^{-6}$), SASRec was retrained across seeds 42, 43, and 44 with text projection ($d=64$, dropout $0.2$, 320k parameters).
-   - Test NDCG@10 jumped from `0.0206` to **`0.0420 [0.0379, 0.0465]`** (3-seed mean: **`0.0424 ± 0.0004`**, HR@10: **`0.0833 ± 0.0010`**).
-   - Validation NDCG@10 jumped from `0.0227` to **`0.0491 ± 0.0007`** (Champion Seed 43: **`0.0488 [0.0443, 0.0535]`**, HR@10: **`0.0974 [0.0888, 0.1056]`**).
-   - Candidate pool recall lift in Stage-1 quota merging increased from +14.8% to **`+18.9% relative recall lift`** (41.8% $\to$ 49.7%).
-   - The evidence demonstrates that sequential order provides strong predictive power once tokens and attention masks are properly aligned; static multimodal Two-Tower representations still lead on sparse catalogs, but SASRec provides powerful complementary candidates.
+   A comprehensive sanity audit resolved two implementation defects: (1) an off-by-one token alignment shift where 0-indexed item IDs were passed to token embeddings with `padding_idx=0` (zeroing item ID 0 and shifting items relative to target/evaluation), and (2) separate 2D causal/pad attention masks producing NaNs in evaluation mode, resolved with a unified 3D attention mask. Following verification across four sanity assertions (overfit test reaching 100% train hit rate on 200 users, chronological sort with last 50 items, causal/padding mask verification, and training-eval fold-in numerical equivalence $< 10^{-6}$), the winning configuration was determined as $d_{\text{model}}=128$, dropout $0.2$, and `use_text=false` (787,329 parameters) evaluated across seeds 42, 43, and 44.
+   - 3-seed validation NDCG@10 mean reached **`0.0609 ± 0.0016`** (HR@10: **`0.1186 ± 0.0026`**).
+   - Champion Seed 42 achieved Test NDCG@10 of **`0.0569 [0.0517, 0.0617]`** (3-seed test mean: **`0.0545 ± 0.0025`**, HR@10: **`0.1054 ± 0.0050`**).
+   - Candidate pool recall in Stage-1 quota merging increases from 0.418 (Two-Tower individual recall@100) to 0.512 (union recall@200), providing a **`+22.5% relative recall lift`**.
+   - SASRec's nominal test NDCG (0.0569) exceeds the champion's (0.0513) but the validation paired difference vs Two-Tower is -0.0009 (CI spans zero), so it is not claimed to be better.
 5. **Cold-Start Evaluation & Evidence Strength (Issues I5, K, Round 4):**
    Fair evaluation across 4 mutually disjoint item cohorts (1 tuning cohort + 3 eval cohorts of 200 items each, total 800 withheld items with zero training interactions) on the validation split evaluated both frequency threshold routing ($N=5$) and zero-interaction-only routing (`route_zero_only=True`). The `zero_only` variant achieves Val NDCG@10 = **`0.0407`** `[0.0239, 0.0577]` on cold-target users (Group a), exceeding the closed-form cold-only random baseline (`0.0228`). However, on warm-target users (Group b), routing introduces statistically significant damage ($\Delta = \mathbf{-0.0044}$ `[-0.0050, -0.0038]`, $p < 0.05$). Under the pre-registered decision rule, the evidence is graded **WEAK**, and the earlier inflated over-random claim is refuted and purged.
 6. **Assistant Intent Classification & Honest Abstention (Issue I6):**
+   - Full gold set accuracy across 347 queries is **0.9251** (MiniLM logistic headline model).
+   - Headline honest generalization metric is the synthetic paraphrase holdout accuracy on 167 queries: **0.8623 [0.8144, 0.9162]**.
+   - Exactly 30/347 gold queries are human-verified; human holdout count is 0 (`holdout_queries_human.jsonl` scaffold awaiting external review).
    - Tuned abstention threshold $\tau = 0.630$ on the validation curve achieves **95.92% selective test accuracy** (91.93% coverage, 8.07% abstention rate).
    - Generalization audit confirms that **95.68% of test queries have zero lexical, template, or high-cosine overlap** with training queries, achieving **92.17% accuracy** on this strictly non-overlapping subset.
-   - All 167 holdout queries are honestly tagged as synthetic developer paraphrases, and a human holdout scaffold (`holdout_queries_human.jsonl`) is established with an automated $\ge 50$ query reporting gate.
 7. **Temporal Leakage Prevention (Issue I7):**
    Unit test suite (`backend/tests/test_timestamp_leakage.py`) proves future-interaction purge on synthetic multi-interaction histories ($t \ge t_{target}$), resolving the uninformative validation before/after check.
 
@@ -176,15 +178,19 @@ SteamIQ/
 ├── frontend/                     # Next.js 14 App Router (Vanilla React, CSS Tokens, SVG, Canvas)
 │   ├── app/
 │   │   ├── page.tsx              # For You (Homepage): cold-start library builder & live explainability
-│   │   ├── model-lab/page.tsx    # Model Lab: 8-tab offline evaluation & diagnostic center
+│   │   ├── ask/page.tsx          # Ask SteamIQ: Natural language game intelligence & ML explainability
+│   │   ├── compare/page.tsx      # Compare Games: 1v1 multi-dimensional game comparison
+│   │   ├── dashboard/page.tsx    # Catalog explorer & legacy game analytics dashboard
 │   │   ├── embedding-map/page.tsx# Embedding Map: 2D UMAP canvas scatter with nearest neighbors
-│   │   └── dashboard/page.tsx    # Catalog explorer & legacy game analytics dashboard
+│   │   ├── market-explorer/page.tsx # Market Explorer: genre demand & opportunity matrix
+│   │   ├── model-lab/page.tsx    # Model Lab: 9-tab offline evaluation & diagnostic center
+│   │   └── monitoring/page.tsx   # Ops Monitoring: live telemetry, drift, retrain gate & model cards
 │   ├── components/recsys/        # Recommender components (LibraryBuilder, ModelSelector, ResultCard, CompareView)
 │   ├── components/model-lab/     # Evidence tab modules (Leaderboard, PairedTests, Ablations, ColdStart, BeyondAccuracy)
 │   └── lib/api.ts                # Strict typed API client for FastAPI recommender endpoints
 ├── backend/
 │   ├── api/                      # Route handlers reading serving_* / mart_* tables only
-│   │   ├── routes/recsys.py      # /api/v1/recsys/ items, for-you, models, health, reports, map, neighbors
+│   │   ├── recsys.py             # /api/v1/recsys/ items, for-you, models, health, reports, map, neighbors
 │   ├── core/                     # App factory, errors, ApiResponse envelope, config
 │   ├── db/                       # SQLAlchemy models & Alembic migrations (serving_rec_* tables)
 │   ├── jobs/                     # BaseJob pipeline implementations (prepare, train, evaluate, project, reports)
@@ -195,7 +201,7 @@ SteamIQ/
 │   ├── ml-accuracy-and-evaluation-guide.md
 │   ├── review-qa.md
 │   ├── recsys-run-log.md
-│   └── design-docs/steamiq/      # ADR 0001 through ADR 0005
+│   └── design-docs/steamiq/      # ADR 0001 through ADR 0006
 ├── scripts/                      # Integrity linters (check_honest_fallbacks.py, check_no_hardcoded_metrics.py)
 ├── Makefile                      # Standardized project CLI
 └── docker-compose.yml
@@ -215,7 +221,7 @@ The **Recommender System** serves as the cross-cutting Machine Learning core, un
 | **3** | **Embeddings & Competitors** | MiniLM-L6 pgvector semantic embeddings, cosine similarity, competitor discovery | ✅ |
 | **4** | **Predictive ML (Game Success)** | Optuna-tuned LightGBM/XGBoost classifier, MLflow run audit, TreeSHAP drivers | ✅ |
 | **5** | **Decision Intelligence** | Analytical data marts (`mart_*`), Update Impact Tracker, Game Match 6D intensity profiles | ✅ |
-| **6** | **Ask SteamIQ Assistant** | Learned router variants (MiniLM headline accuracy 0.9251 vs 3 baselines), Temperature Scaling ($T=0.183$, ECE 0.0231), selective abstention ($\tau=0.100$, selective accuracy 0.9251), extractive retrieval ($n=65$, Recall@3 0.1077, MRR 0.0974), entity resolution ($n=347$, Top-1 0.8468), Zero LLM text | ✅ |
+| **6** | **Ask SteamIQ Assistant** | Learned router variants (MiniLM headline accuracy 0.9251 vs 3 baselines), Temperature Scaling ($T=0.183$, ECE 0.0231), selective abstention ($\tau=0.630$, selective accuracy 95.92%), extractive retrieval ($n=65$, Recall@3 0.1077, MRR 0.0974), entity resolution ($n=347$, Top-1 0.8468), Zero LLM text | ✅ |
 | **7** | **ML Productionization & Reliability** | Statistical drift monitoring (PSI/KS/JSD power analysis), Champion/Challenger retrain gate (pre-registered multi-seed logic), artifact golden tests, Redis cache with graceful degradation, CI/CD | ✅ |
 | **Core** | **Cross-Cutting Recsys Engine** | Two-Tower retriever + LambdaMART ranker, 5,000-user bootstrap CIs, 2D UMAP projection, Model Lab | ✅ |
 

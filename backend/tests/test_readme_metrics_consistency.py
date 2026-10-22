@@ -9,6 +9,7 @@ Verifies:
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from recsys.inference import DEFAULT_MODEL_NAME
@@ -195,4 +196,103 @@ def test_stale_strings_lint():
             assert num not in before_history, (
                 f"Old budget-mismatch ablation figure '{num}' found in Current Authoritative State!"
             )
+
+
+def test_readme_sasrec_findings_consistency():
+    readme_path = Path("README.md") if Path("README.md").exists() else Path("../README.md")
+    sasrec_path = Path("docs/results/sasrec_benchmark.json") if Path("docs/results/sasrec_benchmark.json").exists() else Path("../docs/results/sasrec_benchmark.json")
+
+    readme_text = readme_path.read_text(encoding="utf-8")
+    sas_data = json.loads(sasrec_path.read_text(encoding="utf-8"))
+
+    # (a) SASRec numbers: parameter count, d_model, champion test NDCG, recall lift
+    param_count = sas_data["metadata"]["parameter_count"]
+    assert f"{param_count:,}" in readme_text or f"{param_count}" in readme_text, f"Expected parameter count {param_count} in README"
+
+    d_model = sas_data["metadata"]["winning_config"]["d_model"]
+    assert f"d_model={d_model}" in readme_text or f"d_{{\\text{{model}}}}={d_model}" in readme_text or f"d_model = {d_model}" in readme_text or f"d={d_model}" in readme_text, f"Expected d_model={d_model} in README"
+
+    # Champion seed 42 test NDCG
+    assert "0.0569" in readme_text, "Expected champion test NDCG 0.0569 in README"
+
+    # Recall lift
+    assert "+22.5%" in readme_text or "22.5%" in readme_text, "Expected recall lift +22.5% in README"
+
+
+def test_assistant_finding_and_phase_table_consistency():
+    readme_path = Path("README.md") if Path("README.md").exists() else Path("../README.md")
+    readme_text = readme_path.read_text(encoding="utf-8")
+
+    # (b) Assistant tau and selective accuracy in finding #6 and Phase 6 row must be identical
+    finding_6_match = re.search(r"6\.\s+\*\*Assistant Intent Classification.*?(?=\n\d+\.|\n##|\Z)", readme_text, re.DOTALL)
+    assert finding_6_match, "Finding #6 not found in README.md"
+    f6_text = finding_6_match.group(0)
+
+    phase_6_match = re.search(r"\|\s*\*\*6\*\*\s*\|\s*\*\*Ask SteamIQ Assistant\*\*\s*\|(.*?)\|", readme_text)
+    assert phase_6_match, "Phase 6 table row not found in README.md"
+    p6_text = phase_6_match.group(1)
+
+    tau_f6 = re.search(r"\\tau\s*=\s*(0\.\d+)", f6_text)
+    tau_p6 = re.search(r"\\tau\s*=\s*(0\.\d+)", p6_text)
+    assert tau_f6 and tau_p6, "tau not found in finding #6 or phase 6 row"
+    assert tau_f6.group(1) == tau_p6.group(1), f"tau mismatch: {tau_f6.group(1)} vs {tau_p6.group(1)}"
+
+    sel_acc_f6 = re.search(r"(\d{2}\.\d{2})%\s*selective", f6_text)
+    sel_acc_p6 = re.search(r"(\d{2}\.\d{2})%\s*selective|selective accuracy\s*(\d{2}\.\d{2})%", p6_text)
+    assert sel_acc_f6 and sel_acc_p6, "Selective accuracy not found in finding #6 or phase 6 row"
+    p6_acc = sel_acc_p6.group(1) or sel_acc_p6.group(2)
+    assert sel_acc_f6.group(1) == p6_acc, f"Selective accuracy mismatch: {sel_acc_f6.group(1)} vs {p6_acc}"
+
+
+def test_readme_tab_count_matches_model_lab_tabs():
+    page_path = Path("frontend/app/model-lab/page.tsx") if Path("frontend/app/model-lab/page.tsx").exists() else Path("../frontend/app/model-lab/page.tsx")
+    readme_path = Path("README.md") if Path("README.md").exists() else Path("../README.md")
+
+    page_text = page_path.read_text(encoding="utf-8")
+    readme_text = readme_path.read_text(encoding="utf-8")
+
+    # (c) README tab count equals the number of tabs in frontend/app/model-lab/page.tsx TABS array
+    tabs_match = re.search(r"const TABS:\s*Array<[^>]+>\s*=\s*\[(.*?)\];", page_text, re.DOTALL)
+    assert tabs_match, "TABS array not found in frontend/app/model-lab/page.tsx"
+    tabs = re.findall(r'\{\s*key:\s*"([^"]+)"', tabs_match.group(1))
+    tab_count = len(tabs)
+
+    matches = re.findall(r"(\d+)\-[Tt]ab", readme_text)
+    assert matches, "No tab count mentions like '9-tab' found in README.md"
+    for m in matches:
+        assert int(m) == tab_count, f"README has '{m}-tab' but model-lab/page.tsx has {tab_count} tabs!"
+
+
+def test_readme_project_structure_paths_exist():
+    readme_path = Path("README.md") if Path("README.md").exists() else Path("../README.md")
+    repo_root = readme_path.parent
+    readme_text = readme_path.read_text(encoding="utf-8")
+
+    # (d) every file path mentioned in the Project Structure code block exists
+    tree_match = re.search(r"```(?:\w+)?\nSteamIQ/\n(.*?)\n```", readme_text, re.DOTALL)
+    assert tree_match, "Project Structure code block not found in README.md"
+    tree_text = tree_match.group(1)
+
+    stack: list[str] = []
+    checked_paths = 0
+    for line in tree_text.splitlines():
+        clean = line.split("#")[0].rstrip()
+        if not clean.strip():
+            continue
+        m = re.match(r"^([│\s]*[├──└──\s]+)(.*)", clean)
+        if not m:
+            continue
+        prefix, name = m.groups()
+        indent = len(prefix) // 4
+        name = name.strip()
+        stack = stack[:indent - 1]
+        full_rel_path = "/".join(stack + [name.rstrip("/")])
+        stack.append(name.rstrip("/"))
+
+        target = repo_root / full_rel_path
+        assert target.exists(), f"Path '{full_rel_path}' mentioned in README Project Structure does not exist on disk!"
+        checked_paths += 1
+
+    assert checked_paths >= 10, f"Expected at least 10 paths verified, checked {checked_paths}"
+
 
