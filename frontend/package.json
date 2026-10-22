@@ -5,10 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/copy-standalone.js",
     "start": "next start",
     "check:fallbacks": "python ../scripts/check_honest_fallbacks.py",
     "check:metrics": "python ../scripts/check_no_hardcoded_metrics.py",
-    "lint": "next lint && python ../scripts/check_honest_fallbacks.py && python ../scripts/check_no_hardcoded_metrics.py"
+    "lint": "next lint && python ../scripts/check_honest_fallbacks.py && python ../scripts/check_no_hardcoded_metrics.py",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install chromium"
   },
   "dependencies": {
     "next": "14.2.35",

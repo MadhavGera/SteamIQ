@@ -87,6 +87,50 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: "http://localhost:8000"
 
+  e2e:
+    name: Frontend End-to-End Smoke Tests (Playwright)
+    needs: [frontend]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps chromium
+
+      - name: Next.js Production Build
+        working-directory: frontend
+        run: |
+          npm run build
+        env:
+          NEXT_PUBLIC_API_URL: "http://localhost:8000"
+          INTERNAL_API_URL: "http://localhost:8000"
+
+      - name: Run Playwright Tests
+        working-directory: frontend
+        run: |
+          npm run e2e
+        env:
+          CI: "true"
+          NEXT_PUBLIC_API_URL: "http://localhost:8000"
+          INTERNAL_API_URL: "http://localhost:8000"
+
   nightly-drift-validation:
     name: Statistical Drift Detector Power Validation
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

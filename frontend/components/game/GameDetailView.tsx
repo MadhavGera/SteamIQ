@@ -66,9 +66,9 @@ export function GameDetailView({
   // HONEST-FALLBACK: Real release date or pending indicator
   const releaseDate = game?.release_date ?? "--";
   // HONEST-FALLBACK: Real positive reviews count or 0
-  const posReviews = game?.positive_reviews ?? reviewsBundle?.sentiment.positive_count ?? 0;
+  const posReviews = game?.positive_reviews ?? reviewsBundle?.sentiment?.positive_count ?? 0;
   // HONEST-FALLBACK: Real negative reviews count or 0
-  const negReviews = game?.negative_reviews ?? reviewsBundle?.sentiment.negative_count ?? 0;
+  const negReviews = game?.negative_reviews ?? reviewsBundle?.sentiment?.negative_count ?? 0;
   const score = (posReviews + negReviews > 0) ? reviewScore(posReviews, negReviews) : null;
   const priceStr = game ? formatPrice(game.final_price_usd, game.is_free) : "--";
   // HONEST-FALLBACK: Header image CDN url or default steam capsule URL
@@ -362,9 +362,9 @@ export function GameDetailView({
               <div className="kpi-card">
                 <div className="kpi-card__top">
                   <span className="kpi-card__eyebrow">NET SENTIMENT</span>
-                  <span className={`badge-pill ${reviewsBundle?.sentiment.sentiment_label ? "badge-pill--success" : "badge-pill--neutral"}`}>
+                  <span className={`badge-pill ${reviewsBundle?.sentiment?.sentiment_label ? "badge-pill--success" : "badge-pill--neutral"}`}>
                     {/* HONEST-FALLBACK: Sentiment label from reviews or game overview or Unscored */}
-                    {reviewsBundle?.sentiment.sentiment_label ?? (game?.review_score_desc ?? "Unscored")}
+                    {reviewsBundle?.sentiment?.sentiment_label ?? (game?.review_score_desc ?? "Unscored")}
                   </span>
                 </div>
                 <div>
@@ -372,7 +372,7 @@ export function GameDetailView({
                     {netSentimentStr}
                   </div>
                   <div className="kpi-card__sub">
-                    {reviewsBundle
+                    {reviewsBundle?.sentiment
                       ? `${reviewsBundle.sentiment.total_count.toLocaleString()} reviews analyzed`
                       : (posReviews + negReviews > 0)
                       ? `${(posReviews + negReviews).toLocaleString()} reviews recorded`
@@ -422,7 +422,7 @@ export function GameDetailView({
                 brief={game?.executive_brief ?? null}
                 // HONEST-FALLBACK: Real net sentiment percentage or null
                 netSentimentPct={
-                  reviewsBundle?.sentiment.positive_pct ??
+                  reviewsBundle?.sentiment?.positive_pct ??
                   (game?.net_sentiment_pct ? Number(game.net_sentiment_pct) : null)
                 }
               />
