@@ -28,8 +28,11 @@ export function RecsysResultCard({ item, modelName }: RecsysResultCardProps) {
     return `$${item.price_final.toFixed(2)}`;
   };
 
-  // Format positive ratio
-  const posRatioPct = item.positive_ratio !== null ? Math.round(item.positive_ratio * 100) : null;
+  // Format positive ratio (backend serves 0..100 percentage integer; normalize if <= 1)
+  const posRatioPct =
+    item.positive_ratio !== null && item.positive_ratio !== undefined
+      ? Math.round(item.positive_ratio > 1 ? item.positive_ratio : item.positive_ratio * 100)
+      : null;
 
   return (
     <div

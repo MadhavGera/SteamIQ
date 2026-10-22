@@ -537,7 +537,7 @@ export function RecsysLibraryBuilder({
                         {item.title}
                       </div>
                       <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                        ID: {item.app_id} • Pos: {item.positive_ratio ? `${Math.round(item.positive_ratio * 100)}%` : "N/A"}
+                        ID: {item.app_id} • Pos: {item.positive_ratio !== null && item.positive_ratio !== undefined ? `${Math.round(item.positive_ratio > 1 ? item.positive_ratio : item.positive_ratio * 100)}%` : "N/A"}
                       </div>
                     </div>
                   </div>
