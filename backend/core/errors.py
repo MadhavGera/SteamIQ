@@ -66,6 +66,25 @@ class ReportNotFoundError(NotFoundError):
     code = "report_not_found"
 
 
+class ReportsMissingError(SteamIQException):
+    """Recommender report JSON files are missing on disk and allow_experiments is False."""
+    status_code = 409
+    code = "missing_reports"
+
+    def __init__(
+        self,
+        missing_keys: list[str],
+        message: str = "Required benchmark reports are missing from disk. Run 'make recsys-experiments' to generate them.",
+        hint: str = "run make recsys-experiments",
+    ) -> None:
+        super().__init__(
+            message=message,
+            code="missing_reports",
+            status_code=409,
+            details={"status": "missing_reports", "missing_keys": missing_keys, "hint": hint},
+        )
+
+
 class ModelNotReadyError(SteamIQException):
     """Recommender model or required artifacts are not available for inference."""
     status_code = 503

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, RecsysReport } from "@/lib/api";
+import { DevOnlyGate } from "@/components/DevOnlyGate";
 import { LeaderboardTab } from "@/components/model-lab/LeaderboardTab";
 import { PairedTestsTab } from "@/components/model-lab/PairedTestsTab";
 import { AblationsTab } from "@/components/model-lab/AblationsTab";
@@ -99,6 +100,8 @@ function ModelLabContent() {
   // HONEST-FALLBACK: Default champion name if leaderboard payload models missing
   const championModelName = leaderboardModels?.find((m) => m.stage === "champion")?.model_name ?? "recsys_two_tower_clean";
 
+  const isFileFallback = Object.values(reports).some((r) => r?.source === "file_fallback");
+
   return (
     <main className="container" style={{ paddingTop: "88px", paddingBottom: "64px" }}>
       {/* Header */}
@@ -122,6 +125,21 @@ function ModelLabContent() {
             <span className="badge-pill badge-pill--neutral" style={{ fontFamily: "var(--font-mono, monospace)" }}>
               Dataset: {datasetVer}
             </span>
+            {isFileFallback && (
+              <span
+                className="badge-pill"
+                title="Data served from precomputed filesystem artifacts because database table has not been materialized"
+                style={{
+                  background: "rgba(245, 158, 11, 0.15)",
+                  color: "#f59e0b",
+                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                }}
+              >
+                served from files
+              </span>
+            )}
           </div>
           <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
             Model Lab
@@ -136,10 +154,22 @@ function ModelLabContent() {
           <button
             type="button"
             onClick={async () => {
+              if (!window.confirm("Synchronize precomputed benchmark reports from disk into the database?")) {
+                return;
+              }
               setIsSyncing(true);
               try {
                 await api.materializeReports();
                 await loadReports();
+              } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : String(err);
+                if (msg.includes("409") || msg.includes("missing_reports")) {
+                  alert("Sync Failed (409 Conflict): Required reports are missing from disk. Please run 'make recsys-experiments' first.");
+                } else if (msg.includes("403") || msg.includes("forbidden")) {
+                  alert("Sync Failed (403 Forbidden): Operational writes are disabled by configuration (ENABLE_OPS_WRITE=false).");
+                } else {
+                  alert(`Sync Failed: ${msg}`);
+                }
               } finally {
                 setIsSyncing(false);
               }
@@ -269,8 +299,10 @@ function ModelLabContent() {
 
 export default function ModelLabPage() {
   return (
-    <Suspense fallback={<div className="container" style={{ paddingTop: "88px" }}>Loading Model Lab...</div>}>
-      <ModelLabContent />
-    </Suspense>
+    <DevOnlyGate pageTitle="Model Lab">
+      <Suspense fallback={<div className="container" style={{ paddingTop: "88px" }}>Loading Model Lab...</div>}>
+        <ModelLabContent />
+      </Suspense>
+    </DevOnlyGate>
   );
 }

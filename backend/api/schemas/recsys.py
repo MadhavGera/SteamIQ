@@ -151,6 +151,7 @@ class RecsysReportSchema(BaseModel):
     model_run_id: uuid.UUID | None = Field(default=None, description="Associated ModelRun UUID")
     payload: dict[str, Any] = Field(..., description="Full structured JSON report content")
     updated_at: datetime | None = Field(default=None, description="Last updated timestamp")
+    source: str = Field(default="database", description="'database' or 'file_fallback'")
 
 
 class RecsysMapPointSchema(BaseModel):

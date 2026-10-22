@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
@@ -33,10 +33,15 @@ router = APIRouter(prefix="/ops", tags=["ops"])
 async def materialize_reports(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ApiResponse[dict[str, Any]]:
+    if not getattr(settings, "enable_ops_write", True):
+        raise HTTPException(
+            status_code=403,
+            detail="Operational writes are disabled by configuration (ENABLE_OPS_WRITE=False).",
+        )
     start = time.perf_counter()
     from jobs.generate_reports import GenerateReportsJob
-    job = GenerateReportsJob()
-    result = await job._run_async(session=db)
+    job = GenerateReportsJob(allow_experiments=False)
+    result = await job._run_async(session=db, allow_experiments=False)
     took_ms = (time.perf_counter() - start) * 1000
     return ApiResponse.ok(data=result, took_ms=round(took_ms, 2))
 

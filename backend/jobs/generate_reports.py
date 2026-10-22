@@ -21,6 +21,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from core.config import settings
+from core.errors import ReportsMissingError
 from db.models import ModelRun, ServingRecReport
 from jobs.base_job import BaseJob
 from recsys.config import RecsysConfig, get_recsys_config
@@ -41,14 +42,20 @@ class GenerateReportsJob(BaseJob):
         seed: int = 42,
         dry_run: bool = False,
         rebuild_leaderboard: bool = False,
+        allow_experiments: bool = False,
     ) -> None:
         super().__init__(dry_run=dry_run)
         self.profile = profile
         self.data_dir = data_dir
         self.seed = seed
         self.rebuild_leaderboard = rebuild_leaderboard
+        self.allow_experiments = allow_experiments
 
-    async def _run_async(self, session: AsyncSession | None = None) -> dict[str, Any]:
+    async def _run_async(
+        self,
+        session: AsyncSession | None = None,
+        allow_experiments: bool | None = None,
+    ) -> dict[str, Any]:
         cfg: RecsysConfig = get_recsys_config(self.profile)
         resolved_data_dir = (
             Path(self.data_dir) if self.data_dir else (cfg.data_dir or settings.resolved_recsys_data_dir)
@@ -57,9 +64,7 @@ class GenerateReportsJob(BaseJob):
         reports_dir.mkdir(parents=True, exist_ok=True)
 
         self.logger.info("Generating and synchronizing recommender reports from %s...", reports_dir)
-        data = RecsysData.load(resolved_data_dir)
 
-        # Check if reports exist; if not, execute RunRecsysExperimentsJob
         required_keys = [
             "leaderboard",
             "ablations",
@@ -75,6 +80,9 @@ class GenerateReportsJob(BaseJob):
 
         missing_keys = [k for k in required_keys if not (reports_dir / f"{k}.json").exists()]
         if missing_keys:
+            can_run_exp = self.allow_experiments if allow_experiments is None else allow_experiments
+            if not can_run_exp:
+                raise ReportsMissingError(missing_keys=missing_keys)
             self.logger.info("Missing report files %s. Running experiment suite to generate them...", missing_keys)
             from jobs.run_recsys_experiments import RunRecsysExperimentsJob
             exp_job = RunRecsysExperimentsJob(
@@ -86,11 +94,38 @@ class GenerateReportsJob(BaseJob):
             )
             return await exp_job._run_async(session=session)
 
+        data = RecsysData.load(resolved_data_dir)
+
         # Load existing JSON payloads
         all_payloads: dict[str, dict[str, Any]] = {}
         for k in required_keys:
             with open(reports_dir / f"{k}.json", encoding="utf-8") as f:
                 all_payloads[k] = json.load(f)
+
+        # Optional report keys to synchronize when present on disk
+        optional_keys = [
+            "assistant_leaderboard",
+            "assistant_calibration",
+            "assistant_retrieval",
+            "assistant_errors",
+            "candidate_recall",
+            "latency_benchmark",
+            "sasrec_benchmark",
+            "validation_sweep",
+            "ranker_without_user_features",
+            "lock_equivalence_check",
+        ]
+        repo_results_dir = Path("docs/results") if Path("docs/results").exists() else Path("../docs/results")
+        for opt_k in optional_keys:
+            opt_path = reports_dir / f"{opt_k}.json"
+            if not opt_path.exists() and repo_results_dir.exists():
+                opt_path = repo_results_dir / f"{opt_k}.json"
+            if opt_path.exists():
+                try:
+                    with open(opt_path, encoding="utf-8") as f:
+                        all_payloads[opt_k] = json.load(f)
+                except Exception as exc:
+                    self.logger.warning("Failed to load optional report %s: %s", opt_k, exc)
 
         if self.rebuild_leaderboard:
             self.logger.info("Rebuilding leaderboard with fresh evaluate_model passes...")
@@ -174,6 +209,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--dry-run", action="store_true", help="Run without DB writes")
     parser.add_argument("--rebuild-leaderboard", action="store_true", help="Re-evaluate models with fresh evaluate_model passes")
+    parser.add_argument("--allow-experiments", action="store_true", help="Allow running full experiment suite if reports are missing")
     args = parser.parse_args()
 
     job = GenerateReportsJob(
@@ -182,6 +218,7 @@ def main() -> None:
         seed=args.seed,
         dry_run=args.dry_run,
         rebuild_leaderboard=args.rebuild_leaderboard,
+        allow_experiments=args.allow_experiments,
     )
     job.execute()
 

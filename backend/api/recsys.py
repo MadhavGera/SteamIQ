@@ -16,8 +16,10 @@ ADR 0005 (The Single Authorized Exception to ADR 0001 Decision 2):
 """
 from __future__ import annotations
 
+import json
 import logging
 import time
+from pathlib import Path as FilePath
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -39,6 +41,7 @@ from api.schemas.recsys import (
     RecsysReportSchema,
     RecsysSearchResponseSchema,
 )
+from core.config import settings
 from core.errors import ReportNotFoundError, ValidationError
 from core.response import ApiResponse
 from db.base import get_db
@@ -442,11 +445,39 @@ async def list_models(
 
 # ─── 4. Evidence Reports ──────────────────────────────────────────────────────
 
+ALLOWED_REPORT_KEYS: frozenset[str] = frozenset({
+    "leaderboard",
+    "slices",
+    "ablations",
+    "ranker_ablations",
+    "cold_start",
+    "beyond_accuracy",
+    "training_curves",
+    "shap_global",
+    "dataset",
+    "limitations",
+    "assistant_leaderboard",
+    "assistant_calibration",
+    "assistant_retrieval",
+    "assistant_errors",
+    "candidate_recall",
+    "latency_benchmark",
+    "sasrec_benchmark",
+    "validation_sweep",
+    "ranker_without_user_features",
+    "lock_equivalence_check",
+    "retrain_gate",
+    "drift_detector_power",
+    "monitor_models",
+    "cold_latency_benchmark",
+})
+
+
 @router.get(
     "/reports/{key}",
     response_model=ApiResponse[RecsysReportSchema],
     summary="Get recommender evaluation report",
-    description="Fetches an audit or benchmark report payload from serving_rec_reports by key.",
+    description="Fetches an audit or benchmark report payload from serving_rec_reports by key with file fallback.",
 )
 async def get_report(
     key: Annotated[str, PathParam(description="Report key (e.g. leaderboard, ablations, slices, cold_start)")],
@@ -454,26 +485,64 @@ async def get_report(
 ) -> ApiResponse[RecsysReportSchema]:
     start = time.perf_counter()
 
+    if key not in ALLOWED_REPORT_KEYS:
+        raise ReportNotFoundError(
+            f"Report key '{key}' is invalid or not allowed."
+        )
+
     stmt = select(ServingRecReport).where(ServingRecReport.report_key == key)
     res = await db.execute(stmt)
     report = res.scalar_one_or_none()
 
-    if report is None:
-        raise ReportNotFoundError(
-            f"Report '{key}' not found in serving_rec_reports. "
-            f"Run 'make recsys-reports' to generate and persist all 10 reports."
+    if report is not None:
+        took_ms = (time.perf_counter() - start) * 1000
+        return ApiResponse.ok(
+            data=RecsysReportSchema(
+                report_key=report.report_key,
+                dataset_version=report.dataset_version,
+                model_run_id=report.model_run_id,
+                payload=report.payload,
+                updated_at=report.updated_at,
+                source="database",
+            ),
+            took_ms=round(took_ms, 2),
         )
 
-    took_ms = (time.perf_counter() - start) * 1000
-    return ApiResponse.ok(
-        data=RecsysReportSchema(
-            report_key=report.report_key,
-            dataset_version=report.dataset_version,
-            model_run_id=report.model_run_id,
-            payload=report.payload,
-            updated_at=report.updated_at,
-        ),
-        took_ms=round(took_ms, 2),
+    # Filesystem fallback: check data/recsys/reports or docs/results
+    candidate_paths = [
+        settings.resolved_recsys_data_dir / "reports" / f"{key}.json",
+        FilePath("docs/results") / f"{key}.json",
+        FilePath("../docs/results") / f"{key}.json",
+    ]
+
+    for p in candidate_paths:
+        if p.exists():
+            try:
+                with open(p, encoding="utf-8") as f:
+                    file_payload = json.load(f)
+                took_ms = (time.perf_counter() - start) * 1000
+                ds_ver = (
+                    file_payload.get("dataset_version", "c662b8232dc0")
+                    if isinstance(file_payload, dict)
+                    else "c662b8232dc0"
+                )
+                return ApiResponse.ok(
+                    data=RecsysReportSchema(
+                        report_key=key,
+                        dataset_version=ds_ver,
+                        model_run_id=None,
+                        payload=file_payload,
+                        updated_at=None,
+                        source="file_fallback",
+                    ),
+                    took_ms=round(took_ms, 2),
+                )
+            except Exception as exc:
+                logger.warning("Failed to read fallback report from %s: %s", p, exc)
+
+    raise ReportNotFoundError(
+        f"Report '{key}' not found in serving_rec_reports or fallback files. "
+        f"Run 'make recsys-reports' to generate and persist all 10 reports."
     )
 
 

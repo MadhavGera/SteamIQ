@@ -7,6 +7,7 @@ import {
   type MarketTrendPoint,
 } from "@/lib/api";
 import { useUserMode } from "@/lib/UserModeContext";
+import { DevOnlyGate } from "@/components/DevOnlyGate";
 
 export default function MarketExplorerPage() {
   const { isDeveloper, setMode } = useUserMode();
@@ -102,7 +103,8 @@ export default function MarketExplorerPage() {
   }, [opportunities]);
 
   return (
-    <div className="container" style={{ paddingBottom: "80px", maxWidth: "1280px", margin: "0 auto", paddingLeft: "24px", paddingRight: "24px" }}>
+    <DevOnlyGate pageTitle="Market Explorer">
+      <div className="container" style={{ paddingBottom: "80px", maxWidth: "1280px", margin: "0 auto", paddingLeft: "24px", paddingRight: "24px" }}>
       {/* Page Header */}
       <div style={{ marginTop: "32px", marginBottom: "28px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
@@ -860,6 +862,7 @@ export default function MarketExplorerPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </DevOnlyGate>
   );
 }

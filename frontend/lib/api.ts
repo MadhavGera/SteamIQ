@@ -541,6 +541,7 @@ export interface RecsysReport {
   model_run_id: string | null;
   payload: Record<string, unknown>;
   updated_at: string | null;
+  source?: "database" | "file_fallback";
 }
 
 export interface RecsysMapPoint {

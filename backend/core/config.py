@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     recsys_num_threads: int = 4
     recsys_device: str = "cpu"
 
+    # ── MLOps & Operational Safety ────────────────────────────────────────────
+    enable_ops_write: bool = True
+
     @property
     def resolved_recsys_raw_dir(self) -> Path:
         p = Path(self.recsys_raw_dir)

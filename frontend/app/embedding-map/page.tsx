@@ -10,6 +10,7 @@ import {
   RecsysNeighborItem,
 } from "@/lib/api";
 import { RecsysEmptyState } from "@/components/recsys/RecsysEmptyState";
+import { DevOnlyGate } from "@/components/DevOnlyGate";
 
 // 20 Distinct, harmonious HSL colors for clusters
 const CLUSTER_COLORS = [
@@ -24,7 +25,7 @@ function getClusterColor(clusterId: number | null): string {
   return CLUSTER_COLORS[clusterId % CLUSTER_COLORS.length];
 }
 
-export default function EmbeddingMapPage() {
+function EmbeddingMapContent() {
   const router = useRouter();
   const [mapData, setMapData] = useState<RecsysMapResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -671,5 +672,13 @@ export default function EmbeddingMapPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function EmbeddingMapPage() {
+  return (
+    <DevOnlyGate pageTitle="Item Embedding Map">
+      <EmbeddingMapContent />
+    </DevOnlyGate>
   );
 }
