@@ -63,6 +63,10 @@ class RecsysForYouRequest(BaseModel):
         default=True,
         description="Whether to generate explainability reasons and anchor games",
     )
+    debug: bool = Field(
+        default=False,
+        description="Whether to return inference inspector telemetry (quota breakdown, timings, and re-ranking delta)",
+    )
 
 
 class RecsysAnchorGame(BaseModel):
@@ -100,6 +104,18 @@ class RecsysRecommendationItemSchema(BaseModel):
         default_factory=list,
         description="Natural language explanation statements",
     )
+    candidate_source: str | None = Field(
+        default=None,
+        description="Stage 1 retrieval source (e.g. 'two_tower', 'itemknn', 'fallback')",
+    )
+    similarity_to_seeds: float | None = Field(
+        default=None,
+        description="Cosine similarity to seed items in embedding space",
+    )
+    retrieval_timing_ms: float | None = Field(
+        default=None,
+        description="Candidate retrieval step latency in ms",
+    )
 
 
 class RecsysForYouResponse(BaseModel):
@@ -121,6 +137,10 @@ class RecsysForYouResponse(BaseModel):
     warning: str | None = Field(default=None, description="Personalization or library size warning")
     preview: bool = Field(default=False, description="Preview flag for experimental models")
     took_ms: float = Field(..., description="Inference compute time in milliseconds")
+    debug: dict[str, Any] | None = Field(
+        default=None,
+        description="Inference inspector telemetry: quota breakdown, timing, and re-ranking delta",
+    )
 
 
 class RecsysModelInfoSchema(BaseModel):

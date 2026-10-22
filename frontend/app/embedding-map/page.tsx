@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -25,6 +25,17 @@ function getClusterColor(clusterId: number | null): string {
   return CLUSTER_COLORS[clusterId % CLUSTER_COLORS.length];
 }
 
+type ColorByMode = "cluster" | "popularity";
+
+function getPopularityColor(rank: number | null, maxRank: number = 3000): string {
+  if (rank === null || rank === undefined) return "#64748b";
+  const norm = Math.min(1, Math.max(0, rank / Math.max(1, maxRank)));
+  if (norm < 0.1) return "#fbbf24"; // Top 10% (Gold/Amber)
+  if (norm < 0.3) return "#22d3ee"; // Top 30% (Cyan)
+  if (norm < 0.6) return "#818cf8"; // Mid 30-60% (Indigo)
+  return "#64748b"; // Tail 60-100% (Muted Slate)
+}
+
 function EmbeddingMapContent() {
   const router = useRouter();
   const [mapData, setMapData] = useState<RecsysMapResponse | null>(null);
@@ -35,6 +46,9 @@ function EmbeddingMapContent() {
   const [hoveredPoint, setHoveredPoint] = useState<RecsysMapPoint | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [activeClusterFilter, setActiveClusterFilter] = useState<number | null>(null);
+  const [colorBy, setColorBy] = useState<ColorByMode>("cluster");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -164,6 +178,8 @@ function EmbeddingMapContent() {
 
       if (isFiltered) {
         ctx.fillStyle = "rgba(60, 70, 80, 0.2)";
+      } else if (colorBy === "popularity") {
+        ctx.fillStyle = getPopularityColor(p.popularity_rank, mapData.total_points);
       } else {
         ctx.fillStyle = getClusterColor(p.cluster_id);
       }
@@ -182,7 +198,38 @@ function EmbeddingMapContent() {
     });
 
     ctx.restore();
-  }, [mapData, selectedPoint, hoveredPoint, activeClusterFilter, normalizeCoords]);
+  }, [mapData, selectedPoint, hoveredPoint, activeClusterFilter, colorBy, normalizeCoords]);
+
+  // Zoom directly to an item
+  const zoomToPoint = useCallback(
+    (point: RecsysMapPoint) => {
+      const canvas = canvasRef.current;
+      if (!canvas || !mapData || mapData.points.length === 0) return;
+
+      const normPoints = normalizeCoords(mapData.points, canvas.width, canvas.height);
+      const target = normPoints.find((p) => p.app_id === point.app_id);
+      if (target) {
+        const targetScale = 3.0;
+        transformRef.current = {
+          scale: targetScale,
+          offsetX: canvas.width / 2 - target.canvasX * targetScale,
+          offsetY: canvas.height / 2 - target.canvasY * targetScale,
+        };
+        setSelectedPoint(point);
+        drawCanvas();
+      }
+    },
+    [mapData, normalizeCoords, drawCanvas]
+  );
+
+  // Filter points matching search query
+  const searchResults: RecsysMapPoint[] = useMemo(() => {
+    if (!mapData || !searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase().trim();
+    return mapData.points
+      .filter((p) => p.title.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [mapData, searchQuery]);
 
   // Redraw when dependencies change
   useEffect(() => {
@@ -342,13 +389,173 @@ function EmbeddingMapContent() {
           </p>
         </div>
 
-        {/* Zoom Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        {/* Controls: Search, Colour by, and Zoom */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+          {/* Title Search Input with Autocomplete & Auto-Zoom */}
+          <div style={{ position: "relative", minWidth: "260px" }}>
+            <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  position: "absolute",
+                  left: "10px",
+                  fontSize: "16px",
+                  color: "var(--text-muted)",
+                  pointerEvents: "none",
+                }}
+              >
+                search
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setTimeout(() => setIsSearchFocused(false), 250)}
+                placeholder="Search catalog game..."
+                className="input"
+                style={{
+                  paddingLeft: "32px",
+                  paddingRight: searchQuery ? "28px" : "12px",
+                  fontSize: "12px",
+                  width: "100%",
+                  height: "36px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "var(--bg-surface-lowest)",
+                  color: "var(--text-primary)",
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  style={{
+                    position: "absolute",
+                    right: "8px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--text-muted)",
+                    fontSize: "14px",
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Autocomplete Dropdown */}
+            {isSearchFocused && searchResults.length > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "40px",
+                  left: 0,
+                  right: 0,
+                  backgroundColor: "var(--bg-surface)",
+                  border: "1px solid var(--border-strong)",
+                  borderRadius: "6px",
+                  zIndex: 50,
+                  boxShadow: "var(--shadow-dropdown)",
+                  maxHeight: "240px",
+                  overflowY: "auto",
+                }}
+              >
+                {searchResults.map((pt: RecsysMapPoint) => (
+                  <div
+                    key={pt.app_id}
+                    onMouseDown={() => {
+                      zoomToPoint(pt);
+                      setSearchQuery(pt.title);
+                      setIsSearchFocused(false);
+                    }}
+                    style={{
+                      padding: "8px 12px",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderBottom: "1px solid var(--border-subtle)",
+                      transition: "background 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--bg-surface-mid)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{pt.title}</span>
+                    <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>#{pt.popularity_rank}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Colour by Selector */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              background: "var(--bg-surface-lowest)",
+              borderRadius: "6px",
+              padding: "2px",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "11px",
+                color: "var(--text-muted)",
+                padding: "0 8px",
+                fontWeight: 600,
+                textTransform: "uppercase",
+              }}
+            >
+              Colour by:
+            </span>
+            <button
+              type="button"
+              onClick={() => setColorBy("cluster")}
+              style={{
+                padding: "6px 12px",
+                fontSize: "12px",
+                fontWeight: colorBy === "cluster" ? 600 : 400,
+                backgroundColor: colorBy === "cluster" ? "var(--accent-primary)" : "transparent",
+                color: colorBy === "cluster" ? "var(--bg-surface-lowest)" : "var(--text-secondary)",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              Cluster
+            </button>
+            <button
+              type="button"
+              onClick={() => setColorBy("popularity")}
+              style={{
+                padding: "6px 12px",
+                fontSize: "12px",
+                fontWeight: colorBy === "popularity" ? 600 : 400,
+                backgroundColor: colorBy === "popularity" ? "var(--accent-primary)" : "transparent",
+                color: colorBy === "popularity" ? "var(--bg-surface-lowest)" : "var(--text-secondary)",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              Popularity
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={handleResetZoom}
             className="btn btn--secondary"
-            style={{ fontSize: "12px", padding: "6px 12px" }}
+            style={{ fontSize: "12px", padding: "6px 12px", height: "36px" }}
             aria-label="Reset zoom and center view"
           >
             <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
@@ -359,8 +566,43 @@ function EmbeddingMapContent() {
         </div>
       </div>
 
-      {/* Cluster Legend Filter Pills */}
-      {clusters.length > 0 && (
+      {/* Colour by Popularity Gradient Strip */}
+      {colorBy === "popularity" && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            marginBottom: "16px",
+            padding: "8px 14px",
+            backgroundColor: "var(--bg-surface-lowest)",
+            borderRadius: "6px",
+            border: "1px solid var(--border-subtle)",
+            fontSize: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>Popularity Gradient:</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ color: "#fbbf24", fontWeight: 600 }}>Top 10% (Head)</span>
+            <div
+              style={{
+                width: "160px",
+                height: "8px",
+                borderRadius: "4px",
+                background: "linear-gradient(to right, #fbbf24, #22d3ee, #818cf8, #64748b)",
+              }}
+            />
+            <span style={{ color: "#64748b" }}>Tail (Niche)</span>
+          </div>
+          <span style={{ color: "var(--text-muted)", fontSize: "11px", marginLeft: "auto" }}>
+            Note: Release year omitted (unprojected in 64-d Two-Tower embedding space).
+          </span>
+        </div>
+      )}
+
+      {/* Cluster Legend Filter Pills (Rendered only when colorBy === 'cluster') */}
+      {colorBy === "cluster" && clusters.length > 0 && (
         <div
           style={{
             display: "flex",
@@ -653,13 +895,17 @@ function EmbeddingMapContent() {
                         {nb.title}
                       </Link>
                       <span
+                        className="badge-pill"
                         style={{
                           fontFamily: "var(--font-mono, monospace)",
                           color: "var(--accent-primary)",
                           fontSize: "11px",
+                          padding: "2px 8px",
+                          background: "rgba(99, 102, 241, 0.12)",
+                          border: "1px solid rgba(99, 102, 241, 0.25)",
                         }}
                       >
-                        {nb.similarity.toFixed(3)}
+                        cos θ: {nb.similarity.toFixed(4)}
                       </span>
                     </div>
                   ))}

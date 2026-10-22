@@ -472,6 +472,7 @@ export interface RecsysForYouRequest {
   model?: string | null;
   k?: number;
   explain?: boolean;
+  debug?: boolean;
 }
 
 export interface RecsysAnchorGame {
@@ -503,6 +504,9 @@ export interface RecsysRecommendationItem {
     similarity: number;
   }>;
   reasons: string[];
+  candidate_source?: string | null;
+  similarity_to_seeds?: number | null;
+  retrieval_timing_ms?: number | null;
 }
 
 export interface RecsysForYouResponse {
@@ -517,6 +521,14 @@ export interface RecsysForYouResponse {
   warning: string | null;
   preview: boolean;
   took_ms: number;
+  debug?: {
+    candidate_quota_breakdown?: Record<string, number>;
+    candidate_pool_size?: number;
+    retrieval_timing_ms?: number;
+    scoring_timing_ms?: number;
+    reranking_delta_ms?: number;
+    total_latency_ms?: number;
+  } | null;
 }
 
 export interface RecsysModelInfo {

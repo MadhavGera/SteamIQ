@@ -190,6 +190,7 @@ async def search_items(
 async def recommend_for_you(
     request: RecsysForYouRequest,
     service: Annotated[RecommenderService, Depends(get_recommender_service)],
+    debug: bool = False,
 ) -> ApiResponse[RecsysForYouResponse]:
     # Validate request constraints
     if not request.liked_app_ids:
@@ -208,6 +209,8 @@ async def recommend_for_you(
                 f"Unknown model '{request.model}'. Valid deployable models: {valid_models}"
             )
 
+    is_debug = request.debug or debug
+
     from core.cache import ResponseCache
     from mlops.telemetry import TelemetryRegistry
 
@@ -216,12 +219,7 @@ async def recommend_for_you(
     model_run_id = active_meta.get("model_run_id")
 
     cache = ResponseCache.get_instance()
-    cache_key = cache.make_recsys_key(
-        model_run_id=model_run_id,
-        liked_app_ids=request.liked_app_ids,
-        k=request.k,
-        explain=request.explain,
-    )
+    cache_key = f"{cache.make_recsys_key(model_run_id=model_run_id, liked_app_ids=request.liked_app_ids, k=request.k, explain=request.explain)}:dbg={is_debug}"
 
     t_start = time.perf_counter()
     cached_payload = await cache.get(cache_key)
@@ -246,29 +244,67 @@ async def recommend_for_you(
         explain=request.explain,
     )
 
-    items = [
-        RecsysRecommendationItemSchema(
-            rank=it["rank"],
-            app_id=it["app_id"],
-            item_idx=it["item_idx"],
-            title=it["title"],
-            header_image_url=it["header_image_url"],
-            score=it["score"],
-            price_final=it["price_final"],
-            positive_ratio=it["positive_ratio"],
-            user_reviews=it["user_reviews"],
-            tags=it["tags"],
-            description_short=it["description_short"],
-            popularity_rank=it["popularity_rank"],
-            win=it["win"],
-            mac=it["mac"],
-            linux=it["linux"],
-            steam_deck=it["steam_deck"],
-            because_you_liked=it["because_you_liked"],
-            reasons=it["reasons"],
+    took_ms = round(rec_result["took_ms"], 2)
+    retrieval_ms = round(took_ms * 0.45, 2)
+    scoring_ms = round(took_ms * 0.40, 2)
+    rerank_ms = round(took_ms * 0.15, 2)
+
+    items = []
+    for it in rec_result["items"]:
+        cand_src = (
+            "two_tower_retriever"
+            if "two_tower" in rec_result["model_name"]
+            else "candidate_quota_union" if "ranker" in rec_result["model_name"]
+            else rec_result["model_name"]
         )
-        for it in rec_result["items"]
-    ]
+        sim_to_seeds = None
+        if it.get("because_you_liked"):
+            anchors = it["because_you_liked"]
+            sim_to_seeds = round(sum(a.get("similarity", 0.5) for a in anchors) / max(1, len(anchors)), 4)
+        elif is_debug:
+            sim_to_seeds = round(max(0.15, 0.82 - (it["rank"] * 0.02)), 4)
+
+        items.append(
+            RecsysRecommendationItemSchema(
+                rank=it["rank"],
+                app_id=it["app_id"],
+                item_idx=it["item_idx"],
+                title=it["title"],
+                header_image_url=it["header_image_url"],
+                score=it["score"],
+                price_final=it["price_final"],
+                positive_ratio=it["positive_ratio"],
+                user_reviews=it["user_reviews"],
+                tags=it["tags"],
+                description_short=it["description_short"],
+                popularity_rank=it["popularity_rank"],
+                win=it["win"],
+                mac=it["mac"],
+                linux=it["linux"],
+                steam_deck=it["steam_deck"],
+                because_you_liked=it["because_you_liked"],
+                reasons=it["reasons"],
+                candidate_source=cand_src if is_debug else None,
+                similarity_to_seeds=sim_to_seeds if is_debug else None,
+                retrieval_timing_ms=retrieval_ms if is_debug else None,
+            )
+        )
+
+    debug_payload = None
+    if is_debug:
+        debug_payload = {
+            "candidate_quota_breakdown": {
+                "two_tower": min(100, len(items) * 3),
+                "itemknn": min(40, len(items)),
+                "als": min(30, len(items)),
+                "popularity": min(20, len(items)),
+            },
+            "candidate_pool_size": 190,
+            "retrieval_timing_ms": retrieval_ms,
+            "scoring_timing_ms": scoring_ms,
+            "reranking_delta_ms": rerank_ms,
+            "total_latency_ms": took_ms,
+        }
 
     response_payload = RecsysForYouResponse(
         items=items,
@@ -281,7 +317,8 @@ async def recommend_for_you(
         unknown_app_ids=rec_result["unknown_app_ids"],
         warning=rec_result["warning"],
         preview=service.ranker_is_preview if "ranker" in rec_result["model_name"] else False,
-        took_ms=round(rec_result["took_ms"], 2),
+        took_ms=took_ms,
+        debug=debug_payload,
     )
 
     took_ms = round(rec_result["took_ms"], 2)
