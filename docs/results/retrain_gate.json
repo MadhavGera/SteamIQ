@@ -1,0 +1,54 @@
+{
+  "decision": "cannot decide",
+  "mode": "dry_run",
+  "training_executed": false,
+  "seed_artifacts_saved": [],
+  "explanation": "Cannot decide: champion recsys_two_tower_clean has 2 seeds (requires 3), and clean ranker recsys_two_tower_ranker_clean has 2 seeds (requires 5).",
+  "provenance": {
+    "status": "cannot_decide",
+    "reason": "Cannot decide: champion recsys_two_tower_clean has 2 seeds (requires 3), and clean ranker recsys_two_tower_ranker_clean has 2 seeds (requires 5).",
+    "champion_model": "recsys_two_tower_clean",
+    "champion_seeds_found": 2,
+    "champion_seeds_required": 3,
+    "champion_run_dirs": [
+      "42382df7-cf88-436b-87de-91deffff8627",
+      "eb9a3374-2aad-476f-a25e-5d3b84261b7f"
+    ],
+    "challenger_model": "recsys_two_tower_ranker_clean",
+    "challenger_seeds_found": 2,
+    "challenger_seeds_required": 5,
+    "challenger_run_dirs": [
+      "2a368ce4-2f65-44e1-8951-40a95ad79e34",
+      "387ae922-b85f-4307-aaaa-8ba9d477343e"
+    ]
+  },
+  "dataset_version": "c662b8232dc0",
+  "champion": {
+    "model_name": "recsys_two_tower_clean",
+    "val_ndcg_at_10": 0.0611,
+    "test_ndcg_at_10": 0.0516,
+    "seeds_available": 2,
+    "seeds_required": 3
+  },
+  "challenger": {
+    "family": "recsys_two_tower_ranker_clean",
+    "val_ndcg_at_10": 0.0615,
+    "test_ndcg_at_10": 0.0579,
+    "target_seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "min_seeds_required": 5,
+    "seeds_available": 2,
+    "target_artifact_dir": "D:\\Coding\\SteamIQ\\backend\\data\\recsys\\recsys_gate_runs\\recsys_two_tower_ranker_clean"
+  },
+  "gate_rules": {
+    "rule_1": "Challenger mean val NDCG@10 - Champion val NDCG@10 > challenger seed std",
+    "rule_2": "Paired bootstrap test 95% CI lower bound vs champion > -epsilon (non-inferiority)",
+    "rule_3": "Requires manual sign-off; never auto-promotes to production stage"
+  },
+  "generated_at": "2026-10-13T16:51:43.965733+00:00"
+}

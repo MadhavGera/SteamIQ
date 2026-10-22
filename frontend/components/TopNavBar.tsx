@@ -152,6 +152,16 @@ export function TopNavBar() {
                 ref={toggleButtonRef}
                 type="button"
                 onClick={() => setDevMenuOpen((prev) => !prev)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setDevMenuOpen(true);
+                    setTimeout(() => {
+                      const firstItem = devMenuRef.current?.querySelector<HTMLAnchorElement>('a[role="menuitem"]');
+                      firstItem?.focus();
+                    }, 50);
+                  }
+                }}
                 className={`stitch-nav__link stitch-nav__dropdown-toggle ${isDevSectionActive ? "stitch-nav__link--active" : ""}`}
                 id="nav-dev-tools-toggle"
                 aria-expanded={devMenuOpen}

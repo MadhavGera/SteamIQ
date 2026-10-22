@@ -1,0 +1,45 @@
+{
+  "status": "no live data",
+  "generated_at": "2026-10-12T16:37:41.274727+00:00",
+  "dataset_version": "c662b8232dc0",
+  "summary": "No live serving inference traffic captured in bounded telemetry buffer. All online drift detectors are in standby mode.",
+  "alerts": [],
+  "warnings": [],
+  "components": {
+    "library_lengths": {
+      "status": "no live data",
+      "details": "Buffered 0 samples (minimum required: 10)",
+      "curr_samples": 0,
+      "ref_samples": 20000
+    },
+    "recommendation_scores": {
+      "status": "no live data",
+      "details": "Buffered 0 samples (minimum required: 10)",
+      "curr_samples": 0
+    },
+    "assistant_intents": {
+      "status": "no live data",
+      "details": "Observed 0 intent requests (minimum required: 10)",
+      "note": "JSD has low statistical power for detecting subtle volume shifts in tail categories (e.g. out_of_scope).",
+      "curr_samples": 0,
+      "ref_categories": 13
+    },
+    "assistant_confidences": {
+      "status": "no live data",
+      "details": "Buffered 0 samples (minimum required: 10)",
+      "curr_samples": 0
+    },
+    "item_catalog_features": {
+      "status": "no live data",
+      "details": "No live streaming catalog feature ingestion currently connected in online serving buffer.",
+      "total_reference_items": 3000
+    }
+  },
+  "telemetry_counts": {
+    "recsys_requests_total": 0,
+    "assistant_requests_total": 0,
+    "live_library_samples": 0,
+    "live_score_samples": 0,
+    "live_confidence_samples": 0
+  }
+}

@@ -889,6 +889,42 @@ export const api = {
   },
 
   /**
+   * Fetch MLOps evidence log and report data by name.
+   * GET /api/v1/ops/evidence/{name}
+   */
+  async opsEvidence(name: string): Promise<OpsEvidenceResponse> {
+    return apiFetch<OpsEvidenceResponse>(`/api/v1/ops/evidence/${name}`);
+  },
+
+  /**
+   * Fetch all registered model cards and raw markdown content.
+   * GET /api/v1/ops/model-cards
+   */
+  async opsModelCards(): Promise<OpsModelCard[]> {
+    return apiFetch<OpsModelCard[]>("/api/v1/ops/model-cards");
+  },
+
+  /**
+   * Fetch model drift status and telemetry samples.
+   * GET /api/v1/ops/drift
+   */
+  async opsDrift(): Promise<OpsDriftResponse> {
+    return apiFetch<OpsDriftResponse>("/api/v1/ops/drift");
+  },
+
+  /**
+   * Fetch Prometheus live telemetry text exposition.
+   * GET /api/v1/ops/metrics
+   */
+  async opsMetrics(): Promise<string> {
+    const baseUrl = getApiBaseUrl();
+    const res = await fetch(`${baseUrl}/api/v1/ops/metrics`, {
+      cache: "no-store",
+    });
+    return res.text();
+  },
+
+  /**
    * Health check.
    * GET /health
    */
@@ -896,6 +932,32 @@ export const api = {
     return apiFetch<{ status: string; db: string; version: string }>("/health");
   },
 } as const;
+
+// ─── MLOps & Telemetry Types ─────────────────────────────────────────────────
+
+export interface OpsEvidenceResponse {
+  name: string;
+  log: string;
+  data: Record<string, unknown> | null;
+}
+
+export interface OpsModelCard {
+  filename: string;
+  model_name: string;
+  title: string;
+  content: string;
+}
+
+export interface OpsDriftResponse {
+  report: Record<string, unknown>;
+  telemetry_samples: {
+    recsys_total_requests: number;
+    assistant_total_requests: number;
+    buffered_library_samples: number;
+    buffered_score_samples: number;
+    buffered_confidence_samples: number;
+  };
+}
 
 // ─── Assistant Types ──────────────────────────────────────────────────────────
 

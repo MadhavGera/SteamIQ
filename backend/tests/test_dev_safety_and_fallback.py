@@ -79,3 +79,47 @@ async def test_recsys_report_fallback_source(client: AsyncClient):
     assert report_data["report_key"] == "leaderboard"
     assert report_data["source"] in ("database", "file_fallback")
     assert "models" in report_data["payload"]
+
+
+@pytest.mark.asyncio
+async def test_ops_evidence_whitelisting_and_retrieval(client: AsyncClient):
+    """
+    GET /api/v1/ops/evidence/{name} must return 200 for whitelisted names
+    and 404 for arbitrary unwhitelisted keys.
+    """
+    # 404 on unwhitelisted name
+    res_bad = await client.get("/api/v1/ops/evidence/unwhitelisted_key")
+    assert res_bad.status_code == 404
+
+    # 200 on whitelisted name
+    for valid_name in ["retrain_gate", "drift_detector_power", "monitor_models"]:
+        res_ok = await client.get(f"/api/v1/ops/evidence/{valid_name}")
+        assert res_ok.status_code == 200
+        data = res_ok.json()
+        assert data["success"] is True
+        ev = data["data"]
+        assert ev["name"] == valid_name
+        assert "log" in ev
+        assert "data" in ev
+
+
+@pytest.mark.asyncio
+async def test_ops_model_cards_retrieval(client: AsyncClient):
+    """
+    GET /api/v1/ops/model-cards must return a list of model cards with metadata and markdown content.
+    """
+    res = await client.get("/api/v1/ops/model-cards")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    cards = data["data"]
+    assert isinstance(cards, list)
+    assert len(cards) >= 3
+    card_names = {c["model_name"] for c in cards}
+    assert "recsys_two_tower_clean" in card_names
+    for c in cards:
+        assert "filename" in c
+        assert "title" in c
+        assert "content" in c
+        assert len(c["content"]) > 50
+

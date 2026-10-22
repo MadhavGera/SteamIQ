@@ -102,7 +102,8 @@ def main() -> int:
             rel_path = path.relative_to(ROOT_DIR)
             print(f"\n  File: {rel_path}:")
             for line_num, match, code in violations:
-                print(f"    Line {line_num}: Found '{match}' in: {code}")
+                safe_code = code.encode("ascii", errors="replace").decode("ascii")
+                print(f"    Line {line_num}: Found '{match}' in: {safe_code}")
         print("\nAll evaluation metrics must be loaded dynamically from reports or registry.")
         return 1
 
