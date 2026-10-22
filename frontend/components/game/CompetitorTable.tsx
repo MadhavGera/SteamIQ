@@ -93,6 +93,7 @@ export function CompetitorTable({
                       style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" }}
                     >
                       {comp.header_image ? (
+                        /* eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN thumbnail, intentionally unoptimized */
                         <img
                           src={comp.header_image}
                           alt={comp.name}

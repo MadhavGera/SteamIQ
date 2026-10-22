@@ -63,6 +63,7 @@ export function CompetitorSentimentMatrix({
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "4px", marginBottom: "14px" }}>
             {sourceGame.header_image ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN thumbnail, intentionally unoptimized */
               <img
                 src={sourceGame.header_image}
                 alt={sourceGame.name}
@@ -131,6 +132,7 @@ export function CompetitorSentimentMatrix({
             <div key={comp.app_id} className="competitor-card">
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
                 {comp.header_image ? (
+                  /* eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN thumbnail, intentionally unoptimized */
                   <img
                     src={comp.header_image}
                     alt={comp.name}

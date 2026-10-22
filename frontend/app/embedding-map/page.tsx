@@ -799,6 +799,7 @@ function EmbeddingMapContent() {
                   backgroundColor: "var(--bg-surface-lowest)",
                 }}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN thumbnail, intentionally unoptimized */}
                 <img
                   src={selectedPoint.header_image_url}
                   alt={selectedPoint.title}

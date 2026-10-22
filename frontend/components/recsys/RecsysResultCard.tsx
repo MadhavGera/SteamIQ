@@ -56,6 +56,7 @@ export function RecsysResultCard({ item, modelName }: RecsysResultCardProps) {
         }}
       >
         {!imgError && item.header_image_url ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN thumbnail, intentionally unoptimized */
           <img
             src={item.header_image_url}
             alt={item.title}

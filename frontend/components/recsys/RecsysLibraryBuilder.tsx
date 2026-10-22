@@ -510,6 +510,7 @@ export function RecsysLibraryBuilder({
                       }}
                     >
                       {item.header_image_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN thumbnail, intentionally unoptimized */
                         <img
                           src={item.header_image_url}
                           alt={item.title}
@@ -675,6 +676,7 @@ export function RecsysLibraryBuilder({
                 }}
               >
                 {game.header_image_url ? (
+                  /* eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN thumbnail, intentionally unoptimized */
                   <img
                     src={game.header_image_url}
                     alt=""
