@@ -121,12 +121,14 @@ class ProjectItemEmbeddingsJob(BaseJob):
         if items_df is None or items_df.empty:
             raise ValueError("RecsysData items_df is missing or empty.")
 
+        INAPPROPRIATE_TAG_PATTERNS = ("nsfw", "hentai", "sexual content", "nudity", "erotic")
+
         all_tags: set[str] = set()
         for t_val in items_df["tags"]:
             if t_val is not None and isinstance(t_val, np.ndarray | list):
                 for t in t_val:
                     t_str = str(t).strip()
-                    if t_str:
+                    if t_str and not any(pat in t_str.lower() for pat in INAPPROPRIATE_TAG_PATTERNS):
                         all_tags.add(t_str)
 
         total_universe = len(items_df)
@@ -134,7 +136,8 @@ class ProjectItemEmbeddingsJob(BaseJob):
         for t_val in items_df["tags"]:
             if t_val is not None and isinstance(t_val, np.ndarray | list):
                 for t in set(str(x).strip() for x in t_val if str(x).strip()):
-                    tag_universe_counts[t] += 1
+                    if t in tag_universe_counts:
+                        tag_universe_counts[t] += 1
 
         # Minimum 20 items in universe for distinctiveness stability
         valid_tags = {t for t, count in tag_universe_counts.items() if count >= 20}
@@ -166,7 +169,10 @@ class ProjectItemEmbeddingsJob(BaseJob):
 
             tag_lifts.sort(key=lambda x: (x[1], x[2]), reverse=True)
             top_2 = [t[0] for t in tag_lifts[:2]]
-            cluster_labels[c] = ", ".join(top_2) if top_2 else "General"
+            raw_label = ", ".join(top_2) if top_2 else "General"
+            if any(pat in raw_label.lower() for pat in INAPPROPRIATE_TAG_PATTERNS):
+                raw_label = "Anime, Visual Novel"
+            cluster_labels[c] = raw_label
             self.logger.info("  Cluster %2d (%3d items): %s", c, c_size, cluster_labels[c])
 
         # 6. Build records and upsert into serving_rec_item_projection

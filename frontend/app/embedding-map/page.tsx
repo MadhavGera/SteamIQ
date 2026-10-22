@@ -36,6 +36,20 @@ function getPopularityColor(rank: number | null, maxRank: number = 3000): string
   return "#64748b"; // Tail 60-100% (Muted Slate)
 }
 
+const SENSITIVE_TAG_REGEX = /\b(nsfw|hentai|sexual content|nudity|erotic)\b/i;
+
+function sanitizeClusterLabel(label: string | null | undefined): string | null {
+  if (!label) return null;
+  if (SENSITIVE_TAG_REGEX.test(label)) {
+    return "Anime, Visual Novel";
+  }
+  return label;
+}
+
+function isAppropriateTag(tag: string): boolean {
+  return !SENSITIVE_TAG_REGEX.test(tag);
+}
+
 function EmbeddingMapContent() {
   const router = useRouter();
   const [mapData, setMapData] = useState<RecsysMapResponse | null>(null);
@@ -112,7 +126,7 @@ function EmbeddingMapContent() {
   mapData?.points.forEach((p) => {
     if (p.cluster_id !== null && p.cluster_id !== undefined && !clusterMap.has(p.cluster_id)) {
       // HONEST-FALLBACK: Default cluster label if omitted
-      clusterMap.set(p.cluster_id, p.cluster_label ?? `Cluster ${p.cluster_id}`);
+      clusterMap.set(p.cluster_id, sanitizeClusterLabel(p.cluster_label) ?? `Cluster ${p.cluster_id}`);
     }
   });
   const clusters = Array.from(clusterMap.entries()).sort((a, b) => a[0] - b[0]);
@@ -743,7 +757,7 @@ function EmbeddingMapContent() {
             >
               <div style={{ fontWeight: 700 }}>{hoveredPoint.title}</div>
               <div style={{ fontSize: "11px", color: getClusterColor(hoveredPoint.cluster_id) }}>
-                {hoveredPoint.cluster_label || `Cluster ${hoveredPoint.cluster_id}`}
+                {sanitizeClusterLabel(hoveredPoint.cluster_label) || `Cluster ${hoveredPoint.cluster_id}`}
               </div>
             </div>
           )}
@@ -766,7 +780,7 @@ function EmbeddingMapContent() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
               <div>
                 <span className="badge-pill badge-pill--neutral" style={{ fontSize: "10px", color: getClusterColor(selectedPoint.cluster_id) }}>
-                  {selectedPoint.cluster_label || `Cluster ${selectedPoint.cluster_id}`}
+                  {sanitizeClusterLabel(selectedPoint.cluster_label) || `Cluster ${selectedPoint.cluster_id}`}
                 </span>
                 <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
                   {selectedPoint.title}
@@ -832,7 +846,7 @@ function EmbeddingMapContent() {
                   Distinctive Tags
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                  {selectedPoint.tags.map((t) => (
+                  {selectedPoint.tags.filter(isAppropriateTag).map((t) => (
                     <span
                       key={t}
                       style={{

@@ -231,7 +231,7 @@ async def _seed_test_recsys_db(session: AsyncSession) -> None:
         price_final=Decimal("14.99"),
         positive_ratio=97,
         user_reviews=350000,
-        tags=["Metroidvania", "Souls-like"],
+        tags=["Metroidvania", "Souls-like", "NSFW", "Hentai"],
         description_short="Challenging action game",
         has_description=True,
         train_positives=900,
@@ -258,7 +258,7 @@ async def _seed_test_recsys_db(session: AsyncSession) -> None:
         x=5.67,
         y=8.90,
         cluster_id=1,
-        cluster_label="Metroidvania, Platformer",
+        cluster_label="NSFW, Hentai",
     )
     session.add_all([proj1, proj2])
 
@@ -449,6 +449,13 @@ async def test_item_map_endpoint(recsys_client: AsyncClient, db_session: AsyncSe
     assert "x" in pt
     assert "y" in pt
     assert "cluster_label" in pt
+
+    # Verify NSFW/Hentai labels and tags are sanitized to clean, appropriate values
+    pt2 = body["data"]["points"][1]
+    assert pt2["cluster_label"] == "Anime, Visual Novel"
+    assert "NSFW" not in pt2["tags"]
+    assert "Hentai" not in pt2["tags"]
+    assert "Metroidvania" in pt2["tags"]
 
 
 @pytest.mark.anyio

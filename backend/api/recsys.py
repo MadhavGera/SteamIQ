@@ -20,7 +20,7 @@ import json
 import logging
 import time
 from pathlib import Path as FilePath
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 from fastapi import Path as PathParam
@@ -56,6 +56,33 @@ from recsys.inference import (
 
 logger = logging.getLogger("steamiq.api.recsys")
 router = APIRouter(prefix="/recsys", tags=["recsys"])
+
+INAPPROPRIATE_TAG_PATTERNS: tuple[str, ...] = ("nsfw", "hentai", "sexual content", "nudity", "erotic")
+
+
+def sanitize_cluster_label(label: str | None) -> str | None:
+    """Sanitize inappropriate or sensitive cluster labels before serving."""
+    if not label:
+        return label
+    lower = label.lower()
+    if any(pat in lower for pat in INAPPROPRIATE_TAG_PATTERNS):
+        return "Anime, Visual Novel"
+    return label
+
+
+def sanitize_item_tags(tags: list[Any] | None) -> list[str]:
+    """Filter out inappropriate or sensitive community tags from item metadata."""
+    if not tags:
+        return []
+    cleaned: list[str] = []
+    for t in tags:
+        if not isinstance(t, str):
+            continue
+        t_clean = t.strip()
+        t_lower = t_clean.lower()
+        if not any(pat in t_lower for pat in INAPPROPRIATE_TAG_PATTERNS):
+            cleaned.append(t_clean)
+    return cleaned
 
 
 # ─── 1. Catalog Search ────────────────────────────────────────────────────────
@@ -114,7 +141,7 @@ async def search_items(
                     price_final=float(item.price_final) if item.price_final is not None else None,
                     positive_ratio=item.positive_ratio,
                     user_reviews=item.user_reviews,
-                    tags=item.tags if isinstance(item.tags, list) else [],
+                    tags=sanitize_item_tags(item.tags if isinstance(item.tags, list) else []),
                     description_short=item.description_short,
                     has_description=item.has_description,
                     train_positives=item.train_positives,
@@ -275,7 +302,7 @@ async def recommend_for_you(
                 price_final=it["price_final"],
                 positive_ratio=it["positive_ratio"],
                 user_reviews=it["user_reviews"],
-                tags=it["tags"],
+                tags=sanitize_item_tags(it.get("tags", [])),
                 description_short=it["description_short"],
                 popularity_rank=it["popularity_rank"],
                 win=it["win"],
@@ -614,10 +641,10 @@ async def get_item_map(
                 x=float(proj.x),
                 y=float(proj.y),
                 cluster_id=proj.cluster_id,
-                cluster_label=proj.cluster_label,
+                cluster_label=sanitize_cluster_label(proj.cluster_label),
                 popularity_rank=item.popularity_rank,
                 header_image_url=item.header_image_url,
-                tags=item.tags if isinstance(item.tags, list) else [],
+                tags=sanitize_item_tags(item.tags if isinstance(item.tags, list) else []),
             )
         )
 
@@ -661,7 +688,7 @@ async def get_item_neighbors(
             price_final=n.get("price_final"),
             positive_ratio=n.get("positive_ratio"),
             user_reviews=n.get("user_reviews"),
-            tags=n.get("tags", []),
+            tags=sanitize_item_tags(n.get("tags", [])),
             popularity_rank=n["popularity_rank"],
         )
         for n in neighbors_list
