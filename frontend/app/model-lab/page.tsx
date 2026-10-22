@@ -13,9 +13,13 @@ import { TrainingCurvesTab } from "@/components/model-lab/TrainingCurvesTab";
 import { ExplainabilityTab } from "@/components/model-lab/ExplainabilityTab";
 import { DataMethodTab } from "@/components/model-lab/DataMethodTab";
 import { AssistantTab } from "@/components/model-lab/AssistantTab";
+import { RetrievalLatencyTab } from "@/components/model-lab/RetrievalLatencyTab";
+import { SprintEvidenceTab } from "@/components/model-lab/SprintEvidenceTab";
 
 type TabKey =
   | "leaderboard"
+  | "retrieval"
+  | "latency"
   | "paired"
   | "ablations"
   | "cold_start"
@@ -23,7 +27,8 @@ type TabKey =
   | "curves"
   | "explainability"
   | "data_method"
-  | "assistant";
+  | "assistant"
+  | "sprint_evidence";
 
 const REPORT_KEYS = [
   "leaderboard",
@@ -40,10 +45,18 @@ const REPORT_KEYS = [
   "assistant_calibration",
   "assistant_retrieval",
   "assistant_errors",
+  "candidate_recall",
+  "latency_benchmark",
+  "sasrec_benchmark",
+  "validation_sweep",
+  "ranker_without_user_features",
+  "lock_equivalence_check",
 ];
 
 const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
   { key: "leaderboard", label: "Leaderboard", icon: "leaderboard" },
+  { key: "retrieval", label: "Candidate Retrieval", icon: "filter_alt" },
+  { key: "latency", label: "Latency & SLA", icon: "speed" },
   { key: "paired", label: "Paired Tests", icon: "compare_arrows" },
   { key: "ablations", label: "Ablations", icon: "tune" },
   { key: "cold_start", label: "Cold-Start & Slices", icon: "ac_unit" },
@@ -52,6 +65,7 @@ const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
   { key: "explainability", label: "Explainability", icon: "psychology" },
   { key: "data_method", label: "Data & Method", icon: "description" },
   { key: "assistant", label: "Assistant", icon: "smart_toy" },
+  { key: "sprint_evidence", label: "Sprint Evidence", icon: "science" },
 ];
 
 function ModelLabContent() {
@@ -65,6 +79,7 @@ function ModelLabContent() {
   const [reports, setReports] = useState<Record<string, RecsysReport>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [copiedRepro, setCopiedRepro] = useState<boolean>(false);
 
   const handleTabChange = (key: TabKey) => {
     router.replace(`/model-lab?tab=${key}`, { scroll: false });
@@ -148,6 +163,57 @@ function ModelLabContent() {
             Comprehensive offline evaluation metrics, paired statistical tests, fairness diagnostics, and TreeSHAP explainability.
             Headline production champion: <strong style={{ color: "var(--accent-primary)" }}>{championModelName}</strong>. With train-only item stats there is no evidence of gain (CI includes 0); the all-time-stats gain is leakage-confounded.
           </p>
+
+          {/* Reproducibility Strip */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "12px",
+              padding: "10px 16px",
+              background: "rgba(255, 255, 255, 0.03)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "8px",
+              marginTop: "16px",
+              fontSize: "12px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", fontFamily: "var(--font-mono, monospace)", color: "var(--text-secondary)" }}>
+              <span>
+                Commit: <strong style={{ color: "var(--text-primary)" }}>47ef6f1</strong>
+              </span>
+              <span>
+                Dataset: <strong style={{ color: "var(--text-primary)" }}>{datasetVer}</strong>
+              </span>
+              <span>
+                Seed: <strong style={{ color: "var(--text-primary)" }}>42</strong>
+              </span>
+              <span>
+                Eval Users: <strong style={{ color: "var(--text-primary)" }}>5,000</strong>
+              </span>
+              <span>
+                Hardware: <strong style={{ color: "var(--text-primary)" }}>4 cores, 11.7 GB RAM</strong>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText("RECSYS_PROFILE=dev make recsys-all");
+                setCopiedRepro(true);
+                setTimeout(() => setCopiedRepro(false), 2000);
+              }}
+              className="btn btn--secondary"
+              style={{ fontSize: "11px", padding: "4px 10px", display: "flex", alignItems: "center", gap: "6px" }}
+              title="Copy full pipeline execution command"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>
+                {copiedRepro ? "check" : "content_copy"}
+              </span>
+              {copiedRepro ? "Copied!" : "Copy Repro Command"}
+            </button>
+          </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -249,6 +315,22 @@ function ModelLabContent() {
             <LeaderboardTab payload={reports["leaderboard"]?.payload || null} />
           )}
 
+          {activeTab === "retrieval" && (
+            <RetrievalLatencyTab
+              candidateRecallPayload={reports["candidate_recall"]?.payload || null}
+              latencyPayload={reports["latency_benchmark"]?.payload || null}
+              initialSubTab="retrieval"
+            />
+          )}
+
+          {activeTab === "latency" && (
+            <RetrievalLatencyTab
+              candidateRecallPayload={reports["candidate_recall"]?.payload || null}
+              latencyPayload={reports["latency_benchmark"]?.payload || null}
+              initialSubTab="latency"
+            />
+          )}
+
           {activeTab === "paired" && (
             <PairedTestsTab payload={reports["slices"]?.payload || null} />
           )}
@@ -289,6 +371,15 @@ function ModelLabContent() {
               calibrationPayload={reports["assistant_calibration"]?.payload || null}
               retrievalPayload={reports["assistant_retrieval"]?.payload || null}
               errorsPayload={reports["assistant_errors"]?.payload || null}
+            />
+          )}
+
+          {activeTab === "sprint_evidence" && (
+            <SprintEvidenceTab
+              sasrecPayload={reports["sasrec_benchmark"]?.payload || null}
+              sweepPayload={reports["validation_sweep"]?.payload || null}
+              rankerNoUserPayload={reports["ranker_without_user_features"]?.payload || null}
+              lockPayload={reports["lock_equivalence_check"]?.payload || null}
             />
           )}
         </div>

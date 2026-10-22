@@ -44,7 +44,7 @@ flowchart TD
         ServingItems & ServingProj & Reports --> RecService["RecommenderService<br/>(In-Memory O(N x 64) Dot Product)"]
         RecService --> API["FastAPI Endpoints<br/>(/api/v1/recsys/*)"]
         API --> ForYou["/ (For You Homepage)<br/>Interactive Seed Library & SHAP Chips"]
-        API --> ModelLab["/model-lab<br/>9-Tab Evidence Center & SVG Charts"]
+        API --> ModelLab["/model-lab<br/>12-Tab Evidence Center & SVG Charts"]
         API --> EmbeddingMap["/embedding-map<br/>HTML5 Canvas 2D Scatter & Neighbors"]
         API --> Dashboard["/dashboard<br/>Catalog & Intelligence Mart"]
     end
@@ -183,10 +183,10 @@ SteamIQ/
 │   │   ├── dashboard/page.tsx    # Catalog explorer & legacy game analytics dashboard
 │   │   ├── embedding-map/page.tsx# Embedding Map: 2D UMAP canvas scatter with nearest neighbors
 │   │   ├── market-explorer/page.tsx # Market Explorer: genre demand & opportunity matrix
-│   │   ├── model-lab/page.tsx    # Model Lab: 9-tab offline evaluation & diagnostic center
+│   │   ├── model-lab/page.tsx    # Model Lab: 12-tab offline evaluation & diagnostic center
 │   │   └── monitoring/page.tsx   # Ops Monitoring: live telemetry, drift, retrain gate & model cards
 │   ├── components/recsys/        # Recommender components (LibraryBuilder, ModelSelector, ResultCard, CompareView)
-│   ├── components/model-lab/     # Evidence tab modules (Leaderboard, PairedTests, Ablations, ColdStart, BeyondAccuracy)
+│   ├── components/model-lab/     # Evidence tab modules (Leaderboard, RetrievalLatency, SprintEvidence, etc.)
 │   └── lib/api.ts                # Strict typed API client for FastAPI recommender endpoints
 ├── backend/
 │   ├── api/                      # Route handlers reading serving_* / mart_* tables only
